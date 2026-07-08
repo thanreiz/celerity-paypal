@@ -56,7 +56,8 @@ stellar contract info interface --network testnet --id <CONTRACT_ID>
 ## Current status
 
 **Phase 1 complete** — core escrow and farmer registry live on Testnet
-(`CBLBN25BUURXCPAWJWO6MNRIVGRFSCOYVH7WAVFXNEGUCPLF35STK7ED`):
+(`CCO2BHML2QCP6XIPMZEDIXP3U6FZZ35YXFTCCCEBL33AJB3DCU2BRZN7`), QA'd end to end
+on-chain: 24/24 checks (see `qa-reports/2026-07-09-phase0-1.md`).
 
 - `deposit` / `top_up` / `withdraw_unspent` / `pause_pool` / `resume_pool` —
   earmarked per-funder sub-pools holding real escrow (native XLM SAC);
