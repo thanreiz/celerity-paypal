@@ -37,6 +37,7 @@ pub enum Error {
     InvalidAmount = 6,
     InvalidPayout = 7,
     InvalidInstallments = 8,
+    PoolNotPaused = 9,
 }
 
 // ---------------------------------------------------------------------------
@@ -276,9 +277,14 @@ impl Celerity {
     }
 
     /// Reactivate a sub-pool the funder previously paused. Funder-auth only.
+    /// Strictly Paused -> Active: an Exhausted pool is cured only by new money
+    /// (top_up), never by flipping its status.
     pub fn resume_pool(e: Env, pool_id: u64) {
         let mut pool = get_pool(&e, pool_id);
         pool.funder.require_auth();
+        if pool.status != PoolStatus::Paused {
+            panic_with_error!(&e, Error::PoolNotPaused);
+        }
         pool.status = PoolStatus::Active;
         save_pool(&e, pool_id, &pool);
     }
@@ -360,6 +366,12 @@ impl Celerity {
     /// farmer in that region. Idempotent on Settled(event_id, farmer, pool_id);
     /// an underfunded pool is flagged Exhausted and skipped, never reverted.
     /// (Phase 3.)
+    ///
+    /// Phase 3 design note: this iterates pools (1..NextPoolId) x farmers in
+    /// the region inside one transaction. At demo scale that is fine; past a
+    /// few hundred (pool, farmer) pairs it would hit per-tx limits and revert —
+    /// exactly what rule 3 forbids. Document the bound or paginate before any
+    /// real-scale use.
     pub fn settle_event(_e: Env, _event_id: u64) {
         unimplemented!()
     }

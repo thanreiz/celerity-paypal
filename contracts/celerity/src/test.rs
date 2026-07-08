@@ -413,6 +413,38 @@ fn pause_pool_sets_status_and_resume_reverts_it() {
 }
 
 #[test]
+fn resume_only_works_from_paused() {
+    // Active -> resume is an error, and Exhausted is cured only by top_up,
+    // never by flipping status (an Active/0 pool would lie on stage).
+    let s = setup();
+    let funder = funded_addr(&s, 1_000);
+    let pool_id = s
+        .client
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+
+    let on_active = s.client.try_resume_pool(&pool_id);
+    assert_eq!(on_active.err(), Some(cerr(Error::PoolNotPaused)));
+
+    s.env.as_contract(&s.client.address, || {
+        let mut pool: SubPool = s
+            .env
+            .storage()
+            .persistent()
+            .get(&DataKey::Pool(pool_id))
+            .unwrap();
+        pool.status = PoolStatus::Exhausted;
+        pool.balance = 0;
+        s.env
+            .storage()
+            .persistent()
+            .set(&DataKey::Pool(pool_id), &pool);
+    });
+    let on_exhausted = s.client.try_resume_pool(&pool_id);
+    assert_eq!(on_exhausted.err(), Some(cerr(Error::PoolNotPaused)));
+    assert_eq!(s.client.pool(&pool_id).status, PoolStatus::Exhausted);
+}
+
+#[test]
 fn stranger_cannot_resume_anothers_pool() {
     let s = setup();
     let alice = funded_addr(&s, 1_000);
