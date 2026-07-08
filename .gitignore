@@ -1,0 +1,20 @@
+# Rust's output directory
+target
+**/target
+
+# Soroban / Stellar local settings
+.soroban
+.stellar
+
+# Secrets — NEVER commit (oracle signing key lives here)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Node
+node_modules
+dist
+.DS_Store

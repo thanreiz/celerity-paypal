@@ -1,0 +1,11 @@
+{
+  "note": "Public deployment metadata. Contract IDs are public and safe to commit. No secret keys here.",
+  "testnet": {
+    "network_passphrase": "Test SDF Network ; September 2015",
+    "rpc_url": "https://soroban-testnet.stellar.org:443",
+    "contract_id": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX",
+    "wasm_hash": "afbdb2ac414554223f70d98188c202235c9f3ea904a25ebdd7240df40aefedd3",
+    "deployer_identity": "alice",
+    "phase": "0 — skeleton (all functions unimplemented!())"
+  }
+}
