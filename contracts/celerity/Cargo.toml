@@ -13,3 +13,6 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+# See root Cargo.toml [patch] — pins the transitive ed25519-dalek to the 2.x
+# line the soroban-env-host testutils were written against.
+ed25519-dalek = { version = "2", default-features = false, features = ["rand_core"] }
