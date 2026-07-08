@@ -3,9 +3,14 @@
   "testnet": {
     "network_passphrase": "Test SDF Network ; September 2015",
     "rpc_url": "https://soroban-testnet.stellar.org:443",
-    "contract_id": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX",
-    "wasm_hash": "afbdb2ac414554223f70d98188c202235c9f3ea904a25ebdd7240df40aefedd3",
+    "contract_id": "CBLBN25BUURXCPAWJWO6MNRIVGRFSCOYVH7WAVFXNEGUCPLF35STK7ED",
+    "wasm_sha256": "57df4d7d934e22ab0dfa954219607bc574b40ca47e7bd0326b01e95708bb49ce",
     "deployer_identity": "alice",
-    "phase": "0 — skeleton (all functions unimplemented!())"
+    "settlement_token": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC (native XLM SAC)",
+    "oracle_key": "placeholder zeros — real Ed25519 key set at Phase 2 redeploy",
+    "phase": "1 — core escrow + registry live (deposit, top_up, withdraw_unspent, pause/resume, register/remove_farmer, views)",
+    "previous_contract_ids": {
+      "phase_0": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX"
+    }
   }
 }

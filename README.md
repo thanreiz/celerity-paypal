@@ -35,12 +35,19 @@ cargo build --target wasm32v1-none --release
 # Run tests
 cargo test
 
-# Deploy to Testnet (returns a contract ID; recorded in deployments.json)
+# Deploy to Testnet (returns a contract ID; recorded in deployments.json).
+# The constructor runs atomically at deploy: admin, oracle Ed25519 pubkey
+# (hex), and the settlement token (SAC address) are set with no separate
+# init call to front-run.
 stellar contract deploy \
   --wasm target/wasm32v1-none/release/celerity.wasm \
   --source-account alice \
   --network testnet \
-  --alias celerity
+  --alias celerity \
+  -- \
+  --admin "$(stellar keys address alice)" \
+  --oracle <64-hex-char Ed25519 pubkey> \
+  --token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 
 # Inspect the deployed interface
 stellar contract info interface --network testnet --id <CONTRACT_ID>
@@ -48,7 +55,19 @@ stellar contract info interface --network testnet --id <CONTRACT_ID>
 
 ## Current status
 
-**Phase 0 complete** — environment set up, contract skeleton with the full
-function surface builds to Wasm and is deployed to Testnet
-(`CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX`). All bodies are
-`unimplemented!()` stubs; implementation begins in Phase 1.
+**Phase 1 complete** — core escrow and farmer registry live on Testnet
+(`CBLBN25BUURXCPAWJWO6MNRIVGRFSCOYVH7WAVFXNEGUCPLF35STK7ED`):
+
+- `deposit` / `top_up` / `withdraw_unspent` / `pause_pool` / `resume_pool` —
+  earmarked per-funder sub-pools holding real escrow (native XLM SAC);
+  funder-auth enforced, verified on-chain (a second account cannot withdraw,
+  top up, or pause another funder's pool).
+- `register_farmer` / `remove_farmer` — admin-only registry with per-region
+  farmer lists; verified on-chain.
+- 24 unit tests incl. adversarial: cross-funder isolation, non-admin registry
+  calls, remove/re-register lifecycle, exhausted-pool refill.
+- Constructor (not `init`) sets admin/oracle/token atomically at deploy.
+
+`report_event` (Phase 2), `settle_event` (Phase 3), and `claim` (Phase 4)
+remain labeled stubs. The oracle key on the current deployment is a
+placeholder; the real Ed25519 key ships with the Phase 2 redeploy.
