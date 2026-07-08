@@ -57,17 +57,27 @@ stellar contract info interface --network testnet --id <CONTRACT_ID>
 
 ## Current status
 
-**Phase 2 complete** — signed oracle events live on Testnet
-(`CAL64YFBWUAE4OXLA3ZYSEQ7WZW73DPHDLPHW4F4AVEJ2TMPAJ5GAWZ7`):
+**Phase 3 complete — the win-condition core is live on Testnet**
+(`CDWFQPHFK5PT55AQWAJYE2FSQ4XLXCBRWTFZFJXVYJ4IYM4IOSV7KWMM`): one signed
+weather event released two independently-funded, earmarked sub-pools to one
+registered farmer, idempotently, with a per-funder ledger — demonstrated
+end to end on-chain (`qa-reports/2026-07-09-phase3-gate.md`).
 
-- `report_event(region, signal, nonce, sig)` verifies the oracle's Ed25519
-  signature over `"CELERITY-EVENT-V1" || region || signal || nonce` and
-  rejects any reused nonce — a captured signature cannot be replayed into a
-  second event. Anyone may relay a signed event; nobody can forge one.
-- Node.js signer in `oracle/` produces contract-accepted signatures end to
-  end; the signing key is generated into gitignored `.env`, never committed.
-- Verified on-chain: valid event accepted (id 1), tampered payload rejected,
-  replay rejected, wrong-key event rejected. 30/30 local tests.
+- `settle_event(event_id)` — permissionless crank over a verified event:
+  every Active pool matching (region, signal ≥ threshold) pays each
+  registered farmer in the region. Idempotent on
+  `Settled(event_id, farmer, pool_id)`: re-runs pay exactly once. A pool
+  that can't cover the next payout is flagged `Exhausted` and skipped —
+  never reverting the other funders' releases. `top_up` cures the flag, and
+  re-settling the same event pays only whoever was missed.
+- Per-funder ledger (`funder_ledger`) + one `release` contract event per
+  (funder, farmer); recurring pools release their first installment and
+  record progress for the Phase 4 claim schedule.
+- 38/38 local tests, adversarial cases included.
+
+**Phase 2** — signed oracle events (`report_event`: Ed25519-verified,
+nonce replay-protected), Node signer in `oracle/`; verified on-chain
+accept/tamper/replay/wrong-key.
 
 **Phase 1** — core escrow + registry, QA'd 24/24 on-chain
 (see `qa-reports/2026-07-09-phase0-1.md`).

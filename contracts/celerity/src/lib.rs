@@ -18,8 +18,8 @@
 //! Phases 2–4.
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, token, Address, Bytes,
-    BytesN, Env, Vec,
+    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, token,
+    Address, Bytes, BytesN, Env, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -100,6 +100,16 @@ pub struct Release {
     pub amount: i128,
 }
 
+/// Per-(pool, farmer) installment bookkeeping for recurring pools.
+/// Written by settle_event when the first installment releases; the claim
+/// schedule (Phase 4) advances it.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InstallmentProgress {
+    pub paid: u32,
+    pub last_ts: u64,
+}
+
 /// Storage keys (doc §6.2 / §10).
 #[contracttype]
 pub enum DataKey {
@@ -108,6 +118,7 @@ pub enum DataKey {
     Settled(u64, Address, u64), // (event_id, farmer, pool_id) -> bool
     Event(u64),                 // event_id -> Event
     UsedNonce(u64),             // oracle nonce -> bool (replay protection)
+    Progress(u64, Address),     // (pool_id, farmer) -> InstallmentProgress
     Ledger(Address),            // funder -> Vec<Release>
     RegionFarmers(u32),         // region -> Vec<Address> of registered farmers
     Token,                      // the settlement asset (SAC) address
@@ -403,19 +414,114 @@ impl Celerity {
 
     // --- release / claim ----------------------------------------------------
 
-    /// For each Active sub-pool whose region matches and whose signal_threshold
-    /// is met by the event, release `payout_per_farmer` to each registered
-    /// farmer in that region. Idempotent on Settled(event_id, farmer, pool_id);
-    /// an underfunded pool is flagged Exhausted and skipped, never reverted.
-    /// (Phase 3.)
+    /// For each Active sub-pool whose region matches the event and whose
+    /// signal_threshold is met (event.signal >= threshold), release
+    /// `payout_per_farmer` to each registered farmer in that region — the
+    /// first installment for recurring pools. Returns the number of new
+    /// releases made.
     ///
-    /// Phase 3 design note: this iterates pools (1..NextPoolId) x farmers in
-    /// the region inside one transaction. At demo scale that is fine; past a
-    /// few hundred (pool, farmer) pairs it would hit per-tx limits and revert —
-    /// exactly what rule 3 forbids. Document the bound or paginate before any
-    /// real-scale use.
-    pub fn settle_event(_e: Env, _event_id: u64) {
-        unimplemented!()
+    /// Permissionless by design: the signed event is the authority, so anyone
+    /// may crank settlement — the caller can neither choose who gets paid nor
+    /// how much.
+    ///
+    /// Idempotent on Settled(event_id, farmer, pool_id): re-running the same
+    /// event never double-pays; already-settled (farmer, pool) pairs are
+    /// skipped, so a re-run after a top_up pays only whoever was missed.
+    ///
+    /// Flag, never fail: a pool that cannot cover the next payout is marked
+    /// Exhausted and settlement continues with the remaining pools — one
+    /// funder's dry pool must never revert another funder's release.
+    ///
+    /// Scale note: iterates pools (1..NextPoolId) x farmers in the region in
+    /// one transaction — fine at demo scale; paginate before real-scale use.
+    pub fn settle_event(e: Env, event_id: u64) -> u32 {
+        let event: Event = e
+            .storage()
+            .persistent()
+            .get(&DataKey::Event(event_id))
+            .unwrap_or_else(|| panic_with_error!(&e, Error::EventNotFound));
+
+        let farmers = region_farmers(&e, event.region);
+        let token = token::TokenClient::new(&e, &get_token(&e));
+        let next_pool_id: u64 = e
+            .storage()
+            .instance()
+            .get(&DataKey::NextPoolId)
+            .unwrap_or(1);
+        let mut released: u32 = 0;
+
+        for pool_id in 1..next_pool_id {
+            let mut pool: SubPool = match e.storage().persistent().get(&DataKey::Pool(pool_id)) {
+                Some(p) => p,
+                None => continue,
+            };
+            if pool.status != PoolStatus::Active
+                || pool.region != event.region
+                || event.signal < pool.signal_threshold
+            {
+                continue;
+            }
+
+            let mut dirty = false;
+            for farmer in farmers.iter() {
+                let settled_key = DataKey::Settled(event_id, farmer.clone(), pool_id);
+                if e.storage().persistent().has(&settled_key) {
+                    continue; // this event already paid this farmer from this pool
+                }
+                if pool.balance < pool.payout_per_farmer {
+                    // Flag, never fail: mark and move on to the next pool.
+                    pool.status = PoolStatus::Exhausted;
+                    dirty = true;
+                    e.events().publish(
+                        (symbol_short!("exhausted"), pool.funder.clone()),
+                        (event_id, pool_id),
+                    );
+                    break;
+                }
+
+                token.transfer(&e.current_contract_address(), &farmer, &pool.payout_per_farmer);
+                pool.balance -= pool.payout_per_farmer;
+                dirty = true;
+                e.storage().persistent().set(&settled_key, &true);
+
+                let release = Release {
+                    event_id,
+                    pool_id,
+                    funder: pool.funder.clone(),
+                    farmer: farmer.clone(),
+                    amount: pool.payout_per_farmer,
+                };
+                let mut ledger: Vec<Release> = e
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::Ledger(pool.funder.clone()))
+                    .unwrap_or_else(|| Vec::new(&e));
+                ledger.push_back(release);
+                e.storage()
+                    .persistent()
+                    .set(&DataKey::Ledger(pool.funder.clone()), &ledger);
+
+                if pool.installments > 1 {
+                    e.storage().persistent().set(
+                        &DataKey::Progress(pool_id, farmer.clone()),
+                        &InstallmentProgress {
+                            paid: 1,
+                            last_ts: e.ledger().timestamp(),
+                        },
+                    );
+                }
+
+                e.events().publish(
+                    (symbol_short!("release"), pool.funder.clone(), farmer.clone()),
+                    (event_id, pool_id, pool.payout_per_farmer),
+                );
+                released += 1;
+            }
+            if dirty {
+                save_pool(&e, pool_id, &pool);
+            }
+        }
+        released
     }
 
     /// Pull the next installment from a recurring sub-pool if it is due, then

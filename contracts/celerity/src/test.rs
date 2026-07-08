@@ -765,3 +765,240 @@ fn missing_event_view_errors_cleanly() {
     let (s, _) = setup_with_oracle();
     assert_eq!(s.client.try_event(&42).err(), Some(cerr(Error::EventNotFound)));
 }
+
+// ---------------------------------------------------------------------------
+// settle_event — the heart (Phase 3): idempotent, flag-not-fail, per-funder
+// ledger. These are the two bugs that lose the hackathon; over-test them.
+// ---------------------------------------------------------------------------
+
+use crate::{InstallmentProgress, Release};
+use soroban_sdk::testutils::Events as _;
+
+/// Report a validly-signed event through the real oracle path.
+fn seed_event(s: &Setup, signer: &SigningKey, region: u32, signal: u32, nonce: u64) -> u64 {
+    let sig = sign_event(s, signer, region, signal, nonce);
+    s.client.report_event(&region, &signal, &nonce, &sig)
+}
+
+#[test]
+fn one_event_releases_two_funders_to_one_farmer() {
+    // The win condition's core: one signed event, two independently-funded
+    // earmarked pools, one registered farmer, separate ledger receipts.
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 1_000);
+    let bob = funded_addr(&s, 1_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+
+    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
+    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &50, &1);
+
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 100);
+    let released = s.client.settle_event(&event_id);
+
+    // events().all() holds only the last invocation's events — count Celerity's
+    // "release" events now, before any further client call clears them.
+    let release_events = s
+        .env
+        .events()
+        .all()
+        .filter_by_contract(&s.client.address)
+        .events()
+        .len();
+    assert_eq!(release_events, 2);
+
+    assert_eq!(released, 2);
+    assert_eq!(s.token.balance(&farmer), 150);
+    assert_eq!(s.client.pool(&pool_a).balance, 500);
+    assert_eq!(s.client.pool(&pool_b).balance, 350);
+    // escrow invariant: holdings == sum of pool balances
+    assert_eq!(s.token.balance(&s.client.address), 850);
+
+    // one separate receipt per funder
+    let ledger_a = s.client.funder_ledger(&alice);
+    let ledger_b = s.client.funder_ledger(&bob);
+    assert_eq!(ledger_a.len(), 1);
+    assert_eq!(ledger_b.len(), 1);
+    assert_eq!(
+        ledger_a.get(0).unwrap(),
+        Release {
+            event_id,
+            pool_id: pool_a,
+            funder: alice.clone(),
+            farmer: farmer.clone(),
+            amount: 100
+        }
+    );
+    assert_eq!(ledger_b.get(0).unwrap().amount, 50);
+}
+
+#[test]
+fn settle_twice_pays_exactly_once() {
+    // THE idempotency gate: a re-run must be a no-op, not a double payment.
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 1_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
+
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 200);
+    assert_eq!(s.client.settle_event(&event_id), 1);
+
+    let rerun = s.client.settle_event(&event_id);
+    assert_eq!(rerun, 0);
+    assert_eq!(s.token.balance(&farmer), 100); // not 200
+    assert_eq!(s.client.pool(&pool_id).balance, 500); // not 400
+    assert_eq!(s.client.funder_ledger(&alice).len(), 1); // no duplicate receipt
+}
+
+#[test]
+fn dry_pool_flagged_solvent_pools_still_pay() {
+    // Flag-not-fail: one underfunded pool must never revert the event.
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 1_000);
+    let bob = funded_addr(&s, 1_000);
+    let carol = funded_addr(&s, 1_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+
+    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
+    let pool_dry = s.client.deposit(&bob, &30, &REGION_V, &3, &100, &1); // < payout
+    let pool_c = s.client.deposit(&carol, &200, &REGION_V, &3, &50, &1);
+
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 300);
+    let released = s.client.settle_event(&event_id);
+
+    assert_eq!(released, 2); // A and C paid; dry pool skipped, not reverted
+    assert_eq!(s.token.balance(&farmer), 150);
+    assert_eq!(s.client.pool(&pool_dry).status, PoolStatus::Exhausted);
+    assert_eq!(s.client.pool(&pool_dry).balance, 30); // flagged, money intact
+    assert_eq!(s.client.pool(&pool_a).balance, 500);
+    assert_eq!(s.client.pool(&pool_c).balance, 150);
+    assert_eq!(s.client.funder_ledger(&bob).len(), 0);
+}
+
+#[test]
+fn three_funders_one_farmer_three_separate_receipts() {
+    let (s, signer) = setup_with_oracle();
+    let funders: [Address; 3] = [
+        funded_addr(&s, 1_000),
+        funded_addr(&s, 1_000),
+        funded_addr(&s, 1_000),
+    ];
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+    for (i, f) in funders.iter().enumerate() {
+        s.client
+            .deposit(f, &500, &REGION_V, &3, &(100 + i as i128), &1);
+    }
+
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 400);
+    assert_eq!(s.client.settle_event(&event_id), 3);
+    assert_eq!(s.token.balance(&farmer), 100 + 101 + 102);
+
+    for (i, f) in funders.iter().enumerate() {
+        let ledger = s.client.funder_ledger(f);
+        assert_eq!(ledger.len(), 1); // each funder sees ONLY its own release
+        let r = ledger.get(0).unwrap();
+        assert_eq!(r.funder, f.clone());
+        assert_eq!(r.amount, 100 + i as i128);
+    }
+}
+
+#[test]
+fn midlist_exhaustion_pays_partial_then_recovers_after_topup() {
+    // A pool that runs dry halfway through the farmer list: whoever was paid
+    // stays paid, the pool is flagged, and after a top_up the SAME event can
+    // be re-settled to pay only the missed farmers.
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 1_000);
+    let f1 = Address::generate(&s.env);
+    let f2 = Address::generate(&s.env);
+    s.client.register_farmer(&f1, &REGION_V);
+    s.client.register_farmer(&f2, &REGION_V);
+
+    // 150 covers one payout of 100, not two
+    let pool_id = s.client.deposit(&alice, &150, &REGION_V, &3, &100, &1);
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 500);
+
+    assert_eq!(s.client.settle_event(&event_id), 1);
+    assert_eq!(s.token.balance(&f1), 100);
+    assert_eq!(s.token.balance(&f2), 0);
+    assert_eq!(s.client.pool(&pool_id).status, PoolStatus::Exhausted);
+    assert_eq!(s.client.pool(&pool_id).balance, 50);
+
+    // refill cures the flag; re-settling the same event pays ONLY f2
+    s.client.top_up(&pool_id, &200);
+    assert_eq!(s.client.settle_event(&event_id), 1);
+    assert_eq!(s.token.balance(&f1), 100); // idempotent: f1 not paid again
+    assert_eq!(s.token.balance(&f2), 100);
+    assert_eq!(s.client.pool(&pool_id).balance, 150);
+    assert_eq!(s.client.funder_ledger(&alice).len(), 2);
+}
+
+#[test]
+fn paused_wrong_region_and_high_threshold_pools_are_skipped() {
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 2_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+
+    let paused = s.client.deposit(&alice, &300, &REGION_V, &3, &100, &1);
+    s.client.pause_pool(&paused);
+    let wrong_region = s.client.deposit(&alice, &300, &6, &3, &100, &1);
+    let too_high = s.client.deposit(&alice, &300, &REGION_V, &5, &100, &1); // thr 5 > signal 4
+    let exact = s.client.deposit(&alice, &300, &REGION_V, &4, &100, &1); // thr == signal pays
+
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 600);
+    assert_eq!(s.client.settle_event(&event_id), 1); // only `exact`
+
+    assert_eq!(s.token.balance(&farmer), 100);
+    assert_eq!(s.client.pool(&paused).balance, 300);
+    assert_eq!(s.client.pool(&wrong_region).balance, 300);
+    assert_eq!(s.client.pool(&too_high).balance, 300);
+    assert_eq!(s.client.pool(&exact).balance, 200);
+}
+
+#[test]
+fn settle_unknown_event_and_empty_region_are_safe() {
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 1_000);
+    s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
+
+    // unknown event id -> clean error
+    assert_eq!(
+        s.client.try_settle_event(&99).err(),
+        Some(cerr(Error::EventNotFound))
+    );
+
+    // event over a region with no registered farmers -> 0 releases, no flag
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 700);
+    assert_eq!(s.client.settle_event(&event_id), 0);
+    assert_eq!(s.client.pool(&1).status, PoolStatus::Active);
+}
+
+#[test]
+fn recurring_pool_releases_first_installment_and_records_progress() {
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 1_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+
+    // 3 installments of 100
+    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &3);
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 800);
+
+    assert_eq!(s.client.settle_event(&event_id), 1);
+    assert_eq!(s.token.balance(&farmer), 100); // first installment only
+    assert_eq!(s.client.pool(&pool_id).balance, 500);
+
+    // progress recorded for the claim schedule (Phase 4)
+    let progress: InstallmentProgress = s.env.as_contract(&s.client.address, || {
+        s.env
+            .storage()
+            .persistent()
+            .get(&DataKey::Progress(pool_id, farmer.clone()))
+            .unwrap()
+    });
+    assert_eq!(progress.paid, 1);
+}
