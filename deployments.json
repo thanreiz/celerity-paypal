@@ -3,14 +3,16 @@
   "testnet": {
     "network_passphrase": "Test SDF Network ; September 2015",
     "rpc_url": "https://soroban-testnet.stellar.org:443",
-    "contract_id": "CCO2BHML2QCP6XIPMZEDIXP3U6FZZ35YXFTCCCEBL33AJB3DCU2BRZN7",
+    "contract_id": "CAL64YFBWUAE4OXLA3ZYSEQ7WZW73DPHDLPHW4F4AVEJ2TMPAJ5GAWZ7",
     "deployer_identity": "alice",
     "settlement_token": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC (native XLM SAC)",
-    "oracle_key": "placeholder zeros — real Ed25519 key set at Phase 2 redeploy",
-    "phase": "1 — core escrow + registry live; QA'd 24/24 (see qa-reports/2026-07-09-phase0-1.md)",
+    "oracle_public_key_hex": "12811b0d23c5d2738042963d57cb3dfa1705bfce3880b86aa258182df3b77941",
+    "oracle_note": "public key only — the signing secret lives in oracle/.env (gitignored)",
+    "phase": "2 — signed oracle events live (report_event: Ed25519-verified, nonce replay-protected); E2E verified accept/tamper/replay/wrong-key",
     "previous_contract_ids": {
       "phase_0": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX",
-      "phase_1_pre_review_fix": "CBLBN25BUURXCPAWJWO6MNRIVGRFSCOYVH7WAVFXNEGUCPLF35STK7ED"
+      "phase_1_pre_review_fix": "CBLBN25BUURXCPAWJWO6MNRIVGRFSCOYVH7WAVFXNEGUCPLF35STK7ED",
+      "phase_1_qa": "CCO2BHML2QCP6XIPMZEDIXP3U6FZZ35YXFTCCCEBL33AJB3DCU2BRZN7"
     }
   }
 }

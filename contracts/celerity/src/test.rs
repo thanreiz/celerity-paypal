@@ -640,3 +640,128 @@ fn funder_ledger_starts_empty() {
         .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
     assert_eq!(s.client.funder_ledger(&funder).len(), 0);
 }
+
+// ---------------------------------------------------------------------------
+// report_event — the signed oracle trigger (Phase 2)
+// ---------------------------------------------------------------------------
+
+use ed25519_dalek::{Signer as _, SigningKey};
+
+/// Deterministic test oracle. Same seed -> same keypair in every test.
+fn oracle_signer() -> SigningKey {
+    SigningKey::from_bytes(&[7u8; 32])
+}
+
+/// A `setup()` whose contract trusts our test oracle's public key.
+fn setup_with_oracle() -> (Setup, SigningKey) {
+    let signer = oracle_signer();
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let asset = env.register_stellar_asset_contract_v2(token_admin);
+    let token = token::TokenClient::new(&env, &asset.address());
+    let sac = token::StellarAssetClient::new(&env, &asset.address());
+
+    let contract_id = env.register(
+        Celerity,
+        (
+            admin.clone(),
+            BytesN::from_array(&env, &signer.verifying_key().to_bytes()),
+            asset.address(),
+        ),
+    );
+    let client = CelerityClient::new(&env, &contract_id);
+
+    (
+        Setup {
+            env,
+            client,
+            token,
+            sac,
+            admin,
+        },
+        signer,
+    )
+}
+
+/// The exact byte layout the contract verifies:
+/// "CELERITY-EVENT-V1" || region u32 BE || signal u32 BE || nonce u64 BE.
+fn event_payload(region: u32, signal: u32, nonce: u64) -> [u8; 33] {
+    let mut p = [0u8; 33];
+    p[..17].copy_from_slice(b"CELERITY-EVENT-V1");
+    p[17..21].copy_from_slice(&region.to_be_bytes());
+    p[21..25].copy_from_slice(&signal.to_be_bytes());
+    p[25..33].copy_from_slice(&nonce.to_be_bytes());
+    p
+}
+
+fn sign_event(s: &Setup, signer: &SigningKey, region: u32, signal: u32, nonce: u64) -> BytesN<64> {
+    let sig = signer.sign(&event_payload(region, signal, nonce));
+    BytesN::from_array(&s.env, &sig.to_bytes())
+}
+
+#[test]
+fn valid_signed_event_is_accepted_and_stored() {
+    let (s, signer) = setup_with_oracle();
+
+    let sig = sign_event(&s, &signer, REGION_V, 4, 1001);
+    let event_id = s.client.report_event(&REGION_V, &4, &1001, &sig);
+    assert_eq!(event_id, 1);
+
+    let event = s.client.event(&event_id);
+    assert_eq!(event.region, REGION_V);
+    assert_eq!(event.signal, 4);
+
+    // a second, distinct event gets the next id
+    let sig2 = sign_event(&s, &signer, REGION_V, 5, 1002);
+    assert_eq!(s.client.report_event(&REGION_V, &5, &1002, &sig2), 2);
+}
+
+#[test]
+fn tampered_event_is_rejected() {
+    let (s, signer) = setup_with_oracle();
+
+    // Signed "signal 4" but submitted as "signal 5": verification must trap.
+    let sig = sign_event(&s, &signer, REGION_V, 4, 2001);
+    assert!(s.client.try_report_event(&REGION_V, &5, &2001, &sig).is_err());
+
+    // Same for a shifted region or nonce under an otherwise valid signature.
+    assert!(s.client.try_report_event(&6, &4, &2001, &sig).is_err());
+    assert!(s.client.try_report_event(&REGION_V, &4, &2002, &sig).is_err());
+
+    // and nothing was stored
+    assert_eq!(s.client.try_event(&1).err(), Some(cerr(Error::EventNotFound)));
+}
+
+#[test]
+fn event_from_unauthorized_key_is_rejected() {
+    let (s, _signer) = setup_with_oracle();
+
+    // A different key signs a perfectly well-formed payload.
+    let intruder = SigningKey::from_bytes(&[9u8; 32]);
+    let sig = ed25519_dalek::Signer::sign(&intruder, &event_payload(REGION_V, 4, 3001));
+    let sig = BytesN::from_array(&s.env, &sig.to_bytes());
+
+    assert!(s.client.try_report_event(&REGION_V, &4, &3001, &sig).is_err());
+}
+
+#[test]
+fn replayed_event_is_rejected() {
+    let (s, signer) = setup_with_oracle();
+
+    let sig = sign_event(&s, &signer, REGION_V, 4, 4001);
+    assert_eq!(s.client.report_event(&REGION_V, &4, &4001, &sig), 1);
+
+    // Submitting the identical signed payload again must NOT mint event 2.
+    let replay = s.client.try_report_event(&REGION_V, &4, &4001, &sig);
+    assert_eq!(replay.err(), Some(cerr(Error::NonceAlreadyUsed)));
+    assert_eq!(s.client.try_event(&2).err(), Some(cerr(Error::EventNotFound)));
+}
+
+#[test]
+fn missing_event_view_errors_cleanly() {
+    let (s, _) = setup_with_oracle();
+    assert_eq!(s.client.try_event(&42).err(), Some(cerr(Error::EventNotFound)));
+}

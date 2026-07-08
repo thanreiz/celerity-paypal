@@ -1,0 +1,14 @@
+{
+  "name": "celerity-oracle",
+  "private": true,
+  "type": "module",
+  "description": "Ed25519 oracle signer — DEMO STUB simulating a PAGASA/JMA signed weather feed for Celerity. Signs events the contract's report_event verifies.",
+  "scripts": {
+    "generate-key": "node generate-key.js",
+    "sign": "node sign-event.js"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.3.0",
+    "dotenv": "^16.4.5"
+  }
+}

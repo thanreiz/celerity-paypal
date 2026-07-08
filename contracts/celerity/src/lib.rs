@@ -18,8 +18,8 @@
 //! Phases 2–4.
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, token, Address, BytesN,
-    Env, Vec,
+    contract, contracterror, contractimpl, contracttype, panic_with_error, token, Address, Bytes,
+    BytesN, Env, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -38,6 +38,8 @@ pub enum Error {
     InvalidPayout = 7,
     InvalidInstallments = 8,
     PoolNotPaused = 9,
+    NonceAlreadyUsed = 10,
+    EventNotFound = 11,
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +84,11 @@ pub struct Event {
     pub signal: u32,
 }
 
+/// Domain-separation prefix for the oracle's signed payload. The full message
+/// the oracle signs is: PREFIX || region (u32 BE) || signal (u32 BE) ||
+/// nonce (u64 BE). The Node signer in oracle/ builds the identical bytes.
+const EVENT_PAYLOAD_PREFIX: &[u8; 17] = b"CELERITY-EVENT-V1";
+
 /// A single release receipt (one per funder→farmer payment), for the ledger.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -100,6 +107,7 @@ pub enum DataKey {
     FarmerReg(Address),         // addr -> Farmer
     Settled(u64, Address, u64), // (event_id, farmer, pool_id) -> bool
     Event(u64),                 // event_id -> Event
+    UsedNonce(u64),             // oracle nonce -> bool (replay protection)
     Ledger(Address),            // funder -> Vec<Release>
     RegionFarmers(u32),         // region -> Vec<Address> of registered farmers
     Token,                      // the settlement asset (SAC) address
@@ -124,6 +132,13 @@ fn get_token(e: &Env) -> Address {
     e.storage()
         .instance()
         .get(&DataKey::Token)
+        .unwrap_or_else(|| panic_with_error!(e, Error::NotInitialized))
+}
+
+fn get_oracle(e: &Env) -> BytesN<32> {
+    e.storage()
+        .instance()
+        .get(&DataKey::OracleKey)
         .unwrap_or_else(|| panic_with_error!(e, Error::NotInitialized))
 }
 
@@ -347,16 +362,43 @@ impl Celerity {
 
     // --- oracle -------------------------------------------------------------
 
-    /// Verify `sig` against the stored OracleKey (Ed25519) over the event
-    /// payload, store the event, and return an event_id. No other party can
-    /// forge an event. (Phase 2.)
+    /// Verify `sig` (Ed25519, from the authorized oracle key) over the event
+    /// payload, store the event, and return its event_id. Anyone may relay a
+    /// signed event — the signature, not the submitter, is the authority; no
+    /// other party can forge one.
     ///
-    /// Phase 2 design note: the signed payload MUST carry a unique identity
-    /// (nonce/timestamp), and the contract must dedupe on the signed content —
-    /// otherwise replaying the same oracle signature mints a fresh event_id
-    /// and defeats the Settled(event_id, farmer, pool_id) idempotency key.
-    pub fn report_event(_e: Env, _region: u32, _signal: u32, _sig: BytesN<64>) -> u64 {
-        unimplemented!()
+    /// `nonce` is an addition to the doc §6.3 signature: it gives each signed
+    /// event a unique identity, and a used nonce is rejected — otherwise
+    /// replaying the same oracle signature would mint a fresh event_id and
+    /// defeat the Settled(event_id, farmer, pool_id) idempotency key.
+    pub fn report_event(e: Env, region: u32, signal: u32, nonce: u64, sig: BytesN<64>) -> u64 {
+        // Reconstruct the exact bytes the oracle signed; verification traps
+        // on any mismatch of content or key.
+        let mut payload = Bytes::from_slice(&e, EVENT_PAYLOAD_PREFIX);
+        payload.extend_from_array(&region.to_be_bytes());
+        payload.extend_from_array(&signal.to_be_bytes());
+        payload.extend_from_array(&nonce.to_be_bytes());
+        e.crypto().ed25519_verify(&get_oracle(&e), &payload, &sig);
+
+        if e.storage().persistent().has(&DataKey::UsedNonce(nonce)) {
+            panic_with_error!(&e, Error::NonceAlreadyUsed);
+        }
+        e.storage()
+            .persistent()
+            .set(&DataKey::UsedNonce(nonce), &true);
+
+        let event_id: u64 = e
+            .storage()
+            .instance()
+            .get(&DataKey::NextEventId)
+            .unwrap_or_else(|| panic_with_error!(&e, Error::NotInitialized));
+        e.storage()
+            .instance()
+            .set(&DataKey::NextEventId, &(event_id + 1));
+        e.storage()
+            .persistent()
+            .set(&DataKey::Event(event_id), &Event { region, signal });
+        event_id
     }
 
     // --- release / claim ----------------------------------------------------
@@ -391,6 +433,14 @@ impl Celerity {
     /// Read back a sub-pool.
     pub fn pool(e: Env, pool_id: u64) -> SubPool {
         get_pool(&e, pool_id)
+    }
+
+    /// Read back a reported weather event.
+    pub fn event(e: Env, event_id: u64) -> Event {
+        e.storage()
+            .persistent()
+            .get(&DataKey::Event(event_id))
+            .unwrap_or_else(|| panic_with_error!(&e, Error::EventNotFound))
     }
 
     /// Read back a farmer registration.

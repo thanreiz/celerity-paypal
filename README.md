@@ -16,6 +16,8 @@ See [`CLAUDE.md`](CLAUDE.md) for the design rules and win condition,
 contracts/celerity/     Soroban smart contract (Rust)
   src/lib.rs            Data model + function surface
   src/test.rs          Unit / adversarial tests
+oracle/                 Node.js Ed25519 oracle signer (demo stub for PAGASA/JMA feed)
+qa-reports/             On-chain QA sweeps per phase
 deployments.json        Public Testnet deployment metadata (contract ID, wasm hash)
 ```
 
@@ -55,9 +57,20 @@ stellar contract info interface --network testnet --id <CONTRACT_ID>
 
 ## Current status
 
-**Phase 1 complete** — core escrow and farmer registry live on Testnet
-(`CCO2BHML2QCP6XIPMZEDIXP3U6FZZ35YXFTCCCEBL33AJB3DCU2BRZN7`), QA'd end to end
-on-chain: 24/24 checks (see `qa-reports/2026-07-09-phase0-1.md`).
+**Phase 2 complete** — signed oracle events live on Testnet
+(`CAL64YFBWUAE4OXLA3ZYSEQ7WZW73DPHDLPHW4F4AVEJ2TMPAJ5GAWZ7`):
+
+- `report_event(region, signal, nonce, sig)` verifies the oracle's Ed25519
+  signature over `"CELERITY-EVENT-V1" || region || signal || nonce` and
+  rejects any reused nonce — a captured signature cannot be replayed into a
+  second event. Anyone may relay a signed event; nobody can forge one.
+- Node.js signer in `oracle/` produces contract-accepted signatures end to
+  end; the signing key is generated into gitignored `.env`, never committed.
+- Verified on-chain: valid event accepted (id 1), tampered payload rejected,
+  replay rejected, wrong-key event rejected. 30/30 local tests.
+
+**Phase 1** — core escrow + registry, QA'd 24/24 on-chain
+(see `qa-reports/2026-07-09-phase0-1.md`).
 
 - `deposit` / `top_up` / `withdraw_unspent` / `pause_pool` / `resume_pool` —
   earmarked per-funder sub-pools holding real escrow (native XLM SAC);
