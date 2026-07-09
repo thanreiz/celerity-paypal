@@ -1,5 +1,6 @@
 import React from "react";
 import { addr, invoke } from "../lib/celerity";
+import { friendlyError } from "../lib/errors";
 import { fmtUnits, short, UNIT } from "../lib/config";
 import { ANCHOR_LABEL, DEMO_PHP_RATE, toPHP } from "../lib/anchor";
 
@@ -15,7 +16,7 @@ export default function FarmerView({ pools, receipts, busy, setBusy, refresh, no
       await new Promise((r) => setTimeout(r, 1500)); // let the RPC catch up to the write
       await refresh();
     } catch (e) {
-      notify(`Claim: ${e.message || e}`);
+      notify(`Claim: ${friendlyError(e)}`, true);
     } finally {
       setBusy(false);
     }

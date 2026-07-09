@@ -114,6 +114,8 @@ tr.mine { background: rgba(79, 140, 255, 0.07); }
   padding: 12px 22px;
   border-radius: 12px;
   font-weight: 600;
+  font-size: 17px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
   max-width: 90vw;
 }
+.toast.error { background: #b91c1c; }

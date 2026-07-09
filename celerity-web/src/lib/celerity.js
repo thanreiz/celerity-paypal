@@ -11,11 +11,14 @@ const keypairs = Object.fromEntries(
 
 export const addr = (role) => keypairs[role].publicKey();
 
-const clients = {};
-async function clientFor(role) {
-  if (!clients[role]) {
+// Memoize the PROMISE, not the resolved client: concurrent first calls (App
+// refresh + view effects fire together on mount) must share one spec fetch
+// instead of each building their own client.
+const clientPromises = {};
+function clientFor(role) {
+  if (!clientPromises[role]) {
     const kp = keypairs[role];
-    clients[role] = await contract.Client.from({
+    clientPromises[role] = contract.Client.from({
       contractId: CONTRACT_ID,
       networkPassphrase: NETWORK_PASSPHRASE,
       rpcUrl: RPC_URL,
@@ -23,7 +26,7 @@ async function clientFor(role) {
       ...contract.basicNodeSigner(kp, NETWORK_PASSPHRASE),
     });
   }
-  return clients[role];
+  return clientPromises[role];
 }
 
 /** Submit a state-changing call as `role`. Returns the tx result value. */
@@ -98,6 +101,17 @@ export async function reportAndSettle(region, signal) {
     nonce,
     sig,
   });
-  const released = await invoke("funder", "settle_event", { event_id: eventId });
+  // The settle simulation can race the RPC's view of the just-written event
+  // (read-after-write lag ~1s on Testnet). One short-delay retry keeps the
+  // stage demo from dying on that flake.
+  let released;
+  try {
+    released = await invoke("funder", "settle_event", { event_id: eventId });
+  } catch {
+    // Safe to retry even if the first settle actually landed: settlement is
+    // idempotent on-chain, a re-run pays nothing twice.
+    await new Promise((r) => setTimeout(r, 2000));
+    released = await invoke("funder", "settle_event", { event_id: eventId });
+  }
   return { eventId, released };
 }

@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import FunderView from "./components/FunderView";
 import FarmerView from "./components/FarmerView";
 import OraclePanel from "./components/OraclePanel";
-import { allPools, farmerReceipts, addr } from "./lib/celerity";
+import { farmerReceipts, addr } from "./lib/celerity";
+import { friendlyError } from "./lib/errors";
 import { CONTRACT_ID, short } from "./lib/config";
 
 export default function App() {
@@ -18,14 +19,15 @@ export default function App() {
     setReceipts(receipts);
   }, []);
 
-  useEffect(() => {
-    refresh().catch((e) => setToast(String(e.message || e)));
-  }, [refresh]);
+  // Errors linger long enough to read from the back row; successes clear fast.
+  const notify = useCallback((msg, isError = false) => {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), isError ? 12000 : 5000);
+  }, []);
 
-  const notify = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 6000);
-  };
+  useEffect(() => {
+    refresh().catch((e) => notify(friendlyError(e), true));
+  }, [refresh, notify]);
 
   return (
     <div className="app">
@@ -61,7 +63,7 @@ export default function App() {
         />
       )}
 
-      {toast && <div className="toast">{toast}</div>}
+      {toast && <div className={`toast${toast.isError ? " error" : ""}`}>{toast.msg}</div>}
     </div>
   );
 }

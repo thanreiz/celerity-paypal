@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { reportAndSettle } from "../lib/celerity";
+import { friendlyError } from "../lib/errors";
 
 /**
  * DEMO oracle simulator. Signs "region, signal, nonce" with the same Ed25519
@@ -21,7 +22,7 @@ export default function OraclePanel({ busy, setBusy, refresh, notify }) {
       await new Promise((r) => setTimeout(r, 1500)); // let the RPC catch up to the write
       await refresh();
     } catch (e) {
-      notify(`Oracle: ${e.message || e}`);
+      notify(`Oracle: ${friendlyError(e)}`, true);
     } finally {
       setBusy(false);
     }

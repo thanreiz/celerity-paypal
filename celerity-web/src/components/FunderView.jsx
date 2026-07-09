@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { addr, invoke, view } from "../lib/celerity";
+import { friendlyError } from "../lib/errors";
 import { fmtUnits, short, toStroops } from "../lib/config";
 
 const FUNDERS = [
@@ -20,7 +21,6 @@ export default function FunderView({ pools, busy, setBusy, refresh, notify }) {
   const [ledger, setLedger] = useState([]);
 
   const me = addr(who);
-  const myPools = pools.filter((p) => p.funder === me);
 
   useEffect(() => {
     view("funder_ledger", { funder: me })
@@ -38,7 +38,7 @@ export default function FunderView({ pools, busy, setBusy, refresh, notify }) {
       await new Promise((r) => setTimeout(r, 1500)); // let the RPC catch up to the write
       await refresh();
     } catch (e) {
-      notify(`${label} failed: ${e.message || e}`);
+      notify(`${label}: ${friendlyError(e)}`, true);
     } finally {
       setBusy(false);
     }
