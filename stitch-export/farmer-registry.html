@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Farmers Registry - Celerity</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#e4e2dc",
+                        "primary-fixed-dim": "#a0d2b1",
+                        "surface-container-low": "#f3f4f0",
+                        "surface": "#f9faf5",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#fdb5ba",
+                        "inverse-primary": "#a0d2b1",
+                        "surface-container-highest": "#e2e3df",
+                        "tertiary": "#5f2e33",
+                        "on-surface": "#1a1c1a",
+                        "on-tertiary-fixed-variant": "#6b383d",
+                        "tertiary-fixed": "#ffdadb",
+                        "secondary-fixed-dim": "#c8c7c0",
+                        "background": "#f9faf5",
+                        "surface-bright": "#f9faf5",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#3a684d",
+                        "on-secondary-fixed": "#1b1c18",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c1c9c0",
+                        "surface-container-high": "#e7e9e4",
+                        "surface-variant": "#e2e3df",
+                        "on-primary": "#ffffff",
+                        "outline": "#717972",
+                        "on-primary-container": "#a2d4b3",
+                        "primary": "#16452d",
+                        "surface-container": "#edeeea",
+                        "on-tertiary-fixed": "#360d13",
+                        "on-secondary-container": "#61615c",
+                        "tertiary-fixed-dim": "#fcb4b9",
+                        "on-primary-fixed": "#002111",
+                        "surface-dim": "#d9dad6",
+                        "tertiary-container": "#7a4449",
+                        "on-primary-fixed-variant": "#214f36",
+                        "inverse-on-surface": "#f0f1ed",
+                        "on-error-container": "#93000a",
+                        "primary-fixed": "#bbeecc",
+                        "inverse-surface": "#2e312e",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#2f5d43",
+                        "error": "#ba1a1a",
+                        "on-surface-variant": "#414943",
+                        "secondary-container": "#deddd7",
+                        "on-background": "#1a1c1a",
+                        "secondary": "#5e5f5a",
+                        "on-secondary-fixed-variant": "#474743"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "base": "8px",
+                        "container-margin": "24px",
+                        "section-gap": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Quicksand"],
+                        "body-md": ["Quicksand"],
+                        "headline-md": ["Quicksand"],
+                        "monetary-secondary": ["Quicksand"],
+                        "body-lg": ["Quicksand"],
+                        "display-lg": ["Quicksand"],
+                        "label-md": ["Quicksand"],
+                        "monetary-primary": ["Quicksand"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "monetary-secondary": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "monetary-primary": ["20px", { "lineHeight": "24px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex">
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex flex-col h-screen py-8 px-4 h-full w-64 fixed left-0 top-0 bg-surface dark:bg-inverse-surface shadow-sm dark:shadow-none z-50 border-r border-surface-container-high">
+<div class="mb-10 px-4">
+<h1 class="text-headline-lg font-headline-lg text-primary dark:text-primary-fixed-dim tracking-tight">Celerity Funder</h1>
+<p class="text-label-md font-label-md text-on-surface-variant dark:text-on-secondary-container mt-1">Institutional Portal</p>
+</div>
+<ul class="flex flex-col gap-2 flex-grow">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-secondary-container transition-colors scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-body-md font-body-md">Pools</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-primary dark:border-primary-fixed-dim bg-surface-container-low" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="text-body-md font-body-md">Farmers</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-secondary-container transition-colors scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="text-body-md font-body-md">Ledger</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-secondary-container transition-colors scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-body-md font-body-md">Settings</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto px-4">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-3 rounded-full hover:bg-primary-container hover:text-on-primary-container transition-colors text-label-md font-label-md">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+                New Escrow Pool
+            </button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow ml-0 md:ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-container-margin py-4 bg-background dark:bg-background border-b border-surface-container-high sticky top-0 z-40">
+<div class="flex items-center">
+<h2 class="text-headline-md font-headline-md text-primary dark:text-primary-fixed-dim">Farmers Registry</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 transition-all" placeholder="Search registry..." type="text"/>
+</div>
+<button class="p-2 text-on-surface-variant hover:opacity-80 transition-opacity duration-200 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:opacity-80 transition-opacity duration-200 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant ml-2">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of an institutional fund manager, warm studio lighting, modern corporate aesthetic, neutral background. High-quality digital photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFPSbcJoWXWjN1G7kG3_PCPudAESQ33bl7lD9tYRWOqZHNFyBaxy_6fjZox6DUxFZq72veOAilLZLS818qTH7H3i292lY74twNVehY_Xa7RuUHLAEjSFONpB8M4HkNbt3BNFUwxF7B-kNGpeCQH2sAMGje-NDUlpaR4ic5HsiHssO9SsdlKYoEUBmPf1Rm8WRD80KC_YzzmP7huER_wVONKP18u5_qZIMY9_o-8FipCn7n7fb_0CY2L5GLchL74rpwzq8VfC_jrZIP"/>
+</div>
+</div>
+</header>
+<!-- Canvas Content -->
+<div class="p-container-margin md:p-section-gap flex-grow max-w-[1280px] mx-auto w-full">
+<!-- Actions & Filters Bar -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<div class="relative">
+<select class="appearance-none pl-4 pr-10 py-2 bg-surface border border-outline-variant rounded-lg text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-on-surface cursor-pointer">
+<option value="all">All Regions</option>
+<option value="rift-valley">Rift Valley</option>
+<option value="central">Central Highlands</option>
+<option value="western">Western Belt</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+<div class="relative hidden sm:block lg:hidden">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-48 transition-all" placeholder="Search..." type="text"/>
+</div>
+</div>
+<button class="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-on-primary px-6 py-2.5 rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-colors text-label-md font-label-md shadow-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="person_add">person_add</span>
+                    Register Farmer
+                </button>
+</div>
+<!-- Warm Ledger Table Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(42,42,40,0.04)] overflow-hidden border border-surface-container-high mb-8">
+<!-- Region Group: Rift Valley -->
+<div class="bg-surface-container-low px-6 py-3 border-b border-surface-container-highest flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="terrain">terrain</span>
+<h3 class="text-label-md font-label-md text-on-surface uppercase tracking-wider">Rift Valley</h3>
+<span class="ml-2 px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant text-[12px] font-bold">124</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-surface-container-high bg-surface-bright/50">
+<th class="px-6 py-4 text-label-md font-label-md text-on-surface-variant font-medium">Farmer Name</th>
+<th class="px-6 py-4 text-label-md font-label-md text-on-surface-variant font-medium">Wallet Address</th>
+<th class="px-6 py-4 text-label-md font-label-md text-on-surface-variant font-medium">Registered Date</th>
+<th class="px-6 py-4 text-label-md font-label-md text-on-surface-variant font-medium text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-high">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-lowest/80 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary font-bold text-sm">
+                                            EK
+                                        </div>
+<div>
+<p class="text-body-md font-body-md text-on-surface font-medium">Elijah Kiprono</p>
+<p class="text-[13px] text-on-surface-variant">Maize &amp; Wheat</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 text-monetary-secondary font-monetary-secondary text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="wallet">wallet</span>
+                                        0x7F...3a9B
+                                        <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-surface-container rounded text-outline"><span class="material-symbols-outlined text-[14px]" data-icon="content_copy">content_copy</span></button>
+</div>
+</td>
+<td class="px-6 py-5 text-body-md font-body-md text-on-surface-variant">Oct 12, 2023</td>
+<td class="px-6 py-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-label-md font-label-md border border-[#C8E6C9]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2E7D32]"></span>
+                                        Active
+                                    </span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-lowest/80 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary font-bold text-sm">
+                                            MW
+                                        </div>
+<div>
+<p class="text-body-md font-body-md text-on-surface font-medium">Mary Wanjiku</p>
+<p class="text-[13px] text-on-surface-variant">Dairy &amp; Fodder</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 text-monetary-secondary font-monetary-secondary text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="wallet">wallet</span>
+                                        0x2A...8c4D
+                                        <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-surface-container rounded text-outline"><span class="material-symbols-outlined text-[14px]" data-icon="content_copy">content_copy</span></button>
+</div>
+</td>
+<td class="px-6 py-5 text-body-md font-body-md text-on-surface-variant">Nov 05, 2023</td>
+<td class="px-6 py-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-label-md font-label-md border border-[#C8E6C9]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2E7D32]"></span>
+                                        Active
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Region Group: Central Highlands -->
+<div class="bg-surface-container-low px-6 py-3 border-y border-surface-container-highest flex items-center gap-2 mt-4">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="eco">eco</span>
+<h3 class="text-label-md font-label-md text-on-surface uppercase tracking-wider">Central Highlands</h3>
+<span class="ml-2 px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant text-[12px] font-bold">87</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<tbody class="divide-y divide-surface-container-high">
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-lowest/80 transition-colors group">
+<td class="px-6 py-5 w-1/4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary font-bold text-sm">
+                                            JK
+                                        </div>
+<div>
+<p class="text-body-md font-body-md text-on-surface font-medium">James Kamau</p>
+<p class="text-[13px] text-on-surface-variant">Coffee &amp; Tea</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 w-1/4">
+<div class="flex items-center gap-2 text-monetary-secondary font-monetary-secondary text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="wallet">wallet</span>
+                                        0x9B...1f2E
+                                        <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-surface-container rounded text-outline"><span class="material-symbols-outlined text-[14px]" data-icon="content_copy">content_copy</span></button>
+</div>
+</td>
+<td class="px-6 py-5 w-1/4 text-body-md font-body-md text-on-surface-variant">Jan 18, 2024</td>
+<td class="px-6 py-5 w-1/4 text-right">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-label-md font-label-md border border-[#C8E6C9]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2E7D32]"></span>
+                                        Active
+                                    </span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-lowest/80 transition-colors group">
+<td class="px-6 py-5 w-1/4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-sm">
+                                            SO
+                                        </div>
+<div>
+<p class="text-body-md font-body-md text-on-surface font-medium text-on-surface-variant">Sarah Onyango</p>
+<p class="text-[13px] text-outline">Horticulture</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 w-1/4">
+<div class="flex items-center gap-2 text-monetary-secondary font-monetary-secondary text-outline">
+<span class="material-symbols-outlined text-[16px] text-surface-dim" data-icon="wallet">wallet</span>
+                                        0x4C...7d5F
+                                        <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-surface-container rounded text-outline"><span class="material-symbols-outlined text-[14px]" data-icon="content_copy">content_copy</span></button>
+</div>
+</td>
+<td class="px-6 py-5 w-1/4 text-body-md font-body-md text-outline">Feb 02, 2024</td>
+<td class="px-6 py-5 w-1/4 text-right">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF8E1] text-[#F57F17] text-label-md font-label-md border border-[#FFECB3]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#F57F17]"></span>
+                                        Paused
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="bg-surface-bright px-6 py-4 border-t border-surface-container-high flex justify-between items-center">
+<p class="text-label-md font-label-md text-on-surface-variant font-normal">Showing 1 to 4 of 211 entries</p>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50 text-label-md font-label-md">Previous</button>
+<button class="px-3 py-1.5 border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-low text-label-md font-label-md bg-surface-container-high">1</button>
+<button class="px-3 py-1.5 border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-low text-label-md font-label-md">2</button>
+<button class="px-3 py-1.5 border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-low text-label-md font-label-md">Next</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

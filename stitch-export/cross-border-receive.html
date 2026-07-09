@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Celerity Cross-border Receive</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Geist:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#c3c6cf",
+                        "on-tertiary-fixed-variant": "#0039b5",
+                        "surface-bright": "#f8f9ff",
+                        "primary-container": "#092c4c",
+                        "tertiary-container": "#002174",
+                        "on-secondary-container": "#006f66",
+                        "secondary-fixed": "#89f5e7",
+                        "primary-fixed": "#d2e4ff",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#005049",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed": "#001c37",
+                        "surface-dim": "#cbdbf5",
+                        "on-primary-container": "#7794b9",
+                        "secondary-fixed-dim": "#6bd8cb",
+                        "error-container": "#ffdad6",
+                        "surface": "#f8f9ff",
+                        "background": "#f8f9ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-tertiary-fixed": "#001551",
+                        "tertiary": "#001045",
+                        "surface-container": "#e5eeff",
+                        "secondary": "#006a61",
+                        "on-secondary-fixed": "#00201d",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#dce1ff",
+                        "on-surface-variant": "#43474e",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#eff4ff",
+                        "inverse-primary": "#acc9f1",
+                        "surface-tint": "#446083",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#acc9f1",
+                        "tertiary-fixed-dim": "#b7c4ff",
+                        "on-background": "#0b1c30",
+                        "primary": "#00172e",
+                        "outline": "#73777f",
+                        "on-tertiary-container": "#6b8aff",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#213145",
+                        "on-primary-fixed-variant": "#2b486a",
+                        "surface-variant": "#d3e4fe",
+                        "secondary-container": "#86f2e4",
+                        "on-surface": "#0b1c30",
+                        "surface-container-high": "#dce9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#eaf1ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "gutter": "16px",
+                        "base": "8px",
+                        "margin-desktop": "24px"
+                    },
+                    "fontFamily": {
+                        "mono-hero-mobile": ["Geist"],
+                        "display-lg-mobile": ["Plus Jakarta Sans"],
+                        "mono-data": ["Geist"],
+                        "mono-hero": ["Geist"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "body-bold": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-base": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "mono-hero-mobile": ["40px", {"lineHeight": "48px", "fontWeight": "700"}],
+                        "display-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "mono-data": ["16px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "600"}],
+                        "mono-hero": ["56px", {"lineHeight": "62px", "letterSpacing": "-0.03em", "fontWeight": "700"}],
+                        "display-lg": ["38px", {"lineHeight": "46px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-bold": ["17px", {"lineHeight": "26px", "letterSpacing": "0", "fontWeight": "600"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-base": ["17px", {"lineHeight": "26px", "letterSpacing": "0", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-base min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="docked full-width top-0 bg-background flex justify-between items-center w-full px-margin-mobile h-16 md:hidden">
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant hover:opacity-80 transition-opacity p-2 -ml-2">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<span class="font-display-lg-mobile text-display-lg-mobile text-secondary">Celerity</span>
+</div>
+</header>
+<header class="hidden md:flex flex justify-between items-center w-full px-margin-desktop h-16 bg-background">
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant hover:opacity-80 transition-opacity p-2 -ml-2">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<span class="font-display-lg-mobile text-display-lg-mobile text-secondary">Celerity</span>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col items-center justify-center p-margin-mobile md:p-margin-desktop pb-32">
+<div class="w-full max-w-md w-full bg-surface rounded-xl shadow-[0px_4px_12px_rgba(9,44,76,0.08)] border border-outline-variant p-md md:p-lg flex flex-col gap-lg relative overflow-hidden">
+<!-- Notification Header -->
+<div class="text-center flex flex-col items-center gap-sm">
+<div class="w-16 h-16 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-4xl" data-icon="mark_email_unread" style="font-variation-settings: 'FILL' 1;">mark_email_unread</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-primary">You received a remittance!</h1>
+</div>
+<!-- Sender Info -->
+<div class="bg-surface-container-low rounded-lg p-md border border-outline-variant flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-body-bold">
+                    JC
+                </div>
+<div>
+<div class="font-body-base text-on-surface-variant">From</div>
+<div class="font-body-bold text-on-surface">Juan dela Cruz <span class="text-on-surface-variant font-body-base">(USA)</span></div>
+</div>
+</div>
+<!-- Breakdown -->
+<div class="flex flex-col gap-sm border-t border-b border-outline-variant py-md">
+<div class="flex justify-between items-center">
+<span class="font-body-base text-on-surface-variant">Sent Amount</span>
+<span class="font-mono-data text-mono-data text-on-surface">$200.00 USD</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-base text-on-surface-variant flex items-center gap-xs">
+                        FX Rate
+                        <span class="material-symbols-outlined text-[16px]" data-icon="info">info</span>
+</span>
+<span class="font-mono-data text-mono-data text-on-surface">$1 = ₱56.10</span>
+</div>
+</div>
+<!-- Total Landing -->
+<div class="text-center">
+<div class="font-body-base text-on-surface-variant mb-xs">Amount landing</div>
+<div class="font-mono-hero-mobile text-mono-hero-mobile text-primary">
+<span class="text-[32px] align-top">₱</span>11,220<span class="text-[32px]">.00</span>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full h-12 bg-secondary text-on-secondary font-body-bold rounded-lg flex items-center justify-center gap-sm hover:opacity-90 transition-opacity active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+                Add to Balance
+            </button>
+<!-- Microcopy -->
+<div class="text-center flex flex-col gap-xs mt-sm">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Transparent rates, zero hidden fees.</p>
+<div class="flex items-center justify-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="bolt">bolt</span>
+<p class="text-[12px]">Powered by Stellar global network</p>
+</div>
+</div>
+<!-- Decorative Gradient for "Trustworthy Modernism" -->
+<div class="absolute -top-24 -right-24 w-48 h-48 bg-primary-fixed rounded-full mix-blend-multiply filter blur-3xl opacity-50 pointer-events-none"></div>
+<div class="absolute -bottom-24 -left-24 w-48 h-48 bg-secondary-fixed rounded-full mix-blend-multiply filter blur-3xl opacity-30 pointer-events-none"></div>
+</div>
+</main>
+</body></html>

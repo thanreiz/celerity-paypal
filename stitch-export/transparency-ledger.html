@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Celerity - Transparency Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Geist:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#43474e",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#213145",
+                        "tertiary-fixed": "#dce1ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#cbdbf5",
+                        "primary": "#00172e",
+                        "on-tertiary-fixed-variant": "#0039b5",
+                        "surface-container-high": "#dce9ff",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#005049",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-primary-container": "#7794b9",
+                        "primary-container": "#092c4c",
+                        "on-primary-fixed": "#001c37",
+                        "on-secondary-container": "#006f66",
+                        "secondary-container": "#86f2e4",
+                        "primary-fixed": "#d2e4ff",
+                        "outline": "#73777f",
+                        "on-secondary-fixed": "#00201d",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary": "#001045",
+                        "on-primary-fixed-variant": "#2b486a",
+                        "surface-container": "#e5eeff",
+                        "secondary": "#006a61",
+                        "on-surface": "#0b1c30",
+                        "surface-tint": "#446083",
+                        "secondary-fixed": "#89f5e7",
+                        "primary-fixed-dim": "#acc9f1",
+                        "background": "#f8f9ff",
+                        "tertiary-container": "#002174",
+                        "on-tertiary-container": "#6b8aff",
+                        "surface": "#f8f9ff",
+                        "on-background": "#0b1c30",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#eff4ff",
+                        "surface-variant": "#d3e4fe",
+                        "surface-bright": "#f8f9ff",
+                        "outline-variant": "#c3c6cf",
+                        "secondary-fixed-dim": "#6bd8cb",
+                        "inverse-primary": "#acc9f1",
+                        "on-tertiary-fixed": "#001551",
+                        "tertiary-fixed-dim": "#b7c4ff",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "xl": "32px",
+                        "base": "8px",
+                        "lg": "24px",
+                        "margin-mobile": "16px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "margin-desktop": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "mono-hero": ["Geist"],
+                        "body-base": ["Plus Jakarta Sans"],
+                        "mono-hero-mobile": ["Geist"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "body-bold": ["Plus Jakarta Sans"],
+                        "mono-data": ["Geist"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "mono-hero": ["56px", { "lineHeight": "62px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+                        "body-base": ["17px", { "lineHeight": "26px", "letterSpacing": "0", "fontWeight": "400" }],
+                        "mono-hero-mobile": ["40px", { "lineHeight": "48px", "fontWeight": "700" }],
+                        "display-lg": ["38px", { "lineHeight": "46px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-bold": ["17px", { "lineHeight": "26px", "letterSpacing": "0", "fontWeight": "600" }],
+                        "mono-data": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "600" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        /* Hide scrollbar for cleaner UI but keep functionality */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: theme('colors.background');
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.outline-variant');
+            border-radius: theme('borderRadius.full');
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline');
+        }
+    </style>
+</head>
+<body class="flex bg-background text-on-background min-h-screen">
+<!-- Desktop Side Navigation -->
+<aside class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline bg-surface dark:bg-inverse-surface py-lg px-md z-40 flat no shadows">
+<div class="mb-xl flex items-center space-x-sm">
+<span class="material-symbols-outlined text-display-lg text-secondary dark:text-secondary-fixed">token</span>
+<span class="font-display-lg text-display-lg text-secondary dark:text-secondary-fixed tracking-tight">Celerity</span>
+</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-lg px-sm">Funder Portal</div>
+<nav class="flex-1 space-y-sm">
+<a class="flex items-center space-x-md px-sm py-sm rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet" data-weight="fill">account_balance_wallet</span>
+<span class="font-body-base text-body-base">Pools</span>
+</a>
+<a class="flex items-center space-x-md px-sm py-sm rounded-lg text-secondary dark:text-secondary-fixed font-bold border-r-4 border-secondary bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long" data-weight="fill">receipt_long</span>
+<span class="font-body-bold text-body-bold">Ledger</span>
+</a>
+<a class="flex items-center space-x-md px-sm py-sm rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="groups" data-weight="fill">groups</span>
+<span class="font-body-base text-body-base">Farmers</span>
+</a>
+<a class="flex items-center space-x-md px-sm py-sm rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings" data-weight="fill">settings</span>
+<span class="font-body-base text-body-base">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-lg">
+<button class="w-full flex items-center justify-center space-x-sm bg-secondary text-on-secondary rounded-full h-[48px] px-md hover:bg-on-secondary-container transition-colors">
+<span class="material-symbols-outlined text-on-secondary">add</span>
+<span class="font-body-bold text-body-bold">Create pool</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full md:ml-64 flex flex-col min-h-screen relative pb-[80px] md:pb-0">
+<!-- Top App Bar (Desktop) -->
+<header class="hidden md:flex justify-between items-center w-full px-margin-desktop h-16 max-w-7xl mx-auto bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline flat no shadows sticky top-0 z-30">
+<div class="flex-1">
+<h1 class="font-headline-md text-headline-md text-primary dark:text-inverse-primary tracking-tight">Public Transparency Ledger</h1>
+</div>
+<div class="flex items-center space-x-md">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-[40px] pr-sm py-sm bg-surface-dim border border-outline-variant rounded-full text-body-base font-body-base h-[40px] w-64 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all placeholder:text-outline" placeholder="Search ledger..." type="text"/>
+</div>
+<div class="flex space-x-sm">
+<button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-surface-container-high rounded-full transition-all scale-98 active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-surface-container-high rounded-full transition-all scale-98 active:opacity-80">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-variant border border-outline-variant overflow-hidden ml-sm cursor-pointer">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of an individual in a bright, modern office setting. The lighting is soft and natural, emphasizing a trustworthy and approachable demeanor. The color palette is composed of crisp whites, soft grays, and muted blues, aligning with a professional light-mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh9BNKBmZSBb0lsQuxyZA0IAy2u4LQb7rKjrGucQ6JVPLx5XhNj4qOCoL2wq_D_VIi3DUZ2AyV7ctC_QrEcNCCKKPQgqol518hi2yOzhzlTY0Ax_GFdykNQtCjkBltOPyHeHuCUigNkYGfSV5vVYT7ipNtz4eXaG2Y-tPLjy2iMXuDO1M8-FxZa_Q-7noBJ5otmftH9OxRNheuv_2q-6t5gNkMGT3WkWTfVJaYXgfOrQ_9FeXi5Te-974Hqs8d1hU6t3fdbXx8uF4B"/>
+</div>
+</div>
+</header>
+<!-- Mobile Header (Visible only on mobile) -->
+<header class="md:hidden flex items-center justify-between px-margin-mobile h-16 bg-surface border-b border-outline-variant sticky top-0 z-30">
+<div class="flex items-center space-x-sm">
+<span class="material-symbols-outlined text-headline-md text-secondary">token</span>
+<span class="font-headline-md text-headline-md text-primary tracking-tight">Ledger</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-variant border border-outline-variant overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of an individual in a bright, modern office setting. The lighting is soft and natural, emphasizing a trustworthy and approachable demeanor. The color palette is composed of crisp whites, soft grays, and muted blues, aligning with a professional light-mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAv9I_w_vyaHw0kxmLU2eO5cLyrjSz_g6Al9xtJPGdMd-4nHExWDWJNzyA3rc0qTgzml4-YwT0NmT9fyljS1Tmhw8kdrZ8LfXXllQeIjXktD7pIoDs0eZUPnh8ViApE5PRUB7RVHgizpF63IhQfgctS1Ksq9qb6YGhBnpL00VkGAL3n9FV3kDKihJAgeQFCWmp58iWMqM6dkKAKIXDo_5_WG-t1WJ6eoP1Y9tmIc-Pl40-kxQhWOnrzhWGsBOpD1zkrKZ4KiKs2N991"/>
+</button>
+</header>
+<!-- Page Content -->
+<div class="flex-1 px-margin-mobile md:px-margin-desktop py-lg max-w-5xl w-full mx-auto space-y-xl">
+<!-- Hero Summary -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg shadow-sm flex flex-col md:flex-row justify-between items-start md:items-end gap-md relative overflow-hidden">
+<!-- Subtle decorative background element to suggest technical nature -->
+<div class="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
+<span class="material-symbols-outlined" style="font-size: 240px;">database</span>
+</div>
+<div class="z-10">
+<h2 class="font-label-caps text-label-caps text-on-surface-variant mb-sm uppercase tracking-wider">Total Disbursed Across All Relief Efforts</h2>
+<div class="flex items-baseline space-x-xs">
+<span class="font-mono-hero-mobile md:font-mono-hero text-mono-hero-mobile md:text-mono-hero text-primary font-bold tracking-tight">₱12,500,000</span>
+<span class="font-body-base text-body-base text-outline">.00</span>
+</div>
+</div>
+<div class="z-10 flex items-center space-x-sm bg-surface-container-high px-sm py-xs rounded-full border border-surface-variant">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Live Blockchain Sync</span>
+</div>
+</section>
+<!-- Filters -->
+<section class="flex flex-col md:flex-row gap-sm items-center justify-between sticky top-[64px] z-20 bg-background/90 backdrop-blur py-sm">
+<div class="flex flex-wrap gap-sm w-full md:w-auto">
+<!-- Funder Dropdown -->
+<div class="relative w-full md:w-auto">
+<select class="w-full md:w-auto appearance-none bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-sm pr-[36px] font-body-base text-body-base text-primary focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary h-[44px]">
+<option value="">All Funders</option>
+<option value="db">Development Bank</option>
+<option value="mc">Mercy Corps</option>
+<option value="pcic">PCIC</option>
+</select>
+<span class="material-symbols-outlined absolute right-sm top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
+</div>
+<!-- Region Dropdown -->
+<div class="relative w-full md:w-auto flex-1 md:flex-none">
+<select class="w-full md:w-auto appearance-none bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-sm pr-[36px] font-body-base text-body-base text-primary focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary h-[44px]">
+<option value="">All Regions</option>
+<option value="v">Region V</option>
+<option value="vi">Region VI</option>
+<option value="leyte">Leyte</option>
+</select>
+<span class="material-symbols-outlined absolute right-sm top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
+</div>
+<!-- Date Picker (Simulated) -->
+<div class="relative w-full md:w-auto flex-1 md:flex-none">
+<div class="flex items-center w-full md:w-auto bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-sm font-body-base text-body-base text-primary h-[44px] cursor-pointer hover:border-outline transition-colors">
+<span class="material-symbols-outlined text-outline mr-sm" style="font-size: 20px;">calendar_today</span>
+<span class="truncate">Select Date</span>
+</div>
+</div>
+</div>
+<div class="w-full md:w-auto flex justify-end">
+<button class="flex items-center space-x-xs text-secondary hover:text-on-secondary-container font-body-bold text-body-bold transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+<span>Export CSV</span>
+</button>
+</div>
+</section>
+<!-- Main Feed -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<div class="p-md hover:bg-surface-container-low transition-colors flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md group">
+<div class="flex-1 space-y-xs">
+<div class="flex items-center space-x-sm mb-xs">
+<span class="px-xs py-[2px] rounded bg-secondary-fixed-dim/20 text-on-secondary-container font-label-caps text-label-caps uppercase">Disbursed</span>
+<span class="font-body-base text-body-base text-outline text-sm">Nov 3, 2026</span>
+</div>
+<p class="font-body-bold text-body-bold text-primary leading-tight">
+<span class="text-on-surface-variant font-normal">Development Bank released</span> 
+                                ₱25,000 
+                                <span class="text-on-surface-variant font-normal">to a registered farmer in Region V —</span>
+<span class="text-error font-medium">typhoon signal 4</span>
+</p>
+</div>
+<div class="flex flex-row lg:flex-col items-center lg:items-end justify-between w-full lg:w-auto mt-sm lg:mt-0 pt-sm lg:pt-0 border-t border-outline-variant lg:border-t-0">
+<div class="text-right">
+<div class="font-mono-data text-mono-data text-primary">₱25,000.00</div>
+<div class="font-mono-data text-xs text-outline">$446.43</div>
+</div>
+<a class="inline-flex items-center space-x-xs text-sm font-body-bold text-secondary hover:text-on-secondary-container mt-0 lg:mt-xs opacity-80 group-hover:opacity-100 transition-opacity" href="#">
+<span>view on-chain</span>
+<span class="material-symbols-outlined" style="font-size: 16px;">arrow_outward</span>
+</a>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="p-md hover:bg-surface-container-low transition-colors flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md group">
+<div class="flex-1 space-y-xs">
+<div class="flex items-center space-x-sm mb-xs">
+<span class="px-xs py-[2px] rounded bg-secondary-fixed-dim/20 text-on-secondary-container font-label-caps text-label-caps uppercase">Disbursed</span>
+<span class="font-body-base text-body-base text-outline text-sm">Oct 12, 2026</span>
+</div>
+<p class="font-body-bold text-body-bold text-primary leading-tight">
+<span class="text-on-surface-variant font-normal">Mercy Corps released</span> 
+                                ₱15,000 
+                                <span class="text-on-surface-variant font-normal">to a family head in Leyte —</span>
+<span class="text-error font-medium">flood detected</span>
+</p>
+</div>
+<div class="flex flex-row lg:flex-col items-center lg:items-end justify-between w-full lg:w-auto mt-sm lg:mt-0 pt-sm lg:pt-0 border-t border-outline-variant lg:border-t-0">
+<div class="text-right">
+<div class="font-mono-data text-mono-data text-primary">₱15,000.00</div>
+<div class="font-mono-data text-xs text-outline">$267.86</div>
+</div>
+<a class="inline-flex items-center space-x-xs text-sm font-body-bold text-secondary hover:text-on-secondary-container mt-0 lg:mt-xs opacity-80 group-hover:opacity-100 transition-opacity" href="#">
+<span>view on-chain</span>
+<span class="material-symbols-outlined" style="font-size: 16px;">arrow_outward</span>
+</a>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="p-md hover:bg-surface-container-low transition-colors flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md group">
+<div class="flex-1 space-y-xs">
+<div class="flex items-center space-x-sm mb-xs">
+<span class="px-xs py-[2px] rounded bg-secondary-fixed-dim/20 text-on-secondary-container font-label-caps text-label-caps uppercase">Disbursed</span>
+<span class="font-body-base text-body-base text-outline text-sm">Sep 20, 2026</span>
+</div>
+<p class="font-body-bold text-body-bold text-primary leading-tight">
+<span class="text-on-surface-variant font-normal">PCIC released</span> 
+                                ₱20,000 
+                                <span class="text-on-surface-variant font-normal">to a rice farmer in Region VI —</span>
+<span class="text-[#b86200] font-medium">drought condition</span>
+</p>
+</div>
+<div class="flex flex-row lg:flex-col items-center lg:items-end justify-between w-full lg:w-auto mt-sm lg:mt-0 pt-sm lg:pt-0 border-t border-outline-variant lg:border-t-0">
+<div class="text-right">
+<div class="font-mono-data text-mono-data text-primary">₱20,000.00</div>
+<div class="font-mono-data text-xs text-outline">$357.14</div>
+</div>
+<a class="inline-flex items-center space-x-xs text-sm font-body-bold text-secondary hover:text-on-secondary-container mt-0 lg:mt-xs opacity-80 group-hover:opacity-100 transition-opacity" href="#">
+<span>view on-chain</span>
+<span class="material-symbols-outlined" style="font-size: 16px;">arrow_outward</span>
+</a>
+</div>
+</div>
+<!-- Load More (Simulated) -->
+<div class="p-md flex justify-center bg-surface-container-lowest">
+<button class="font-body-bold text-body-bold text-secondary hover:text-on-secondary-container transition-colors py-xs px-md border border-secondary/30 rounded-full hover:bg-secondary/5">
+                            Load previous records
+                        </button>
+</div>
+</div>
+</section>
+<!-- Trust Indicator / Audit Footer -->
+<div class="flex flex-col items-center justify-center text-center py-lg mt-md border-t border-outline-variant/50">
+<span class="material-symbols-outlined text-outline mb-xs" style="font-size: 24px;">verified_user</span>
+<p class="font-label-caps text-label-caps text-outline uppercase tracking-widest max-w-md">All transactions are immutably recorded on a public ledger for audit and verification purposes.</p>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Navigation -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-surface dark:bg-inverse-surface border-t border-outline-variant shadow-md rounded-t-xl tap-highlight-transparent transition-transform duration-150">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline w-16" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-label-caps-mobile text-[10px] uppercase font-semibold tracking-wider">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-full px-6 py-1 w-20" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="history" data-weight="fill">history</span>
+<span class="font-label-caps-mobile text-[10px] uppercase font-semibold tracking-wider">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline w-16" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-label-caps-mobile text-[10px] uppercase font-semibold tracking-wider">Profile</span>
+</a>
+</nav>
+</body></html>

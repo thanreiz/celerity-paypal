@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Celerity Home Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Geist:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#c3c6cf",
+                    "on-tertiary-fixed-variant": "#0039b5",
+                    "surface-bright": "#f8f9ff",
+                    "primary-container": "#092c4c",
+                    "tertiary-container": "#002174",
+                    "on-secondary-container": "#006f66",
+                    "secondary-fixed": "#89f5e7",
+                    "primary-fixed": "#d2e4ff",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#005049",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#001c37",
+                    "surface-dim": "#cbdbf5",
+                    "on-primary-container": "#7794b9",
+                    "secondary-fixed-dim": "#6bd8cb",
+                    "error-container": "#ffdad6",
+                    "surface": "#f8f9ff",
+                    "background": "#f8f9ff",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-tertiary-fixed": "#001551",
+                    "tertiary": "#001045",
+                    "surface-container": "#e5eeff",
+                    "secondary": "#006a61",
+                    "on-secondary-fixed": "#00201d",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed": "#dce1ff",
+                    "on-surface-variant": "#43474e",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#eff4ff",
+                    "inverse-primary": "#acc9f1",
+                    "surface-tint": "#446083",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#acc9f1",
+                    "tertiary-fixed-dim": "#b7c4ff",
+                    "on-background": "#0b1c30",
+                    "primary": "#00172e",
+                    "outline": "#73777f",
+                    "on-tertiary-container": "#6b8aff",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#213145",
+                    "on-primary-fixed-variant": "#2b486a",
+                    "surface-variant": "#d3e4fe",
+                    "secondary-container": "#86f2e4",
+                    "on-surface": "#0b1c30",
+                    "surface-container-high": "#dce9ff",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-on-surface": "#eaf1ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "16px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "xl": "32px",
+                    "margin-mobile": "16px",
+                    "lg": "24px",
+                    "gutter": "16px",
+                    "base": "8px",
+                    "margin-desktop": "24px"
+            },
+            "fontFamily": {
+                    "mono-hero-mobile": [
+                            "Geist"
+                    ],
+                    "display-lg-mobile": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "mono-data": [
+                            "Geist"
+                    ],
+                    "mono-hero": [
+                            "Geist"
+                    ],
+                    "display-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "label-caps": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body-bold": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body-base": [
+                            "Plus Jakarta Sans"
+                    ]
+            },
+            "fontSize": {
+                    "mono-hero-mobile": [
+                            "40px",
+                            {
+                                    "lineHeight": "48px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "display-lg-mobile": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "mono-data": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "letterSpacing": "0",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "mono-hero": [
+                            "56px",
+                            {
+                                    "lineHeight": "62px",
+                                    "letterSpacing": "-0.03em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "display-lg": [
+                            "38px",
+                            {
+                                    "lineHeight": "46px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-bold": [
+                            "17px",
+                            {
+                                    "lineHeight": "26px",
+                                    "letterSpacing": "0",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-base": [
+                            "17px",
+                            {
+                                    "lineHeight": "26px",
+                                    "letterSpacing": "0",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-base antialiased pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="docked full-width top-0 bg-background flex justify-between items-center w-full px-margin-mobile h-16 flat no shadows">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A small, professional headshot of a smiling Filipino woman with neat dark hair against a soft, light-mode background, meant to be used as a circular avatar in a minimalist modern UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCebDWlKis550i9BOp8WJcRKKaGksP18q1upNXXVVwxtWiLJV1jLh4c8zYk8dBhu6UOsnHWw8DjAVJCS868Y5k0F8Y_ZUg8mQcbhsb-RT_fAIezj0B4xX7DlVBqKrOwEdhUMbV9ANZCrN1KSsNmT_orH54a04bpZwB-4x5bSUNX-Gg8sPSW2GbhdxgOkI0rp8vuSmBWg31RSKjFLrKG7MR8xSa74uhexDYmtAuLbjKjCCFsRwrxgjMRzi6tlXgOvS7gPgZf3EW0eJ6A"/>
+</div>
+<div class="font-display-lg-mobile text-display-lg-mobile text-secondary">
+            Celerity
+        </div>
+<div>
+<span class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80 transition-opacity" data-icon="notifications">notifications</span>
+</div>
+</header>
+<main class="max-w-[1100px] mx-auto px-margin-mobile md:px-margin-desktop py-md md:py-lg grid grid-cols-1 md:grid-cols-12 gap-lg">
+<div class="md:col-span-8 flex flex-col gap-lg">
+<div class="mb-sm">
+<h1 class="font-headline-md text-headline-md text-on-background">Magandang araw, Maria!</h1>
+</div>
+<!-- Balance Card -->
+<section class="bg-surface rounded-[16px] p-lg border border-outline-variant shadow-[0px_4px_12px_rgba(9,44,76,0.08)] relative overflow-hidden">
+<div class="flex justify-between items-start mb-md">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Available Balance</span>
+<div class="flex items-center gap-xs bg-surface-container-low px-2 py-1 rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-[16px] text-tertiary-container">verified</span>
+<span class="text-[10px] font-bold text-tertiary-container tracking-wide">Settled on Stellar</span>
+</div>
+</div>
+<div class="flex items-baseline gap-xs">
+<span class="font-mono-hero-mobile text-mono-hero-mobile text-on-background">₱</span>
+<span class="font-mono-hero-mobile text-mono-hero-mobile text-on-background">12,450.00</span>
+</div>
+</section>
+<!-- Quick Actions -->
+<section class="grid grid-cols-4 gap-sm md:gap-md">
+<button class="flex flex-col items-center gap-sm group">
+<div class="w-12 h-12 md:w-14 md:h-14 bg-secondary text-on-primary rounded-full flex items-center justify-center shadow-md group-hover:bg-on-secondary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-background">Magpadala</span>
+</button>
+<button class="flex flex-col items-center gap-sm group">
+<div class="w-12 h-12 md:w-14 md:h-14 bg-surface-dim border border-outline-variant text-primary rounded-full flex items-center justify-center group-hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-background">Tanggapin</span>
+</button>
+<button class="flex flex-col items-center gap-sm group">
+<div class="w-12 h-12 md:w-14 md:h-14 bg-surface-dim border border-outline-variant text-primary rounded-full flex items-center justify-center group-hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-background">Cash In</span>
+</button>
+<button class="flex flex-col items-center gap-sm group">
+<div class="w-12 h-12 md:w-14 md:h-14 bg-surface-dim border border-outline-variant text-primary rounded-full flex items-center justify-center group-hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-background">Pay Bills</span>
+</button>
+</section>
+<!-- Recent Activity -->
+<section class="mt-md bg-surface rounded-xl border border-outline-variant overflow-hidden">
+<div class="px-md py-sm bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center">
+<h2 class="font-body-bold text-body-bold text-on-background">Recent Activity</h2>
+<span class="font-label-caps text-label-caps text-primary cursor-pointer hover:underline">See All</span>
+</div>
+<ul class="flex flex-col">
+<li class="px-md py-md border-b border-outline-variant flex justify-between items-center bg-surface hover:bg-surface-bright transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+</div>
+<div>
+<div class="font-body-bold text-body-bold text-on-background">Meralco</div>
+<div class="text-sm text-on-surface-variant">Today, 9:41 AM</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-mono-data text-mono-data text-on-background">-₱1,250.00</div>
+</div>
+</li>
+<li class="px-md py-md border-b border-outline-variant flex justify-between items-center bg-surface hover:bg-surface-bright transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+</div>
+<div>
+<div class="font-body-bold text-body-bold text-on-background">Juan Dela Cruz</div>
+<div class="text-sm text-on-surface-variant">Yesterday</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-mono-data text-mono-data text-secondary">+₱500.00</div>
+</div>
+</li>
+</ul>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center bg-surface py-2 px-4 pb-safe border-t border-outline-variant shadow-md docked rounded-t-xl">
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-container-high transition-colors cursor-pointer active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="home" data-weight="fill">home</span>
+<span class="font-label-caps text-label-caps mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-colors cursor-pointer active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="font-label-caps text-label-caps mt-1">Scan</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-colors cursor-pointer active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-caps text-label-caps mt-1">Activity</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-colors cursor-pointer active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-caps text-label-caps mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

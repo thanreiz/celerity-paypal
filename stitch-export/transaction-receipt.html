@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Celerity Transaction Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&amp;family=Plus+Jakarta+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline-variant": "#c3c6cf",
+                      "on-tertiary-fixed-variant": "#0039b5",
+                      "surface-bright": "#f8f9ff",
+                      "primary-container": "#092c4c",
+                      "tertiary-container": "#002174",
+                      "on-secondary-container": "#006f66",
+                      "secondary-fixed": "#89f5e7",
+                      "primary-fixed": "#d2e4ff",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed-variant": "#005049",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed": "#001c37",
+                      "surface-dim": "#cbdbf5",
+                      "on-primary-container": "#7794b9",
+                      "secondary-fixed-dim": "#6bd8cb",
+                      "error-container": "#ffdad6",
+                      "surface": "#f8f9ff",
+                      "background": "#f8f9ff",
+                      "surface-container-highest": "#d3e4fe",
+                      "on-tertiary-fixed": "#001551",
+                      "tertiary": "#001045",
+                      "surface-container": "#e5eeff",
+                      "secondary": "#006a61",
+                      "on-secondary-fixed": "#00201d",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed": "#dce1ff",
+                      "on-surface-variant": "#43474e",
+                      "on-secondary": "#ffffff",
+                      "surface-container-low": "#eff4ff",
+                      "inverse-primary": "#acc9f1",
+                      "surface-tint": "#446083",
+                      "on-error-container": "#93000a",
+                      "primary-fixed-dim": "#acc9f1",
+                      "tertiary-fixed-dim": "#b7c4ff",
+                      "on-background": "#0b1c30",
+                      "primary": "#00172e",
+                      "outline": "#73777f",
+                      "on-tertiary-container": "#6b8aff",
+                      "on-error": "#ffffff",
+                      "inverse-surface": "#213145",
+                      "on-primary-fixed-variant": "#2b486a",
+                      "surface-variant": "#d3e4fe",
+                      "secondary-container": "#86f2e4",
+                      "on-surface": "#0b1c30",
+                      "surface-container-high": "#dce9ff",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-on-surface": "#eaf1ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "xs": "4px",
+                      "sm": "8px",
+                      "xl": "32px",
+                      "margin-mobile": "16px",
+                      "lg": "24px",
+                      "gutter": "16px",
+                      "base": "8px",
+                      "margin-desktop": "24px"
+              },
+              "fontFamily": {
+                      "mono-hero-mobile": [
+                              "Geist"
+                      ],
+                      "display-lg-mobile": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "mono-data": [
+                              "Geist"
+                      ],
+                      "mono-hero": [
+                              "Geist"
+                      ],
+                      "display-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-caps": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-bold": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-base": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {
+                      "mono-hero-mobile": [
+                              "40px",
+                              {
+                                      "lineHeight": "48px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "mono-data": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "mono-hero": [
+                              "56px",
+                              {
+                                      "lineHeight": "62px",
+                                      "letterSpacing": "-0.03em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "38px",
+                              {
+                                      "lineHeight": "46px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-bold": [
+                              "17px",
+                              {
+                                      "lineHeight": "26px",
+                                      "letterSpacing": "0",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-base": [
+                              "17px",
+                              {
+                                      "lineHeight": "26px",
+                                      "letterSpacing": "0",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .glow-pulse {
+            animation: pulse-glow 3s infinite alternate;
+        }
+        
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(137, 245, 231, 0.4); }
+            100% { box-shadow: 0 0 12px 4px rgba(137, 245, 231, 0.1); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-base antialiased">
+<!-- Top Navigation (Transactional intent, suppressed bottom nav, simple back button top app bar) -->
+<header class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-16 bg-background flat no shadows docked full-width top-0 z-50">
+<button aria-label="Go back" class="text-on-surface-variant hover:opacity-80 transition-opacity p-2 -ml-2 rounded-full focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<span class="font-headline-md text-headline-md text-primary">Transaction Detail</span>
+<div class="w-10"></div> <!-- Spacer for balance -->
+</header>
+<main class="flex-grow w-full max-w-[1100px] mx-auto px-margin-mobile md:px-margin-desktop py-lg pb-32">
+<div class="max-w-xl mx-auto flex flex-col gap-lg">
+<!-- Success Header -->
+<section class="flex flex-col items-center justify-center text-center py-lg bg-surface rounded-xl shadow-sm border border-outline-variant/30 px-md">
+<div class="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center mb-md glow-pulse">
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle" style="font-variation-settings: 'FILL' 1; font-size: 32px;">check_circle</span>
+</div>
+<h1 class="font-mono-hero-mobile text-mono-hero-mobile md:font-mono-hero md:text-mono-hero text-on-background tracking-tight">
+<span class="text-on-surface-variant text-display-lg-mobile md:text-display-lg font-normal mr-1">₱</span>24,500.00
+                </h1>
+<div class="inline-flex items-center gap-xs px-sm py-xs mt-sm rounded-full bg-secondary-container/30 text-secondary">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="font-label-caps text-label-caps">Transaction settled instantly</span>
+</div>
+</section>
+<!-- Human Readable Receipt -->
+<section class="bg-surface rounded-xl shadow-sm border border-outline-variant/30 p-md flex flex-col gap-md">
+<div class="flex justify-between items-start border-b border-outline-variant/30 pb-sm">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">To</span>
+<span class="font-body-bold text-body-bold text-on-background mt-xs">Maria Santos</span>
+<span class="font-mono-data text-mono-data text-on-surface-variant/80 text-sm">Gcash •••• 1234</span>
+</div>
+<img alt="Recipient Avatar" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30" data-alt="A small, professional profile picture of a young Filipino woman smiling warmly. High key lighting, modern clean background, soft shadows. Light mode clean UI aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwjG5hY6gdNYDiUai57tkEMSiSOAEsHReRO1EniFd-S6uxZXLRLUrJsgZLXV0As1k5WITeyZOrlkuzIMjYw_4ux9yxs7QaWo2VL2sRL47JMdWyN1gsa70GvkRpIfQ8m2bS57rWpPxvuBhExSyStM9jZcG6SnFrBnpqspVY9FPZk-zAVlM4yvK342KiRAAbFUMqiUesJOK2KMnDvY_ROtdGSLirawRQi0v4VgPYizUXbwhRpzqE9-woMT5URDV7AlQusbFBurLcoOok"/>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant/30 pb-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">From</span>
+<span class="font-body-bold text-body-bold text-on-background">Your Celerity Wallet</span>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant/30 pb-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Date &amp; Time</span>
+<span class="font-body-base text-body-base text-on-background">Oct 24, 2023 • 14:32 PHT</span>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant/30 pb-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Fee</span>
+<span class="font-mono-data text-mono-data text-on-background">₱0.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Reference #</span>
+<span class="font-mono-data text-mono-data text-on-background">CEL-8829-X</span>
+</div>
+</section>
+<!-- Blockchain Verification Panel -->
+<section class="bg-amber-500/5 border border-amber-500/20 rounded-xl p-md flex flex-col gap-sm relative overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-5 pointer-events-none">
+<span class="material-symbols-outlined" data-icon="shield" style="font-size: 120px;">shield</span>
+</div>
+<div class="flex items-center gap-sm relative z-10">
+<span class="material-symbols-outlined text-amber-600" data-icon="verified_user">verified_user</span>
+<h3 class="font-body-bold text-body-bold text-primary">Verified on-chain</h3>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant text-sm relative z-10">
+                    This transaction is permanently recorded on the Stellar public ledger. It is immutable and publicly verifiable.
+                </p>
+<div class="flex items-center justify-between mt-xs relative z-10">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Ledger Seq</span>
+<span class="font-mono-data text-mono-data text-primary text-xs truncate max-w-[150px]">48920114</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Tx Hash</span>
+<span class="font-mono-data text-mono-data text-primary text-xs truncate max-w-[120px]">0x3f...9a12</span>
+</div>
+</div>
+</section>
+<!-- Actions -->
+<section class="flex flex-col gap-md mt-sm">
+<button class="w-full h-12 bg-surface-dim border border-outline-variant text-primary font-body-bold text-body-bold rounded-lg flex items-center justify-center gap-sm hover:bg-surface-variant transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<span class="material-symbols-outlined" data-icon="open_in_new">open_in_new</span>
+                    View on Explorer
+                </button>
+<button class="w-full h-12 bg-white border border-surface-variant text-primary font-body-bold text-body-bold rounded-lg flex items-center justify-center gap-sm hover:bg-surface-bright transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+                    Share Receipt
+                </button>
+</section>
+</div>
+</main>
+</body></html>

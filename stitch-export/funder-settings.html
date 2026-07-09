@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Celerity Funder - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#e4e2dc",
+                        "primary-fixed-dim": "#a0d2b1",
+                        "surface-container-low": "#f3f4f0",
+                        "surface": "#f9faf5",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#fdb5ba",
+                        "inverse-primary": "#a0d2b1",
+                        "surface-container-highest": "#e2e3df",
+                        "tertiary": "#5f2e33",
+                        "on-surface": "#1a1c1a",
+                        "on-tertiary-fixed-variant": "#6b383d",
+                        "tertiary-fixed": "#ffdadb",
+                        "secondary-fixed-dim": "#c8c7c0",
+                        "background": "#f9faf5",
+                        "surface-bright": "#f9faf5",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#3a684d",
+                        "on-secondary-fixed": "#1b1c18",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c1c9c0",
+                        "surface-container-high": "#e7e9e4",
+                        "surface-variant": "#e2e3df",
+                        "on-primary": "#ffffff",
+                        "outline": "#717972",
+                        "on-primary-container": "#a2d4b3",
+                        "primary": "#16452d",
+                        "surface-container": "#edeeea",
+                        "on-tertiary-fixed": "#360d13",
+                        "on-secondary-container": "#61615c",
+                        "tertiary-fixed-dim": "#fcb4b9",
+                        "on-primary-fixed": "#002111",
+                        "surface-dim": "#d9dad6",
+                        "tertiary-container": "#7a4449",
+                        "on-primary-fixed-variant": "#214f36",
+                        "inverse-on-surface": "#f0f1ed",
+                        "on-error-container": "#93000a",
+                        "primary-fixed": "#bbeecc",
+                        "inverse-surface": "#2e312e",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#2f5d43",
+                        "error": "#ba1a1a",
+                        "on-surface-variant": "#414943",
+                        "secondary-container": "#deddd7",
+                        "on-background": "#1a1c1a",
+                        "secondary": "#5e5f5a",
+                        "on-secondary-fixed-variant": "#474743"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "base": "8px",
+                        "container-margin": "24px",
+                        "section-gap": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Quicksand"],
+                        "body-md": ["Quicksand"],
+                        "headline-md": ["Quicksand"],
+                        "monetary-secondary": ["Quicksand"],
+                        "body-lg": ["Quicksand"],
+                        "display-lg": ["Quicksand"],
+                        "label-md": ["Quicksand"],
+                        "monetary-primary": ["Quicksand"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "monetary-secondary": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "monetary-primary": ["20px", { "lineHeight": "24px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .ambient-shadow { box-shadow: 0px 4px 20px rgba(42, 42, 40, 0.04); }
+        .ambient-shadow-hover:hover { box-shadow: 0px 8px 24px rgba(42, 42, 40, 0.08); }
+    </style>
+</head>
+<body class="min-h-screen flex font-body-md text-body-md">
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex flex-col h-screen py-8 px-4 w-64 fixed left-0 top-0 bg-surface dark:bg-inverse-surface shadow-sm dark:shadow-none z-10">
+<div class="mb-section-gap px-4">
+<h1 class="text-headline-lg font-headline-lg text-primary dark:text-primary-fixed-dim tracking-tight">Celerity Funder</h1>
+<p class="text-label-md font-label-md text-on-surface-variant dark:text-on-secondary-container mt-1">Institutional Portal</p>
+</div>
+<div class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-secondary-container transition-colors scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+<span class="text-label-md font-label-md">Pools</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-secondary-container transition-colors scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">groups</span>
+<span class="text-label-md font-label-md">Farmers</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-secondary-container transition-colors scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+<span class="text-label-md font-label-md">Ledger</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-primary dark:border-primary-fixed-dim bg-surface-container-low" href="#">
+<span class="material-symbols-outlined text-[20px] font-variation-settings: 'FILL' 1">settings</span>
+<span class="text-label-md font-label-md">Settings</span>
+</a>
+</div>
+<div class="mt-auto px-4">
+<button class="w-full bg-primary text-on-primary py-3 rounded-lg text-label-md font-label-md hover:opacity-90 transition-opacity">
+                New Escrow Pool
+            </button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 ml-0 md:ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-container-margin py-4 bg-background dark:bg-background z-10 sticky top-0">
+<div class="md:hidden">
+<h1 class="text-headline-md font-headline-md text-primary dark:text-primary-fixed-dim tracking-tight">Celerity Funder</h1>
+</div>
+<div class="hidden md:block">
+<h2 class="text-headline-md font-headline-md text-on-surface">Settings</h2>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:opacity-80 transition-opacity duration-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:opacity-80 transition-opacity duration-200">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<img alt="User Avatar" class="w-8 h-8 rounded-full object-cover ml-2 border border-outline-variant" data-alt="A small circular avatar placeholder image showing a generic user silhouette or abstract pattern, suitable for a light-mode enterprise portal interface, conveying a sense of professional identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6saQKNsySRJrLfEh03dks3Y4AT7gUEubYunMAciLb1LXOcdkT0VeLo-A9qjb6sP3rQyUVdrgovn12DjowHB-HzMy5Yubv6JdNGytlKqZmajfpb3vm_fNppqPbys753h0MxXVyS7qwVJRIfqwJbs_08jT1Bty3kx8and13JHmZkwnv3VZfSLD_5p7MaiZzWOgHqBOsl3GF5_p7khMWe3IMDNcNt-tUTVIgMTRU1pCP0Neb-Gn2b7JswaV92I_DPNUy3PjF29BJTyT1"/>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 p-container-margin md:p-section-gap max-w-[1280px] w-full mx-auto pb-32">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter lg:gap-section-gap">
+<!-- Left Column: Org & Network -->
+<div class="lg:col-span-4 space-y-section-gap">
+<!-- Organization Profile Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow ambient-shadow-hover transition-shadow border border-surface-container-highest">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-16 h-16 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]">domain</span>
+</div>
+<div>
+<h3 class="text-body-lg font-body-lg text-on-surface">Development Bank</h3>
+<p class="text-label-md font-label-md text-on-surface-variant">DBP-ID: 9482-A</p>
+</div>
+</div>
+<div class="space-y-4">
+<div>
+<label class="text-label-md font-label-md text-on-surface-variant block mb-1">Primary Contact</label>
+<div class="text-body-md font-body-md text-on-surface">admin@dbp.org</div>
+</div>
+<div>
+<label class="text-label-md font-label-md text-on-surface-variant block mb-1">HQ Location</label>
+<div class="text-body-md font-body-md text-on-surface">Manila, Philippines</div>
+</div>
+</div>
+<button class="mt-6 w-full py-2 border border-primary text-primary rounded-lg text-label-md font-label-md hover:bg-surface-container-low transition-colors">
+                            Edit Profile
+                        </button>
+</div>
+<!-- Network Status Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow ambient-shadow-hover transition-shadow border border-surface-container-highest">
+<h3 class="text-body-lg font-body-lg text-on-surface mb-4">Network Connectivity</h3>
+<div class="p-4 bg-surface rounded-lg border border-surface-container-high mb-4">
+<div class="flex items-center justify-between mb-2">
+<span class="text-label-md font-label-md text-on-surface-variant">Network</span>
+<span class="px-2 py-1 bg-[#E8F5E9] text-[#2E7D32] rounded-full text-label-md font-label-md text-[12px]">Connected</span>
+</div>
+<div class="text-body-md font-body-md text-on-surface font-medium">Stellar Testnet</div>
+</div>
+<div class="space-y-3">
+<div>
+<label class="text-label-md font-label-md text-on-surface-variant block mb-1">Gateway Contract ID</label>
+<div class="flex items-center justify-between bg-surface-container-low px-3 py-2 rounded-lg font-mono text-[13px] text-on-surface">
+<span class="truncate mr-2">GABM...4XQ2</span>
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Notifications & Team -->
+<div class="lg:col-span-8 space-y-section-gap">
+<!-- Notification Preferences -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow ambient-shadow-hover transition-shadow border border-surface-container-highest">
+<h3 class="text-body-lg font-body-lg text-on-surface mb-6">Ledger Notifications</h3>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<div>
+<div class="text-body-md font-body-md text-on-surface font-medium">Escrow Disbursements</div>
+<div class="text-label-md font-label-md text-on-surface-variant mt-1">Alerts for successful funds release to farmers.</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<hr class="border-surface-container-highest"/>
+<div class="flex items-center justify-between">
+<div>
+<div class="text-body-md font-body-md text-on-surface font-medium">Pool Replenishment Threshold</div>
+<div class="text-label-md font-label-md text-on-surface-variant mt-1">Warn when a pool balance falls below 20%.</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<hr class="border-surface-container-highest"/>
+<div class="flex items-center justify-between">
+<div>
+<div class="text-body-md font-body-md text-on-surface font-medium">Compliance Audits</div>
+<div class="text-label-md font-label-md text-on-surface-variant mt-1">Monthly summary reports on ledger integrity.</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Team Members -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow ambient-shadow-hover transition-shadow border border-surface-container-highest">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-body-lg font-body-lg text-on-surface">Authorized Personnel</h3>
+<button class="text-primary hover:text-primary-container text-label-md font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">add</span> Add Member
+                            </button>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-[#E0DDD5] text-label-md font-label-md text-on-surface-variant">
+<th class="pb-3 font-normal">Name</th>
+<th class="pb-3 font-normal">Role</th>
+<th class="pb-3 font-normal">Status</th>
+<th class="pb-3 font-normal text-right">Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-[#E0DDD5] h-[56px] hover:bg-surface-container-low transition-colors">
+<td class="text-body-md font-body-md text-on-surface flex items-center gap-3 py-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-label-md">ES</div>
+                                            Elena Santos
+                                        </td>
+<td class="text-body-md font-body-md text-on-surface-variant">Admin</td>
+<td><span class="px-2 py-1 bg-[#E8F5E9] text-[#2E7D32] rounded-full text-label-md font-label-md text-[12px]">Active</span></td>
+<td class="text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-[#E0DDD5] h-[56px] hover:bg-surface-container-low transition-colors">
+<td class="text-body-md font-body-md text-on-surface flex items-center gap-3 py-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center text-label-md">MR</div>
+                                            Miguel Reyes
+                                        </td>
+<td class="text-body-md font-body-md text-on-surface-variant">Auditor</td>
+<td><span class="px-2 py-1 bg-[#E8F5E9] text-[#2E7D32] rounded-full text-label-md font-label-md text-[12px]">Active</span></td>
+<td class="text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-[#E0DDD5] h-[56px] hover:bg-surface-container-low transition-colors">
+<td class="text-body-md font-body-md text-on-surface flex items-center gap-3 py-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center text-label-md">JL</div>
+                                            Jose Lim
+                                        </td>
+<td class="text-body-md font-body-md text-on-surface-variant">Viewer</td>
+<td><span class="px-2 py-1 bg-[#F5F5F5] text-[#616161] rounded-full text-label-md font-label-md text-[12px]">Offline</span></td>
+<td class="text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
