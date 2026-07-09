@@ -19,3 +19,6 @@ node_modules
 dist
 .DS_Store
 .gstack/
+
+# VS Code MCP config carries the Stitch API key — never commit
+.vscode/
