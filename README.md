@@ -17,9 +17,25 @@ contracts/celerity/     Soroban smart contract (Rust)
   src/lib.rs            Data model + function surface
   src/test.rs          Unit / adversarial tests
 oracle/                 Node.js Ed25519 oracle signer (demo stub for PAGASA/JMA feed)
+celerity-web/           React frontend: funder + farmer views, oracle demo panel,
+                        labeled SEP-31 anchor stub (USD -> PHP)
 qa-reports/             On-chain QA sweeps per phase
 deployments.json        Public Testnet deployment metadata (contract ID, wasm hash)
 ```
+
+## Frontend
+
+```bash
+cd celerity-web
+npm install
+cp .env.example .env   # fill in: contract ID from deployments.json, demo
+                       # secrets from `stellar keys show <name>` + oracle/.env
+npm run dev
+```
+
+The UI signs with throwaway Testnet demo identities from `.env` (gitignored) —
+no wallet extension to flake on stage. Requires `@stellar/stellar-sdk` ≥ 16
+(older majors cannot parse current-protocol transaction metadata).
 
 ## Prerequisites
 
@@ -57,8 +73,15 @@ stellar contract info interface --network testnet --id <CONTRACT_ID>
 
 ## Current status
 
-**Phase 4 complete — the full contract behavior is live and queryable on
-Testnet** (`CBOC7QW3EZUABZST4KO2FHYNRUZPN3KF6QTLJSZ4H77VZKOHTJFKI2Q2`):
+**Phase 5 complete — the end-to-end story is clickable.** The React frontend
+drives the whole loop against Testnet with zero CLI: deposit into an earmarked
+sub-pool (two funder identities) → in-app oracle panel signs and settles a
+typhoon event → farmer sees funds arrive, claims installments on the on-chain
+schedule → per-funder ledger updates — with a clearly-labeled SEP-31 anchor
+stub converting the received units to PHP. Verified end to end in a headless
+browser against the live contract.
+
+**Phase 4 — full contract behavior live and queryable on Testnet** (`CBOC7QW3EZUABZST4KO2FHYNRUZPN3KF6QTLJSZ4H77VZKOHTJFKI2Q2`):
 `claim(farmer, pool_id)` lets a farmer pull recurring installments on the
 pool's own cadence (`claim_period_secs`, set per pool at deposit — monthly in
 production, seconds on stage). Settlement releases installment 1 and starts
