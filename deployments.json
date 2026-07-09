@@ -3,17 +3,18 @@
   "testnet": {
     "network_passphrase": "Test SDF Network ; September 2015",
     "rpc_url": "https://soroban-testnet.stellar.org:443",
-    "contract_id": "CDWFQPHFK5PT55AQWAJYE2FSQ4XLXCBRWTFZFJXVYJ4IYM4IOSV7KWMM",
+    "contract_id": "CBOC7QW3EZUABZST4KO2FHYNRUZPN3KF6QTLJSZ4H77VZKOHTJFKI2Q2",
     "deployer_identity": "alice",
     "settlement_token": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC (native XLM SAC)",
     "oracle_public_key_hex": "12811b0d23c5d2738042963d57cb3dfa1705bfce3880b86aa258182df3b77941",
     "oracle_note": "public key only — the signing secret lives in oracle/.env (gitignored)",
-    "phase": "3 — settle_event live: idempotent, flag-not-fail, per-funder ledger; win-condition core demonstrated on-chain (qa-reports/2026-07-09-phase3-gate.md)",
+    "phase": "4 — full contract behavior live: claim (recurring installment pull, per-pool cadence) joins deposit/top_up/withdraw/pause/resume, report_event, settle_event, views",
     "previous_contract_ids": {
       "phase_0": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX",
       "phase_1_pre_review_fix": "CBLBN25BUURXCPAWJWO6MNRIVGRFSCOYVH7WAVFXNEGUCPLF35STK7ED",
       "phase_1_qa": "CCO2BHML2QCP6XIPMZEDIXP3U6FZZ35YXFTCCCEBL33AJB3DCU2BRZN7",
-      "phase_2": "CAL64YFBWUAE4OXLA3ZYSEQ7WZW73DPHDLPHW4F4AVEJ2TMPAJ5GAWZ7"
+      "phase_2": "CAL64YFBWUAE4OXLA3ZYSEQ7WZW73DPHDLPHW4F4AVEJ2TMPAJ5GAWZ7",
+      "phase_3": "CDWFQPHFK5PT55AQWAJYE2FSQ4XLXCBRWTFZFJXVYJ4IYM4IOSV7KWMM"
     }
   }
 }

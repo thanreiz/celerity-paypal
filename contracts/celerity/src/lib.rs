@@ -40,6 +40,12 @@ pub enum Error {
     PoolNotPaused = 9,
     NonceAlreadyUsed = 10,
     EventNotFound = 11,
+    InvalidPeriod = 12,
+    PoolPaused = 13,
+    PoolUnderfunded = 14,
+    NothingToClaim = 15,
+    AllInstallmentsPaid = 16,
+    ClaimNotDueYet = 17,
 }
 
 // ---------------------------------------------------------------------------
@@ -63,7 +69,8 @@ pub struct SubPool {
     pub region: u32,
     pub signal_threshold: u32,
     pub payout_per_farmer: i128,
-    pub installments: u32, // 1 = lump, >1 = recurring
+    pub installments: u32,      // 1 = lump, >1 = recurring
+    pub claim_period_secs: u64, // min seconds between installments (recurring only)
     pub status: PoolStatus,
 }
 
@@ -107,6 +114,7 @@ pub struct Release {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InstallmentProgress {
     pub paid: u32,
+    pub event_id: u64, // the triggering event, carried onto claim receipts
     pub last_ts: u64,
 }
 
@@ -196,9 +204,12 @@ impl Celerity {
     /// Create an earmarked sub-pool, transfer `amount` of the settlement token
     /// from the funder into the contract, and return the new pool_id.
     ///
-    /// Note: `amount` is an addition to the doc §6.3 signature — the pool's
-    /// escrowed balance is independent of `payout` (the number of farmers a
-    /// pool will cover is not known at deposit time), so it must be explicit.
+    /// Note: `amount` and `claim_period_secs` are additions to the doc §6.3
+    /// signature — the pool's escrowed balance is independent of `payout`
+    /// (the number of farmers a pool will cover is not known at deposit
+    /// time), and each funder sets its own installment cadence (rule 2:
+    /// funders are independent). `claim_period_secs` is ignored for lump
+    /// (installments == 1) pools.
     pub fn deposit(
         e: Env,
         funder: Address,
@@ -207,6 +218,7 @@ impl Celerity {
         threshold: u32,
         payout: i128,
         installments: u32,
+        claim_period_secs: u64,
     ) -> u64 {
         funder.require_auth();
         if amount <= 0 {
@@ -217,6 +229,9 @@ impl Celerity {
         }
         if installments < 1 {
             panic_with_error!(&e, Error::InvalidInstallments);
+        }
+        if installments > 1 && claim_period_secs == 0 {
+            panic_with_error!(&e, Error::InvalidPeriod);
         }
 
         token::TokenClient::new(&e, &get_token(&e)).transfer(
@@ -244,6 +259,7 @@ impl Celerity {
                 signal_threshold: threshold,
                 payout_per_farmer: payout,
                 installments,
+                claim_period_secs,
                 status: PoolStatus::Active,
             },
         );
@@ -506,6 +522,7 @@ impl Celerity {
                         &DataKey::Progress(pool_id, farmer.clone()),
                         &InstallmentProgress {
                             paid: 1,
+                            event_id,
                             last_ts: e.ledger().timestamp(),
                         },
                     );
@@ -524,14 +541,69 @@ impl Celerity {
         released
     }
 
-    /// Pull the next installment from a recurring sub-pool if it is due, then
-    /// advance the schedule. A paused pool blocks the claim. (Phase 4.)
-    ///
-    /// Phase 4 design note: needs a cadence (period) on SubPool and a
-    /// per-(farmer, pool) progress key for installments claimed / next due —
-    /// added in Phase 4 alongside this implementation.
-    pub fn claim(_e: Env, _farmer: Address, _pool_id: u64) {
-        unimplemented!()
+    /// Pull the next installment from a recurring sub-pool. Farmer-auth: the
+    /// farmer pulls their own schedule, started by settle_event's first
+    /// installment. Due when `claim_period_secs` have elapsed since the last
+    /// payment; a paused pool blocks the claim; an underfunded pool fails
+    /// loudly (top_up cures it — a panic must not persist an Exhausted flag,
+    /// since panicking reverts every write).
+    pub fn claim(e: Env, farmer: Address, pool_id: u64) {
+        farmer.require_auth();
+        let mut pool = get_pool(&e, pool_id);
+        if pool.status == PoolStatus::Paused {
+            panic_with_error!(&e, Error::PoolPaused);
+        }
+
+        let progress_key = DataKey::Progress(pool_id, farmer.clone());
+        let mut progress: InstallmentProgress = e
+            .storage()
+            .persistent()
+            .get(&progress_key)
+            .unwrap_or_else(|| panic_with_error!(&e, Error::NothingToClaim));
+
+        if progress.paid >= pool.installments {
+            panic_with_error!(&e, Error::AllInstallmentsPaid);
+        }
+        let now = e.ledger().timestamp();
+        if now < progress.last_ts.saturating_add(pool.claim_period_secs) {
+            panic_with_error!(&e, Error::ClaimNotDueYet);
+        }
+        if pool.balance < pool.payout_per_farmer {
+            panic_with_error!(&e, Error::PoolUnderfunded);
+        }
+
+        token::TokenClient::new(&e, &get_token(&e)).transfer(
+            &e.current_contract_address(),
+            &farmer,
+            &pool.payout_per_farmer,
+        );
+        pool.balance -= pool.payout_per_farmer;
+        save_pool(&e, pool_id, &pool);
+
+        progress.paid += 1;
+        progress.last_ts = now;
+        e.storage().persistent().set(&progress_key, &progress);
+
+        let mut ledger: Vec<Release> = e
+            .storage()
+            .persistent()
+            .get(&DataKey::Ledger(pool.funder.clone()))
+            .unwrap_or_else(|| Vec::new(&e));
+        ledger.push_back(Release {
+            event_id: progress.event_id,
+            pool_id,
+            funder: pool.funder.clone(),
+            farmer: farmer.clone(),
+            amount: pool.payout_per_farmer,
+        });
+        e.storage()
+            .persistent()
+            .set(&DataKey::Ledger(pool.funder.clone()), &ledger);
+
+        e.events().publish(
+            (symbol_short!("claim"), pool.funder, farmer),
+            (progress.event_id, pool_id, pool.payout_per_farmer),
+        );
     }
 
     // --- views --------------------------------------------------------------

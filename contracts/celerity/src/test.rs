@@ -105,7 +105,7 @@ fn deposit_creates_earmarked_pool() {
 
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
     assert_eq!(pool_id, 1);
 
     // deposit itself (not just the token transfer inside it) demanded the
@@ -134,22 +134,22 @@ fn deposit_rejects_invalid_args() {
 
     let zero_amount = s
         .client
-        .try_deposit(&funder, &0, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .try_deposit(&funder, &0, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
     assert_eq!(zero_amount.err(), Some(cerr(Error::InvalidAmount)));
 
     let neg_amount = s
         .client
-        .try_deposit(&funder, &-5, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .try_deposit(&funder, &-5, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
     assert_eq!(neg_amount.err(), Some(cerr(Error::InvalidAmount)));
 
     let zero_payout = s
         .client
-        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &0, &1);
+        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &0, &1, &0);
     assert_eq!(zero_payout.err(), Some(cerr(Error::InvalidPayout)));
 
     let zero_installments = s
         .client
-        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &0);
+        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &0, &0);
     assert_eq!(zero_installments.err(), Some(cerr(Error::InvalidInstallments)));
 }
 
@@ -162,7 +162,7 @@ fn deposit_without_auth_fails() {
     s.env.mock_auths(&[]);
     let res = s
         .client
-        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
     assert!(res.is_err());
 }
 
@@ -174,8 +174,8 @@ fn two_funders_get_independent_pools() {
 
     let pool_a = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
-    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &200, &2);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &200, &2, &100);
     assert_ne!(pool_a, pool_b);
 
     // Alice withdrawing her own pool must not touch Bob's escrow.
@@ -196,7 +196,7 @@ fn top_up_adds_to_balance() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     s.client.top_up(&pool_id, &250);
     assert_root_auth(&s, &funder, "top_up");
@@ -212,7 +212,7 @@ fn top_up_rejects_invalid_amount_and_missing_pool() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     let zero = s.client.try_top_up(&pool_id, &0);
     assert_eq!(zero.err(), Some(cerr(Error::InvalidAmount)));
@@ -237,7 +237,7 @@ fn stranger_cannot_top_up_anothers_pool() {
     let mallory = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     s.env.mock_auths(&[MockAuth {
         address: &mallory,
@@ -260,7 +260,7 @@ fn top_up_reactivates_exhausted_pool() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     // Settlement (Phase 3) is what flags Exhausted; simulate its effect by
     // writing the flag directly into contract storage.
@@ -293,7 +293,7 @@ fn top_up_does_not_unpause() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     s.client.pause_pool(&pool_id);
     s.client.top_up(&pool_id, &100);
@@ -310,7 +310,7 @@ fn withdraw_unspent_returns_balance_to_funder() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     s.client.withdraw_unspent(&pool_id);
     assert_root_auth(&s, &funder, "withdraw_unspent");
@@ -338,7 +338,7 @@ fn paused_pool_still_allows_withdraw() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     s.client.pause_pool(&pool_id);
     s.client.withdraw_unspent(&pool_id);
@@ -371,7 +371,7 @@ fn funder_cannot_withdraw_anothers_pool() {
     let mallory = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     // Only Mallory signs. The pool's funder (Alice) did not authorize, so the
     // call must fail and every balance must be untouched.
@@ -402,7 +402,7 @@ fn pause_pool_sets_status_and_resume_reverts_it() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     s.client.pause_pool(&pool_id);
     assert_eq!(s.client.pool(&pool_id).status, PoolStatus::Paused);
@@ -420,7 +420,7 @@ fn resume_only_works_from_paused() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     let on_active = s.client.try_resume_pool(&pool_id);
     assert_eq!(on_active.err(), Some(cerr(Error::PoolNotPaused)));
@@ -451,7 +451,7 @@ fn stranger_cannot_resume_anothers_pool() {
     let mallory = Address::generate(&s.env);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
     s.client.pause_pool(&pool_id);
 
     s.env.mock_auths(&[MockAuth {
@@ -475,7 +475,7 @@ fn stranger_cannot_pause_anothers_pool() {
     let mallory = Address::generate(&s.env);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
 
     s.env.mock_auths(&[MockAuth {
         address: &mallory,
@@ -637,7 +637,7 @@ fn funder_ledger_starts_empty() {
     let s = setup();
     let funder = funded_addr(&s, 1_000);
     s.client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
     assert_eq!(s.client.funder_ledger(&funder).len(), 0);
 }
 
@@ -790,8 +790,8 @@ fn one_event_releases_two_funders_to_one_farmer() {
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
 
-    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
-    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &50, &1);
+    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
+    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &50, &1, &0);
 
     let event_id = seed_event(&s, &signer, REGION_V, 4, 100);
     let released = s.client.settle_event(&event_id);
@@ -839,7 +839,7 @@ fn settle_twice_pays_exactly_once() {
     let alice = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
-    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
+    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
 
     let event_id = seed_event(&s, &signer, REGION_V, 4, 200);
     assert_eq!(s.client.settle_event(&event_id), 1);
@@ -861,9 +861,9 @@ fn dry_pool_flagged_solvent_pools_still_pay() {
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
 
-    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
-    let pool_dry = s.client.deposit(&bob, &30, &REGION_V, &3, &100, &1); // < payout
-    let pool_c = s.client.deposit(&carol, &200, &REGION_V, &3, &50, &1);
+    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
+    let pool_dry = s.client.deposit(&bob, &30, &REGION_V, &3, &100, &1, &0); // < payout
+    let pool_c = s.client.deposit(&carol, &200, &REGION_V, &3, &50, &1, &0);
 
     let event_id = seed_event(&s, &signer, REGION_V, 4, 300);
     let released = s.client.settle_event(&event_id);
@@ -889,7 +889,7 @@ fn three_funders_one_farmer_three_separate_receipts() {
     s.client.register_farmer(&farmer, &REGION_V);
     for (i, f) in funders.iter().enumerate() {
         s.client
-            .deposit(f, &500, &REGION_V, &3, &(100 + i as i128), &1);
+            .deposit(f, &500, &REGION_V, &3, &(100 + i as i128), &1, &0);
     }
 
     let event_id = seed_event(&s, &signer, REGION_V, 4, 400);
@@ -918,7 +918,7 @@ fn midlist_exhaustion_pays_partial_then_recovers_after_topup() {
     s.client.register_farmer(&f2, &REGION_V);
 
     // 150 covers one payout of 100, not two
-    let pool_id = s.client.deposit(&alice, &150, &REGION_V, &3, &100, &1);
+    let pool_id = s.client.deposit(&alice, &150, &REGION_V, &3, &100, &1, &0);
     let event_id = seed_event(&s, &signer, REGION_V, 4, 500);
 
     assert_eq!(s.client.settle_event(&event_id), 1);
@@ -943,11 +943,11 @@ fn paused_wrong_region_and_high_threshold_pools_are_skipped() {
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
 
-    let paused = s.client.deposit(&alice, &300, &REGION_V, &3, &100, &1);
+    let paused = s.client.deposit(&alice, &300, &REGION_V, &3, &100, &1, &0);
     s.client.pause_pool(&paused);
-    let wrong_region = s.client.deposit(&alice, &300, &6, &3, &100, &1);
-    let too_high = s.client.deposit(&alice, &300, &REGION_V, &5, &100, &1); // thr 5 > signal 4
-    let exact = s.client.deposit(&alice, &300, &REGION_V, &4, &100, &1); // thr == signal pays
+    let wrong_region = s.client.deposit(&alice, &300, &6, &3, &100, &1, &0);
+    let too_high = s.client.deposit(&alice, &300, &REGION_V, &5, &100, &1, &0); // thr 5 > signal 4
+    let exact = s.client.deposit(&alice, &300, &REGION_V, &4, &100, &1, &0); // thr == signal pays
 
     let event_id = seed_event(&s, &signer, REGION_V, 4, 600);
     assert_eq!(s.client.settle_event(&event_id), 1); // only `exact`
@@ -963,7 +963,7 @@ fn paused_wrong_region_and_high_threshold_pools_are_skipped() {
 fn settle_unknown_event_and_empty_region_are_safe() {
     let (s, signer) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
-    s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1);
+    s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
 
     // unknown event id -> clean error
     assert_eq!(
@@ -977,6 +977,193 @@ fn settle_unknown_event_and_empty_region_are_safe() {
     assert_eq!(s.client.pool(&1).status, PoolStatus::Active);
 }
 
+// ---------------------------------------------------------------------------
+// claim — recurring installment pull (Phase 4)
+// ---------------------------------------------------------------------------
+
+use soroban_sdk::testutils::Ledger as _;
+
+const PERIOD: u64 = 100;
+
+/// Recurring-pool fixture: 3 installments of 100 every PERIOD secs, settled
+/// once (installment 1 paid at t0). Returns (setup, farmer, pool_id, t0).
+fn settled_recurring_pool() -> (Setup, Address, u64, u64) {
+    let (s, signer) = setup_with_oracle();
+    let t0 = 1_000_000;
+    s.env.ledger().with_mut(|l| l.timestamp = t0);
+
+    let alice = funded_addr(&s, 1_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+    let pool_id = s
+        .client
+        .deposit(&alice, &600, &REGION_V, &3, &100, &3, &PERIOD);
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 900);
+    assert_eq!(s.client.settle_event(&event_id), 1); // installment 1
+    (s, farmer, pool_id, t0)
+}
+
+#[test]
+fn two_installments_claimed_in_sequence_on_schedule() {
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+    let funder = s.client.pool(&pool_id).funder;
+    assert_eq!(s.token.balance(&farmer), 100); // installment 1 from settle
+
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+    s.client.claim(&farmer, &pool_id);
+    assert_root_auth(&s, &farmer, "claim"); // the farmer's own pull
+    assert_eq!(s.token.balance(&farmer), 200);
+
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + 2 * PERIOD);
+    s.client.claim(&farmer, &pool_id);
+    assert_eq!(s.token.balance(&farmer), 300);
+    assert_eq!(s.client.pool(&pool_id).balance, 300);
+
+    // 3 receipts on the funder's ledger, all tied to the original event
+    let ledger = s.client.funder_ledger(&funder);
+    assert_eq!(ledger.len(), 3);
+    for r in ledger.iter() {
+        assert_eq!(r.event_id, 1);
+        assert_eq!(r.amount, 100);
+    }
+}
+
+#[test]
+fn claim_before_due_fails() {
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+
+    // immediately after settlement
+    let early = s.client.try_claim(&farmer, &pool_id);
+    assert_eq!(early.err(), Some(cerr(Error::ClaimNotDueYet)));
+
+    // one second before due
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD - 1);
+    let still_early = s.client.try_claim(&farmer, &pool_id);
+    assert_eq!(still_early.err(), Some(cerr(Error::ClaimNotDueYet)));
+
+    assert_eq!(s.token.balance(&farmer), 100); // nothing moved
+    assert_eq!(s.client.pool(&pool_id).balance, 500);
+}
+
+#[test]
+fn paused_pool_blocks_claim_and_resume_unblocks() {
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+
+    s.client.pause_pool(&pool_id);
+    let blocked = s.client.try_claim(&farmer, &pool_id);
+    assert_eq!(blocked.err(), Some(cerr(Error::PoolPaused)));
+    assert_eq!(s.token.balance(&farmer), 100);
+
+    s.client.resume_pool(&pool_id);
+    s.client.claim(&farmer, &pool_id);
+    assert_eq!(s.token.balance(&farmer), 200);
+}
+
+#[test]
+fn claim_stops_after_last_installment_and_schedule_advances() {
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+    s.client.claim(&farmer, &pool_id); // installment 2
+
+    // claiming again in the same window fails — the schedule advanced
+    let same_window = s.client.try_claim(&farmer, &pool_id);
+    assert_eq!(same_window.err(), Some(cerr(Error::ClaimNotDueYet)));
+
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + 2 * PERIOD);
+    s.client.claim(&farmer, &pool_id); // installment 3 (last)
+
+    // no fourth installment, ever
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + 10 * PERIOD);
+    let done = s.client.try_claim(&farmer, &pool_id);
+    assert_eq!(done.err(), Some(cerr(Error::AllInstallmentsPaid)));
+    assert_eq!(s.token.balance(&farmer), 300);
+}
+
+#[test]
+fn claim_without_settlement_or_registration_fails() {
+    let (s, signer) = setup_with_oracle();
+    let alice = funded_addr(&s, 2_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+    let lump = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
+    let recurring = s
+        .client
+        .deposit(&alice, &600, &REGION_V, &3, &100, &3, &PERIOD);
+
+    // no settlement has happened at all -> no schedule to pull from
+    assert_eq!(
+        s.client.try_claim(&farmer, &recurring).err(),
+        Some(cerr(Error::NothingToClaim))
+    );
+
+    // a lump pool never has a claim schedule, even after settlement
+    let event_id = seed_event(&s, &signer, REGION_V, 4, 901);
+    s.client.settle_event(&event_id);
+    assert_eq!(
+        s.client.try_claim(&farmer, &lump).err(),
+        Some(cerr(Error::NothingToClaim))
+    );
+
+    // a stranger with no progress on the recurring pool also has nothing
+    let stranger = Address::generate(&s.env);
+    assert_eq!(
+        s.client.try_claim(&stranger, &recurring).err(),
+        Some(cerr(Error::NothingToClaim))
+    );
+}
+
+#[test]
+fn claim_requires_the_farmers_own_auth() {
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+
+    let mallory = Address::generate(&s.env);
+    s.env.mock_auths(&[MockAuth {
+        address: &mallory,
+        invoke: &MockAuthInvoke {
+            contract: &s.client.address,
+            fn_name: "claim",
+            args: (farmer.clone(), pool_id).into_val(&s.env),
+            sub_invokes: &[],
+        },
+    }]);
+    let res = s.client.try_claim(&farmer, &pool_id);
+    assert_eq!(res.err(), Some(auth_err()));
+
+    s.env.mock_all_auths();
+    assert_eq!(s.token.balance(&farmer), 100); // untouched
+}
+
+#[test]
+fn underfunded_claim_fails_and_topup_cures_it() {
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+    let funder = s.client.pool(&pool_id).funder;
+
+    // drain the pool down below one payout (funder's prerogative)
+    s.client.withdraw_unspent(&pool_id);
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+
+    let dry = s.client.try_claim(&farmer, &pool_id);
+    assert_eq!(dry.err(), Some(cerr(Error::PoolUnderfunded)));
+
+    s.sac.mint(&funder, &100);
+    s.client.top_up(&pool_id, &100);
+    s.client.claim(&farmer, &pool_id);
+    assert_eq!(s.token.balance(&farmer), 200);
+}
+
+#[test]
+fn recurring_deposit_requires_nonzero_period() {
+    let s = setup();
+    let funder = funded_addr(&s, 1_000);
+    let res = s
+        .client
+        .try_deposit(&funder, &600, &REGION_V, &3, &100, &3, &0);
+    assert_eq!(res.err(), Some(cerr(Error::InvalidPeriod)));
+}
+
 #[test]
 fn recurring_pool_releases_first_installment_and_records_progress() {
     let (s, signer) = setup_with_oracle();
@@ -985,7 +1172,7 @@ fn recurring_pool_releases_first_installment_and_records_progress() {
     s.client.register_farmer(&farmer, &REGION_V);
 
     // 3 installments of 100
-    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &3);
+    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &3, &100);
     let event_id = seed_event(&s, &signer, REGION_V, 4, 800);
 
     assert_eq!(s.client.settle_event(&event_id), 1);

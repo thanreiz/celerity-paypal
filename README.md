@@ -57,8 +57,16 @@ stellar contract info interface --network testnet --id <CONTRACT_ID>
 
 ## Current status
 
-**Phase 3 complete — the win-condition core is live on Testnet**
-(`CDWFQPHFK5PT55AQWAJYE2FSQ4XLXCBRWTFZFJXVYJ4IYM4IOSV7KWMM`): one signed
+**Phase 4 complete — the full contract behavior is live and queryable on
+Testnet** (`CBOC7QW3EZUABZST4KO2FHYNRUZPN3KF6QTLJSZ4H77VZKOHTJFKI2Q2`):
+`claim(farmer, pool_id)` lets a farmer pull recurring installments on the
+pool's own cadence (`claim_period_secs`, set per pool at deposit — monthly in
+production, seconds on stage). Settlement releases installment 1 and starts
+the schedule; claiming early fails (`ClaimNotDueYet`), a paused pool blocks
+the claim, the schedule advances per claim, and it hard-stops at the pool's
+installment count. 46/46 local tests; gate verified live on Testnet.
+
+**Phase 3 — the win-condition core**: one signed
 weather event released two independently-funded, earmarked sub-pools to one
 registered farmer, idempotently, with a per-funder ledger — demonstrated
 end to end on-chain (`qa-reports/2026-07-09-phase3-gate.md`).

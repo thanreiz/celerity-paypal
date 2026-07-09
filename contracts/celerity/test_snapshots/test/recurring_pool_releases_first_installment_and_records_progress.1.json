@@ -96,6 +96,9 @@
                 },
                 {
                   "u32": 3
+                },
+                {
+                  "u64": "100"
                 }
               ]
             }
@@ -420,6 +423,14 @@
                   },
                   {
                     "key": {
+                      "symbol": "claim_period_secs"
+                    },
+                    "val": {
+                      "u64": "100"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "funder"
                     },
                     "val": {
@@ -501,6 +512,14 @@
               "durability": "persistent",
               "val": {
                 "map": [
+                  {
+                    "key": {
+                      "symbol": "event_id"
+                    },
+                    "val": {
+                      "u64": "1"
+                    }
+                  },
                   {
                     "key": {
                       "symbol": "last_ts"
