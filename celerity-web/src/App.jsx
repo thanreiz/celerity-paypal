@@ -33,7 +33,10 @@ export default function App() {
     <div className="app">
       <header>
         <h1>
-          ⚡ Celerity <span className="tagline">disaster money that moves itself</span>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+          Celerity <span className="tagline">disaster money that moves itself</span>
         </h1>
         <div className="contract">
           Stellar Testnet · contract {short(CONTRACT_ID)} · everything on-chain is live
