@@ -40,7 +40,8 @@ cross-border settlement layer *underneath* them.
 
 > **Key links**
 >
-> - **Live contract (Testnet):** [`CBSXZ6TK…NESDG`](https://stellar.expert/explorer/testnet/contract/CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG)
+> - **Contract address (Stellar Testnet):** `CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG)
 > - **Pitch & spec:** [`Celerity_Hackathon_Doc.md`](Celerity_Hackathon_Doc.md)
 > - **Design rules & win condition:** [`CLAUDE.md`](CLAUDE.md)
 > - **Design system:** [`design.md`](design.md)
@@ -176,6 +177,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
+| Contract address | `CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG` |
 
 ## Repo Layout
 
