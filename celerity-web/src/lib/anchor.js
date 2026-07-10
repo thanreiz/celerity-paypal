@@ -14,10 +14,20 @@ export const ANCHOR_LABEL = "SEP-31 anchor stub — demo conversion, not a real 
 // Demo rate: 1 unit (testnet XLM standing in for a USD stablecoin) → PHP.
 export const DEMO_PHP_RATE = 57.5;
 
+export function toPHPNumber(units) {
+  return Number(units) * DEMO_PHP_RATE;
+}
+
 export function toPHP(units) {
-  return (Number(units) * DEMO_PHP_RATE).toLocaleString("en-PH", {
+  return toPHPNumber(units).toLocaleString("en-PH", {
     style: "currency",
     currency: "PHP",
     maximumFractionDigits: 0,
   });
+}
+
+/** Same as toPHP but without the currency symbol/formatting noise —
+ * for contexts (e.g. "Claim ₱5,000") that already render the ₱ sign. */
+export function phpValue(units) {
+  return `₱${Math.round(toPHPNumber(units)).toLocaleString()}`;
 }

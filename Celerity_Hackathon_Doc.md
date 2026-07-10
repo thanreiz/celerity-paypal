@@ -286,37 +286,74 @@ If SEP-31 anchor mocking or full weather-signing isn't ready, fall back to an ad
 ---
 
 ## 7. Demo Flow — Stage Script
-Target runtime: **3.5 minutes**, live on Testnet with a backup recording.
+Target runtime: **3.5 minutes**, live on Testnet with a backup recording. Everything
+below is driven from the React app — no terminal, no CLI on stage. The whole loop
+runs against the live contract; only the fiat cash-out is a labeled stub.
 
 ### Step 1 — The setup (25s)
-Open on the funder view. Show two sub-pools already seeded: "ADB APDRF — USD" and "NGO — stablecoin," both scoped to Region V (Bicol), threshold signal ≥ 3. State: "Two independent funders, one region, money locked and waiting."
+Open on the funder console login: "Choose your account — ADB APDRF or PCIC." Log in
+as **ADB APDRF**. The home shows its escrow hero and its pools already seeded across
+islands — a Bicol (Region V) pool and a Northern Mindanao (Region X) pool, both
+Armed. Tap the **PCIC** switcher: the entire dashboard re-scopes to PCIC's own pools
+(a Bicol crop-loss pool + a paused Eastern Visayas pool), no ADB money in sight.
+Say: "Two independent institutional funders, one contract, strictly separated books —
+you never see the other funder's money."
 
-### Step 2 — Fund a pool live (20s)
-As a third funder, deposit into a new sub-pool live — show the balance lock and the earmark. "Each funder keeps its own money and its own rule."
+### Step 2 — Read the pools (20s)
+On the Escrow Pools screen, point at the plain-language rule on a card: *"When typhoon
+signal ≥ 3 hits Bicol → release ₱25,000 per registered farmer."* "Each funder wrote
+its own rule — region, signal threshold, payout. The contract compares numbers; it
+never reads a document." Note the per-island grouping and the Armed / Paused status —
+one funder pausing a pool never touches another's.
 
-### Step 3 — Register a farmer (15s)
-As the LGU admin, register a farmer in Region V. "The co-op enrolls the farmer — the contract doesn't guess who's eligible, it pays the verified list."
+### Step 3 — The registry (15s)
+Open Farmers (LGU). "This list belongs to the government, not the funders." Flip the
+registrar toggle to show it signs with the admin key — then flip it back. "The co-op
+enrolls who's eligible; funders can look, not touch; the contract only ever pays
+addresses on this list."
 
-### Step 4 — The typhoon hits (30s)
-Run the Node oracle signer: sign "Region V, signal 4." Submit `report_event`. This is the hero beat — an objective weather signal, no human judgment, entering the contract.
+### Step 4 — The typhoon hits (35s)
+Open **Trigger Typhoon** and drop the PAGASA bulletin (a signed JSON file) into the
+drop-zone — or load the sample. The app reads it and shows, region by region, exactly
+what will happen: *"Region V — Bicol, signal 4: ✓ pools match — will settle. Region X
+— N. Mindanao, signal 3: ✓ will settle. Region VII, no pools — will skip."* "This is
+a real Philippine typhoon — it hits many regions at once, not one." Hit **Sign & settle
+N regions**. Under the hood it signs one Ed25519 event per region (unique nonces) and
+settles each — this is the hero beat: an objective, signed weather signal entering the
+contract, no human judgment.
 
 ### Step 5 — Instant multi-funder release (40s)
-Call `settle_event`. All three sub-pools release to the farmer at once, in seconds. Show the balances drop and three separate ledger entries appear. "One typhoon signal. Three funders paid the same farmer. No agency, no check."
+Watch the per-region rows report settlement live. Jump to the Ledger: both ADB and
+PCIC pools that cover Bicol have paid the same registered farmers, and the Mindanao
+pool paid its farmer — many farmers, many funders, one signed bulletin, in seconds.
+Switch to the farmer app: the money has already arrived. "One typhoon. Multiple
+funders paid multiple farmers at once. No agency queue, no check."
 
 ### Step 6 — Anchor cash-out (30s)
-Show the released value routing through the stubbed SEP-31 anchor to a PHP balance. "USD and stablecoin become spendable pesos at the edge — the part PCIC still does with a physical check weeks later."
+In the farmer app, run the released value through the clearly-labeled SEP-31 anchor
+stub to a PHP balance. "On-chain release is real and live; this fiat leg is where a
+licensed anchor like Coins.ph plugs in — the part PCIC still does with a physical
+check collected weeks later."
 
 ### Step 7 — The mic-drop (30s)
-Show the recurring installment: "And it's not a lump — ₱50k this month, ₱50k next, matched to rebuild." Then the ledger view filtered per funder.
+Show the recurring installment on the Bicol pool: the farmer pulls the next tranche on
+the on-chain schedule. "And it's not a lump — this tranche now, the next on cadence,
+matched to rebuild." Then the per-funder ledger, each release traceable to a
+transaction on stellar.expert.
 
 > **Close the demo with this**
-> *PCIC is going parametric — they proved the trigger. But they're one funder, one currency, and they still hand out checks at a regional office. I just paid one farmer from three funders, in two currencies, as instant pesos, live. Celerity is the rail their own program will need.*
+> *PCIC is going parametric — they proved the trigger. But they're one funder, peso-only, and they still hand out checks at a regional office. I just took one signed typhoon bulletin and paid multiple farmers from two independent funders, as instant spendable pesos, live on-chain — and every peso is auditable. Celerity is the rail their own program will need.*
 
 ---
 
-## 8. Build Timeline — Now to July 15 (AI-Leveraged)
+## 8. Build Timeline — Actual Progress to July 15 (AI-Leveraged)
 
-This is a 7-day sprint, not 3 weeks. The plan assumes heavy use of a frontier coding model (Claude Fable 5 / Opus 4.8 via Claude Code) to parallelize what a solo builder normally serializes. The rule: **AI drafts, you verify on-chain.** No step is "done" until it compiles, tests pass, and it's deployed to Testnet — the model accelerates drafting, it does not replace verification.
+A 7-day sprint, not 3 weeks, run with heavy use of a frontier coding model (Claude
+Fable 5 / Opus 4.8 via Claude Code) to parallelize what a solo builder normally
+serializes. The rule throughout: **AI drafts, I verify on-chain.** Nothing was "done"
+until it compiled, tests passed, and it was deployed to Testnet — the model accelerated
+drafting, it did not replace verification. The day-by-day below records what actually
+landed; milestones hit are marked ✅.
 
 ### How to actually use the AI (this is the leverage)
 - **Contract-first, AI-drafted, human-verified.** Give the model §6.2/§6.3/§10 as the spec and have it generate the full Soroban contract in one pass, then you compile and fix. Frontier models are strong at Rust/Soroban scaffolding; the win is skipping the blank-page phase.
@@ -325,34 +362,60 @@ This is a 7-day sprint, not 3 weeks. The plan assumes heavy use of a frontier co
 - **Use AI for the oracle signer boilerplate.** The Node.js Ed25519 signing utility is standard code — generate it, don't write it by hand.
 - **Caveat:** don't architect around a specific model being available (safeguards may route some prompts to Opus 4.8); and never paste a private key into any tool. Treat AI as a fast junior engineer whose every PR you review.
 
-### Days 1–3 — The Core (July 8–10)
-- AI-draft the full Soroban contract from §10; you compile, fix, and get `cargo build` green.
-- Implement + AI-test `deposit`, `register_farmer`, `report_event` (sig verify), `settle_event`.
-- Idempotency (§5.2) and flag-not-fail (§5.3) built in from the first commit, with AI-generated adversarial tests.
-- Deploy to Testnet by end of Day 3. **Milestone: a signed event releases one pool to one farmer on-chain.**
+### Days 1–3 — The Core (July 8–10) ✅
+- Full Soroban contract AI-drafted from §10, compiled and fixed to `cargo build` green.
+- `deposit`, `top_up`, `withdraw_unspent`, `pause_pool` / `resume_pool`,
+  `register_farmer` / `remove_farmer`, `report_event` (Ed25519 sig verify + nonce),
+  `settle_event`, and `claim` all implemented, each with adversarial tests written
+  alongside it — idempotency (§5.2) and flag-not-fail (§5.3) built in from the first
+  commit. Phases QA'd live on-chain (`qa-reports/`).
+- Deployed to Testnet. **Milestone hit: a signed event releases pools to a farmer
+  on-chain, idempotently, with a per-funder ledger.**
 
-### Days 4–5 — The Product (July 11–12)
-- React funder view (deposit, ledger) + farmer/claim view, developed in parallel from Day 1 against the mock.
-- Node.js oracle signer (AI-generated) wired to the live contract.
-- Recurring installment `claim`; SEP-31 anchor cash-out stub.
-- **Milestone: full end-to-end flow works on Testnet — deposit → event → multi-pool release → cash-out stub.**
+### Days 4–5 — The Product (July 11–12) ✅
+- React app: funder console + farmer/claim view + public transparency ledger, built
+  against the live contract with `@stellar/stellar-sdk` (no wallet extension — the UI
+  signs with throwaway Testnet demo identities so the stage demo has nothing to flake).
+- In-app oracle panel (the Node signer's key, surfaced in the UI) so the whole loop is
+  clickable end-to-end with zero CLI on stage; the standalone Node.js signer remains
+  the "official" path and manual fallback.
+- Recurring installment `claim` on the on-chain schedule; clearly-labeled SEP-31
+  anchor cash-out stub (USD/stablecoin → PHP).
+- **Milestone hit: full end-to-end flow on Testnet — deposit → signed event →
+  multi-pool release → farmer claim → cash-out stub — verified in a headless browser.**
 
-### Days 6–7 — Polish + Submission (July 13–15)
-- Seed the multi-funder demo state; rehearse the 3.5-min script to muscle memory.
-- Record the backup demo video (do this Day 6, not Day 7 — never leave the recording to the deadline).
-- AI-draft the submission-form fields from §2; you edit for voice.
-- Final Testnet redeploy; cut-line review.
+### Days 6–7 — Redesign, Polish + Submission (July 13–15) — in progress
+- **Funder console redesign (shipped):** the dev/funder side was rebuilt from a
+  sidebar console into a login-first, GCash-style app — pick-your-institution login
+  (ADB APDRF / PCIC), escrow hero + circular quick-actions + event-grouped release
+  feed, and strict per-funder isolation (one funder's pools/ledger never surface under
+  another). Design system in `design.md`; iterated from HTML mockups before touching
+  React.
+- **Multi-region typhoon (shipped):** the oracle screen became a PAGASA-bulletin
+  drop-zone — drop a signed JSON bulletin, the app shows region-by-region what will
+  settle vs. skip, then signs one event per region (unique nonces) and settles each.
+  A real typhoon hits many regions at once, and the demo now reflects that.
+- **Region coverage (shipped):** all 18 PH regions (the 13 numbered + NCR, CAR, BARMM,
+  MIMAROPA, NIR) selectable; contract still stores bare `u32`, the app translates.
+- **Fresh demo slate (shipped):** redeployed a clean contract and seeded the money-shot
+  (ADB + PCIC pools across islands, ≥4 registered farmers, no event fired) so the
+  typhoon is triggered live on stage. Repeatable via `tools/seed-demo.mjs`.
+- **Remaining:** rehearse the 3.5-min script (§7) to muscle memory; record the backup
+  demo video; finalize the submission-form fields (§2).
 
-### The opportunity the extra AI capacity buys you
-Because drafting is faster, you have headroom for **one** ambitious stretch item — pick at most one, only if Days 1–5 milestones hit on time:
-- A second funder funded *live* on stage (not pre-seeded), making the multi-funder claim undeniable.
-- A minimal *real* oracle read — pull an actual PAGASA/JMA signal number from a public source and sign it, instead of a hardcoded value.
-- A per-funder ledger visualization polished enough to screenshot for the pitch deck.
+### What shipped beyond the original plan
+The extra AI capacity was spent on product depth rather than a single stretch item:
+the full funder-console redesign, the multi-region bulletin-ingestion oracle, and the
+per-funder transparency ledger all landed. Not attempted (still roadmap, §4.8): a live
+PAGASA/JMA feed read, and a licensed anchor — both partnership/infra problems, not
+engineering ones.
 
-### Cut Line (if behind)
-
-> **Safe to cut**
-> Cut: live funder deposit (pre-seed all funders), recurring installments (show lump only), second oracle signer, all stretch items. Win condition: one signed weather event releases two pre-seeded funders' money to one registered farmer, live on Testnet, with a per-funder ledger. That alone proves the core claim.
+### Win condition — met
+> One signed weather event releases two independently-funded, earmarked sub-pools to
+> registered farmers, live on Stellar Testnet, idempotently, with a per-funder ledger
+> visible in the frontend and a stubbed anchor step converting to PHP. **Achieved, and
+> exceeded** — the trigger is now multi-region from a signed bulletin, and the console
+> is a polished, isolation-safe, login-first product.
 
 ---
 

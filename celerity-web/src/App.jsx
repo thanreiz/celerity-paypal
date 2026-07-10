@@ -1,15 +1,17 @@
 import React, { useCallback, useEffect, useState } from "react";
-import FunderView from "./components/FunderView";
-import FarmerView from "./components/FarmerView";
-import OraclePanel from "./components/OraclePanel";
+import FunderPortal from "./pages/funder/FunderPortal";
+import FarmerApp from "./pages/farmer/FarmerApp";
+import TransparencyLedgerPage from "./pages/transparency/TransparencyLedgerPage";
+import Toast from "./design/Toast";
 import { farmerReceipts, addr } from "./lib/celerity";
 import { friendlyError } from "./lib/errors";
-import { CONTRACT_ID, short } from "./lib/config";
 
 export default function App() {
-  const [tab, setTab] = useState("funder");
+  const [devOpen, setDevOpen] = useState(false);
+  const [devSurface, setDevSurface] = useState("funder");
   const [pools, setPools] = useState([]);
   const [receipts, setReceipts] = useState([]);
+  const [loaded, setLoaded] = useState(false); // first successful chain read
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -17,6 +19,7 @@ export default function App() {
     const { pools, receipts } = await farmerReceipts(addr("farmer"));
     setPools(pools);
     setReceipts(receipts);
+    setLoaded(true);
   }, []);
 
   // Errors linger long enough to read from the back row; successes clear fast.
@@ -29,44 +32,65 @@ export default function App() {
     refresh().catch((e) => notify(friendlyError(e), true));
   }, [refresh, notify]);
 
-  return (
-    <div className="app">
-      <header>
-        <h1>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-          </svg>
-          Celerity <span className="tagline">disaster money that moves itself</span>
-        </h1>
-        <div className="contract">
-          Stellar Testnet · contract {short(CONTRACT_ID)} · everything on-chain is live
+  const run = useCallback(
+    async (label, fn) => {
+      setBusy(true);
+      try {
+        const result = await fn();
+        notify(`${label} ✓`);
+        await new Promise((r) => setTimeout(r, 1500)); // let the RPC catch up to the write
+        await refresh();
+        return result;
+      } catch (e) {
+        notify(`${label}: ${friendlyError(e)}`, true);
+        throw e;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [refresh, notify]
+  );
+
+  // The funder console owns its own chrome (login screen, corner cluster) —
+  // no dev strip. Farmer App / Public Ledger are reachable from its corner.
+  if (devOpen) {
+    return (
+      <div style={{ minHeight: "100dvh" }}>
+        {/* keep the portal mounted while the public ledger is open so the
+            logged-in identity survives the round trip */}
+        <div style={{ display: devSurface === "funder" ? "block" : "none" }}>
+          <FunderPortal
+            pools={pools}
+            loaded={loaded}
+            busy={busy}
+            run={run}
+            refresh={refresh}
+            onBackToFarmer={() => {
+              setDevOpen(false);
+              setDevSurface("funder");
+            }}
+            onOpenPublic={() => setDevSurface("public")}
+          />
         </div>
-        <nav>
-          <button className={tab === "funder" ? "on" : ""} onClick={() => setTab("funder")}>
-            Funder
-          </button>
-          <button className={tab === "farmer" ? "on" : ""} onClick={() => setTab("farmer")}>
-            Farmer
-          </button>
-        </nav>
-      </header>
+        {devSurface === "public" && <TransparencyLedgerPage onBack={() => setDevSurface("funder")} />}
 
-      <OraclePanel busy={busy} setBusy={setBusy} refresh={refresh} notify={notify} />
+        {toast && <Toast message={toast.msg} error={toast.isError} />}
+      </div>
+    );
+  }
 
-      {tab === "funder" ? (
-        <FunderView pools={pools} busy={busy} setBusy={setBusy} refresh={refresh} notify={notify} />
-      ) : (
-        <FarmerView
-          pools={pools}
-          receipts={receipts}
-          busy={busy}
-          setBusy={setBusy}
-          refresh={refresh}
-          notify={notify}
-        />
-      )}
-
-      {toast && <div className={`toast${toast.isError ? " error" : ""}`}>{toast.msg}</div>}
+  return (
+    <div style={{ minHeight: "100dvh" }}>
+      <FarmerApp
+        pools={pools}
+        receipts={receipts}
+        busy={busy}
+        setBusy={setBusy}
+        refresh={refresh}
+        notify={notify}
+        onOpenDev={() => setDevOpen(true)}
+      />
+      {toast && <Toast message={toast.msg} error={toast.isError} />}
     </div>
   );
 }

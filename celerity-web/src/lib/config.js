@@ -14,6 +14,9 @@ export const SECRETS = {
   funder2: need("VITE_FUNDER2_SECRET"),
   farmer: need("VITE_FARMER_SECRET"),
   oracle: need("VITE_ORACLE_SECRET"),
+  // The contract's admin (LGU registrar). In the demo deployment alice holds
+  // both roles, but registry calls must sign AS the admin, not as a funder.
+  admin: need("VITE_FUNDER_SECRET"),
 };
 
 // 1 unit (XLM on testnet, a USD-stablecoin in the narrative) = 10^7 stroops

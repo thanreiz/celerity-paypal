@@ -1,240 +1,25 @@
-/* Celerity design system v2 — ported from the Stitch "Celerity Design System
-   Evolution" screens (stitch-export/): warm paper light theme, forest-green
-   money semantics, Quicksand type, pill controls, soft-shadow white cards.
-   Class names are load-bearing (tests target them) — do not rename. */
-@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
+/* Base reset + typography. Component-level styling now lives in
+   src/design/*.jsx (ported from the Claude Design "Celerity Design System"
+   handoff) — see src/design/tokens.css for the token set. */
+@import "./design/tokens.css";
 
 * { box-sizing: border-box; margin: 0; }
 
-:root {
-  /* Material-3 green scheme lifted from the generated screens */
-  --bg: #f9faf5;              /* warm paper */
-  --surface: #ffffff;         /* cards */
-  --surface-low: #f3f4f0;
-  --container: #edeeea;
-  --container-high: #e7e9e4;
-  --container-highest: #e2e3df;
-  --outline: #c1c9c0;
-  --text: #1a1c1a;
-  --dim: #414943;
-  --faint: #717972;
-  --primary: #16452d;         /* forest green — money moves, and nothing else */
-  --primary-hover: #214f36;
-  --on-primary: #ffffff;
-  --primary-chip: #2f5d43;    /* active nav pill */
-  --on-primary-chip: #bbeecc;
-  --ok-bg: #e8f5e9;  --ok-text: #2e7d32;  --ok-line: #c8e6c9;
-  --warn-bg: #fff8e1; --warn-text: #b45309; --warn-line: #ffecb3;
-  --bad-bg: #ffdad6;  --bad-text: #93000a; --bad-line: #ffb4ab;
-  --shadow-card: 0 4px 20px rgba(42, 42, 40, 0.04);
-  --shadow-raised: 0 4px 12px rgba(22, 69, 45, 0.18);
-  --sans: "Quicksand", system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
 body {
-  background: var(--bg);
+  background: var(--paper-page);
   color: var(--text);
-  font-family: var(--sans);
+  font-family: var(--font-sans);
   font-size: 17px;
   font-weight: 500;
   line-height: 1.55;
 }
 
-.app { max-width: 1100px; margin: 0 auto; padding: 28px 20px 96px; }
-
-/* ---------- header ---------- */
-header h1 {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-header h1 svg { color: var(--primary); flex: none; }
-.tagline { font-size: 17px; color: var(--dim); font-weight: 500; margin-left: 2px; letter-spacing: 0; }
-.contract {
-  color: var(--faint);
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin: 6px 0 18px;
-}
-
-nav { display: flex; gap: 10px; margin-bottom: 20px; }
-nav button { font-size: 17px; padding: 12px 30px; }
-
-/* ---------- controls ---------- */
-button {
-  background: var(--container-high);
-  color: var(--text);
-  border: 1px solid transparent;
-  border-radius: 999px; /* pill controls, like the Stitch screens */
-  padding: 10px 20px;
-  min-height: 44px; /* touch target */
-  font-family: var(--sans);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-right: 6px;
-  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
-}
-button:hover { background: var(--container-highest); }
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-}
-button.on {
-  background: var(--primary-chip);
-  color: var(--on-primary-chip);
-  font-weight: 700;
-}
-button.on:hover { background: var(--primary); }
-button.primary {
-  background: var(--primary);
-  color: var(--on-primary);
-  font-weight: 700;
-  box-shadow: var(--shadow-raised);
-}
-button.primary:hover { background: var(--primary-hover); }
-button:disabled { opacity: 0.45; cursor: progress; animation: working 1.2s ease-in-out infinite; box-shadow: none; }
-@keyframes working { 50% { opacity: 0.7; } }
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--dim);
-}
-input {
-  background: var(--surface);
-  border: 1px solid var(--outline);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 10px 14px;
-  min-height: 44px;
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-  width: 118px;
-  transition: border-color 200ms ease, box-shadow 200ms ease;
-}
-input:hover, input:focus { border-color: var(--primary); }
-
-/* ---------- surfaces ---------- */
-.card, .oracle {
-  background: var(--surface);
-  border: 1px solid var(--container-highest);
-  border-radius: 16px;
-  box-shadow: var(--shadow-card);
-  padding: 24px;
-  margin-bottom: 20px;
-  overflow-x: auto; /* tables never break the page */
-}
-.card h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.2px; margin-bottom: 16px; }
-
-/* demo/simulation surfaces are amber-tinted — never dressed as live infra */
-.oracle { border-color: var(--warn-line); background: linear-gradient(0deg, rgba(255, 248, 225, 0.35), rgba(255, 248, 225, 0.35)), var(--surface); }
-.oracle-head { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; font-size: 18px; font-weight: 700; }
-.oracle-head svg { color: var(--warn-text); flex: none; }
-.oracle-result { color: var(--ok-text); font-weight: 700; font-variant-numeric: tabular-nums; }
-
-.badge {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--warn-line);
-  color: var(--warn-text);
-  background: var(--warn-bg);
-}
-.badge.stub { text-transform: uppercase; letter-spacing: 0.6px; }
-
-.row { display: flex; gap: 16px; align-items: end; }
-.row.wrap { flex-wrap: wrap; }
-
-.identity { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; color: var(--dim); }
-.addr { font-size: 14px; font-weight: 600; color: var(--faint); letter-spacing: 0.3px; }
-
-/* ---------- tables ---------- */
-table { width: 100%; border-collapse: collapse; min-width: 560px; }
-th {
-  text-align: left;
-  color: var(--faint);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--container-highest);
-}
-td { padding: 12px; border-bottom: 1px solid var(--surface-low); font-size: 16px; font-weight: 500; }
-tbody tr { transition: background-color 150ms ease; }
-tbody tr:hover { background: var(--surface-low); }
-td.num { font-weight: 700; font-variant-numeric: tabular-nums; }
-tr.mine { background: rgba(232, 245, 233, 0.55); }
-tr.mine:hover { background: var(--ok-bg); }
-.empty { color: var(--faint); text-align: center; padding: 20px 12px; }
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-}
-.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.status.Active { color: var(--ok-text); border: 1px solid var(--ok-line); background: var(--ok-bg); }
-.status.Paused { color: var(--warn-text); border: 1px solid var(--warn-line); background: var(--warn-bg); }
-.status.Exhausted { color: var(--bad-text); border: 1px solid var(--bad-line); background: var(--bad-bg); }
-
-/* ---------- farmer hero ---------- */
-.hero-numbers { display: flex; align-items: center; flex-wrap: wrap; gap: 32px; padding: 12px 0 6px; }
-.big {
-  font-size: 52px;
-  font-weight: 700;
-  letter-spacing: -1.5px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-.sub { color: var(--dim); font-size: 14px; font-weight: 500; margin-top: 4px; }
-.arrow { font-size: 44px; color: var(--primary); }
-.php .big { color: var(--primary); }
-.php .badge { margin-top: 10px; display: inline-block; }
-
-.fine { color: var(--faint); font-size: 13px; font-weight: 500; margin-top: 12px; max-width: 72ch; }
-
-/* ---------- toast ---------- */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface);
-  border: 1px solid var(--ok-line);
-  border-left: 6px solid var(--ok-text);
-  color: var(--text);
-  padding: 14px 24px;
-  border-radius: 14px;
-  font-weight: 600;
-  font-size: 17px;
-  box-shadow: 0 12px 40px rgba(42, 42, 40, 0.18);
-  max-width: 90vw;
-}
-.toast.error {
-  background: var(--bad-bg);
-  border-color: var(--bad-line);
-  border-left-color: var(--bad-text);
-  color: var(--bad-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
