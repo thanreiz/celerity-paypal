@@ -1,0 +1,12 @@
+{
+  "typhoon": "Rosing",
+  "issued": "2026-07-10 17:00",
+  "authority": "PAGASA (demo bulletin)",
+  "signals": {
+    "5": 4,
+    "8": 5,
+    "10": 3,
+    "2": 1,
+    "7": 2
+  }
+}
