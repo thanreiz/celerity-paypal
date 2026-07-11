@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import Button from "../../design/Button";
-import { fmtUnits, UNIT } from "../../lib/config";
-import { toPHP, phpValue, toPHPNumber } from "../../lib/anchor";
-import { funderLabel } from "../../lib/celerity";
+import { UNIT } from "../../lib/config";
+import { toPHP, phpValue } from "../../lib/anchor";
 import { useCountUp } from "../../lib/useCountUp";
-import { receiptWhen, formatDate } from "../../lib/activityTime";
+import { formatDate } from "../../lib/activityTime";
+import { buildActivityRows } from "../../lib/activityRows";
 
 /** Ticks once a second while `active`, so countdowns re-render live. Returns
  *  the current time in ms. Idle (no timer) when nothing is counting down. */
@@ -51,23 +51,11 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], claims = []
   const anyCoolingDown = claimable.some((p) => (nextClaimAtByPool[String(p.id)]?.unlockAt ?? 0) > Date.now());
   const nowTick = useNow(anyCoolingDown);
 
-  // Merged recent activity, newest first: demo cash-outs (−, real time) and
-  // relief receipts (+, demo dates by on-chain order). Same rows + timestamps
-  // the Activity screen uses, so a row tapped here matches its detail there.
+  // Recent activity — same shared, reconciled builder the Activity screen uses,
+  // so a row tapped here matches its detail there and a claimed installment
+  // never shows twice (once as "Claimed", once as its on-chain "Received").
   const now = Date.now();
-  const cashRows = cashOuts.map((c) => ({ key: c.id, kind: "cashout", title: `Cashed out to ${c.destLabel}`, amountPhp: c.php, destLabel: c.destLabel, isDemo: true, when: c.when }));
-  const receiptRows = receipts.map((r, i) => {
-    const units = Number(BigInt(r.amount)) / Number(UNIT);
-    return { key: `r-${i}`, kind: "received", title: `Received · ${funderLabel(r.funder)}`, amountPhp: toPHPNumber(units), funder: r.funder, pool_id: r.pool_id, region: regionOf(r.pool_id), when: receiptWhen(receipts.length - 1 - i, now) };
-  });
-  // Installments claimed in-app this session — real time, so they land at the
-  // top of activity the instant they happen (the on-chain receipt follows once
-  // refresh() catches up).
-  const claimRows = claims.map((c) => {
-    const pool = pools.find((p) => String(p.id) === String(c.poolId));
-    return { key: c.id, kind: "received", title: `Claimed · ${pool ? funderLabel(pool.funder) : "relief"}`, amountPhp: c.php, funder: pool?.funder, pool_id: c.poolId, region: regionOf(c.poolId), when: c.when };
-  });
-  const recentRows = [...cashRows, ...receiptRows, ...claimRows].sort((a, b) => b.when - a.when).slice(0, 4);
+  const recentRows = buildActivityRows({ receipts, claims, cashOuts, pools, now }).slice(0, 4);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 15, padding: "6px 18px 22px" }}>
@@ -236,6 +224,12 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], claims = []
                       <span style={{ font: "var(--text-fine)", fontSize: 12, color: "var(--text-faint)" }}>
                         {formatDate(row.when, now)}
                       </span>
+                      {row.pending && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, font: "var(--text-label)", fontSize: 9.5, fontWeight: 700, color: "var(--primary)", background: "var(--container)", borderRadius: 999, padding: "1px 7px", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                          <span className="cel-pulse" style={{ width: 5, height: 5, borderRadius: 999, background: "var(--primary)" }} />
+                          Arriving
+                        </span>
+                      )}
                       {row.isDemo && (
                         <span style={{ font: "var(--text-label)", fontSize: 9.5, fontWeight: 700, color: "var(--warn-text)", background: "var(--warn-bg)", border: "1px solid var(--warn-line)", borderRadius: 999, padding: "1px 6px", letterSpacing: "0.04em", textTransform: "uppercase" }}>Demo</span>
                       )}

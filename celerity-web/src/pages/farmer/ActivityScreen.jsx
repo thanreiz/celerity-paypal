@@ -1,8 +1,6 @@
 import React from "react";
-import { UNIT } from "../../lib/config";
-import { toPHPNumber } from "../../lib/anchor";
-import { funderLabel } from "../../lib/celerity";
-import { receiptWhen, groupByBucket, formatDate } from "../../lib/activityTime";
+import { groupByBucket, formatDate } from "../../lib/activityTime";
+import { buildActivityRows } from "../../lib/activityRows";
 
 const php = (n) => `₱${Math.round(n).toLocaleString()}`;
 
@@ -15,56 +13,9 @@ const php = (n) => `₱${Math.round(n).toLocaleString()}`;
  */
 export default function ActivityScreen({ receipts, pools, cashOuts = [], claims = [], onOpenTx }) {
   const now = Date.now();
-  const regionOf = (poolId) => pools.find((p) => String(p.id) === String(poolId))?.region;
-
-  const cashRows = cashOuts.map((c) => ({
-    key: c.id,
-    kind: "cashout",
-    title: `Cashed out to ${c.destLabel}`,
-    subtitle: "Cash-out",
-    amountPhp: c.php,
-    destLabel: c.destLabel,
-    isDemo: true,
-    when: c.when,
-  }));
-
-  // Installments claimed in-app this session — real time, appears immediately.
-  const claimRows = claims.map((c) => {
-    const pool = pools.find((p) => String(p.id) === String(c.poolId));
-    const region = regionOf(c.poolId);
-    return {
-      key: c.id,
-      kind: "received",
-      title: `Claimed · ${pool ? funderLabel(pool.funder) : "relief"}`,
-      subtitle: `${region != null ? `Region ${region} · ` : ""}Pool #${String(c.poolId)}`,
-      amountPhp: c.php,
-      funder: pool?.funder,
-      pool_id: c.poolId,
-      region,
-      when: c.when,
-    };
-  });
-
-  // Receipts have no on-chain time: newest = last in ledger order. Assign
-  // synthesized dates by position from newest.
-  const receiptRows = receipts.map((r, i) => {
-    const units = Number(BigInt(r.amount)) / Number(UNIT);
-    const region = regionOf(r.pool_id);
-    const indexFromNewest = receipts.length - 1 - i;
-    return {
-      key: `r-${i}`,
-      kind: "received",
-      title: `Received · ${funderLabel(r.funder)}`,
-      subtitle: `${region != null ? `Region ${region} · ` : ""}Pool #${String(r.pool_id)}`,
-      amountPhp: toPHPNumber(units),
-      funder: r.funder,
-      pool_id: r.pool_id,
-      region,
-      when: receiptWhen(indexFromNewest, now),
-    };
-  });
-
-  const rows = [...cashRows, ...receiptRows, ...claimRows].sort((a, b) => b.when - a.when);
+  // One shared builder feeds both this screen and Home, and reconciles claims
+  // against on-chain receipts so a claimed installment never double-lists.
+  const rows = buildActivityRows({ receipts, claims, cashOuts, pools, now });
   const groups = groupByBucket(rows, now);
 
   return (
@@ -100,6 +51,7 @@ export default function ActivityScreen({ receipts, pools, cashOuts = [], claims 
                     <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{formatDate(row.when, now)}</span>
                     <span style={{ color: "var(--container-highest)" }}>·</span>
                     <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{row.subtitle}</span>
+                    {row.pending && <PendingTag />}
                     {row.isDemo && <DemoTag />}
                   </div>
                 </div>
@@ -113,6 +65,16 @@ export default function ActivityScreen({ receipts, pools, cashOuts = [], claims 
         </div>
       ))}
     </div>
+  );
+}
+
+// A claim recorded in-app whose on-chain receipt hasn't been read back yet.
+function PendingTag() {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, font: "var(--text-label)", fontSize: 9.5, fontWeight: 700, color: "var(--primary)", background: "var(--container)", borderRadius: 999, padding: "1px 7px", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+      <span className="cel-pulse" style={{ width: 5, height: 5, borderRadius: 999, background: "var(--primary)" }} />
+      Arriving
+    </span>
   );
 }
 
