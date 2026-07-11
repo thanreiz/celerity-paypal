@@ -11,6 +11,7 @@ import TxDetailScreen from "./TxDetailScreen";
 import { addr, invoke, view } from "../../lib/celerity";
 import { friendlyError } from "../../lib/errors";
 import { UNIT } from "../../lib/config";
+import { toPHPNumber } from "../../lib/anchor";
 
 // Seeded "recent recipients" so the cash-out forms aren't empty on stage.
 // dest matches CashOutFlow destinations; detail is the number/account shown.
@@ -29,6 +30,13 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   // ARRIVED (receipts); these track what the farmer has cashed out locally so
   // the spendable balance can move live on stage. Clearly labeled "Demo" in UI.
   const [cashOuts, setCashOuts] = useState([]); // { id, units, php, destLabel, when, dest, detail, name }
+  // Session record of installments claimed in-app. The on-chain funder_ledger
+  // is still the source of truth (refresh() re-reads it); this gives instant,
+  // correctly-timed feedback — the activity row appears the moment a claim
+  // succeeds, and its `when` starts the per-pool cooldown countdown, since the
+  // contract doesn't expose last_ts to read the unlock time back.
+  const [claims, setClaims] = useState([]); // { id, poolId, units, php, when }
+  const claimSeq = useRef(0);
   // Saved payout destinations shown as "recent recipients" on the cash-out
   // forms. Seeded so the list isn't empty on stage; real ones get appended.
   const [recipients, setRecipients] = useState(SEED_RECIPIENTS);
@@ -45,6 +53,14 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
     setBusy(true);
     try {
       await invoke("farmer", "claim", { farmer: me, pool_id: poolId });
+      // Record it now: drives the instant activity row + the cooldown timer.
+      const pool = pools.find((p) => String(p.id) === String(poolId));
+      const units = pool ? Number(BigInt(pool.payout_per_farmer)) / Number(UNIT) : 0;
+      claimSeq.current += 1;
+      setClaims((prev) => [
+        ...prev,
+        { id: `cl-${claimSeq.current}`, poolId: String(poolId), units, php: toPHPNumber(units), when: Date.now() },
+      ]);
       notify("Installment claimed ✓");
       await new Promise((r) => setTimeout(r, 1500));
       await refresh();
@@ -58,6 +74,21 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   const receivedUnits = receipts.reduce((sum, r) => sum + Number(BigInt(r.amount)) / Number(UNIT), 0);
   const cashedOutUnits = cashOuts.reduce((sum, c) => sum + c.units, 0);
   const availableUnits = Math.max(0, receivedUnits - cashedOutUnits);
+
+  // When each pool's next installment unlocks: the most recent in-app claim's
+  // time + its claim_period. Only reflects claims made this session (the
+  // contract doesn't expose last_ts), which is enough to show a live countdown
+  // after the farmer claims and prevent an immediate "not due yet" error.
+  const nextClaimAtByPool = {};
+  for (const c of claims) {
+    const pool = pools.find((p) => String(p.id) === String(c.poolId));
+    if (!pool) continue;
+    const unlockAt = c.when + Number(pool.claim_period_secs) * 1000;
+    const key = String(c.poolId);
+    if (!(key in nextClaimAtByPool) || c.when > nextClaimAtByPool[key].claimedAt) {
+      nextClaimAtByPool[key] = { unlockAt, claimedAt: c.when };
+    }
+  }
 
   const recordCashOut = ({ units, php, destLabel, dest, detail, name }) => {
     cashOutSeq.current += 1;
@@ -133,6 +164,8 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
             pools={pools}
             receipts={receipts}
             cashOuts={cashOuts}
+            claims={claims}
+            nextClaimAtByPool={nextClaimAtByPool}
             availableUnits={availableUnits}
             busy={busy}
             claim={claim}
@@ -143,7 +176,7 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
           />
         )}
         {page === "activity" && (
-          <ActivityScreen receipts={receipts} pools={pools} cashOuts={cashOuts} onOpenTx={setTxDetail} />
+          <ActivityScreen receipts={receipts} pools={pools} cashOuts={cashOuts} claims={claims} onOpenTx={setTxDetail} />
         )}
         {page === "profile" && (
           <ProfileScreen me={me} registration={registration} farmerName={farmerName} receipts={receipts} pools={pools} />

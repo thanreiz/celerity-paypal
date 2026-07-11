@@ -13,7 +13,7 @@ const php = (n) => `₱${Math.round(n).toLocaleString()}`;
  * tappable and opens the transaction detail. Cash-outs are tagged "Demo" and
  * carry real timestamps; receipt dates are demo-generated from on-chain order.
  */
-export default function ActivityScreen({ receipts, pools, cashOuts = [], onOpenTx }) {
+export default function ActivityScreen({ receipts, pools, cashOuts = [], claims = [], onOpenTx }) {
   const now = Date.now();
   const regionOf = (poolId) => pools.find((p) => String(p.id) === String(poolId))?.region;
 
@@ -27,6 +27,23 @@ export default function ActivityScreen({ receipts, pools, cashOuts = [], onOpenT
     isDemo: true,
     when: c.when,
   }));
+
+  // Installments claimed in-app this session — real time, appears immediately.
+  const claimRows = claims.map((c) => {
+    const pool = pools.find((p) => String(p.id) === String(c.poolId));
+    const region = regionOf(c.poolId);
+    return {
+      key: c.id,
+      kind: "received",
+      title: `Claimed · ${pool ? funderLabel(pool.funder) : "relief"}`,
+      subtitle: `${region != null ? `Region ${region} · ` : ""}Pool #${String(c.poolId)}`,
+      amountPhp: c.php,
+      funder: pool?.funder,
+      pool_id: c.poolId,
+      region,
+      when: c.when,
+    };
+  });
 
   // Receipts have no on-chain time: newest = last in ledger order. Assign
   // synthesized dates by position from newest.
@@ -47,7 +64,7 @@ export default function ActivityScreen({ receipts, pools, cashOuts = [], onOpenT
     };
   });
 
-  const rows = [...cashRows, ...receiptRows].sort((a, b) => b.when - a.when);
+  const rows = [...cashRows, ...receiptRows, ...claimRows].sort((a, b) => b.when - a.when);
   const groups = groupByBucket(rows, now);
 
   return (

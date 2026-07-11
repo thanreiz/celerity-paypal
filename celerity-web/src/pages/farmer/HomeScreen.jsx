@@ -1,10 +1,30 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Button from "../../design/Button";
 import { fmtUnits, UNIT } from "../../lib/config";
 import { toPHP, phpValue, toPHPNumber } from "../../lib/anchor";
 import { funderLabel } from "../../lib/celerity";
 import { useCountUp } from "../../lib/useCountUp";
 import { receiptWhen, formatDate } from "../../lib/activityTime";
+
+/** Ticks once a second while `active`, so countdowns re-render live. Returns
+ *  the current time in ms. Idle (no timer) when nothing is counting down. */
+function useNow(active) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return now;
+}
+
+/** "MM:SS" for a millisecond duration (floored at 0). */
+function fmtCountdown(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
 
 /**
  * Farmer home — a plain-language, mobile-banking-style wallet.
@@ -15,7 +35,7 @@ import { receiptWhen, formatDate } from "../../lib/activityTime";
  * "Fully paid out" chip instead of a Claim button, so nothing errors. Copy stays
  * plain and pesos-only.
  */
-export default function HomeScreen({ pools, receipts, cashOuts = [], availableUnits, busy, claim, onCashOut, onHistory, onDetail, onOpenTx }) {
+export default function HomeScreen({ pools, receipts, cashOuts = [], claims = [], nextClaimAtByPool = {}, availableUnits, busy, claim, onCashOut, onHistory, onDetail, onOpenTx }) {
   const [hidden, setHidden] = useState(false);
   const shownUnits = useCountUp(availableUnits);
 
@@ -26,6 +46,11 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], availableUn
   // Home stays uncluttered (they're still visible under Installments).
   const claimable = pools.filter((p) => p.installments > 1 && claimedCount(p) < p.installments);
 
+  // Tick every second only while a claim is actually on cooldown, so the
+  // "next unlocks in M:SS" countdown stays live without a permanent timer.
+  const anyCoolingDown = claimable.some((p) => (nextClaimAtByPool[String(p.id)]?.unlockAt ?? 0) > Date.now());
+  const nowTick = useNow(anyCoolingDown);
+
   // Merged recent activity, newest first: demo cash-outs (−, real time) and
   // relief receipts (+, demo dates by on-chain order). Same rows + timestamps
   // the Activity screen uses, so a row tapped here matches its detail there.
@@ -35,7 +60,14 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], availableUn
     const units = Number(BigInt(r.amount)) / Number(UNIT);
     return { key: `r-${i}`, kind: "received", title: `Received · ${funderLabel(r.funder)}`, amountPhp: toPHPNumber(units), funder: r.funder, pool_id: r.pool_id, region: regionOf(r.pool_id), when: receiptWhen(receipts.length - 1 - i, now) };
   });
-  const recentRows = [...cashRows, ...receiptRows].sort((a, b) => b.when - a.when).slice(0, 4);
+  // Installments claimed in-app this session — real time, so they land at the
+  // top of activity the instant they happen (the on-chain receipt follows once
+  // refresh() catches up).
+  const claimRows = claims.map((c) => {
+    const pool = pools.find((p) => String(p.id) === String(c.poolId));
+    return { key: c.id, kind: "received", title: `Claimed · ${pool ? funderLabel(pool.funder) : "relief"}`, amountPhp: c.php, funder: pool?.funder, pool_id: c.poolId, region: regionOf(c.poolId), when: c.when };
+  });
+  const recentRows = [...cashRows, ...receiptRows, ...claimRows].sort((a, b) => b.when - a.when).slice(0, 4);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 15, padding: "6px 18px 22px" }}>
@@ -108,6 +140,9 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], availableUn
             const done = claimedCount(p);
             const total = p.installments;
             const amount = phpValue(Number(BigInt(p.payout_per_farmer)) / Number(UNIT));
+            const unlockAt = nextClaimAtByPool[String(p.id)]?.unlockAt ?? 0;
+            const remaining = unlockAt - nowTick;
+            const cooling = remaining > 0;
             return (
               <div key={String(p.id)} className={`cel-fade cel-fade-${Math.min(i + 2, 4)}`} style={claimCardStyle(true)}>
                 <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
@@ -130,9 +165,23 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], availableUn
                   </div>
                 </div>
 
-                <Button variant="primary" className="cel-press" disabled={busy} onClick={() => claim(p.id)} style={{ width: "100%", marginTop: 14, fontSize: 17, minHeight: 50 }}>
-                  Claim {amount}
-                </Button>
+                {cooling ? (
+                  <div style={countdownStyle}>
+                    <div style={{ font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)" }}>
+                      Next installment in
+                    </div>
+                    <div style={{ font: "var(--text-hero)", fontSize: 30, color: "var(--primary)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em", marginTop: 2 }}>
+                      {fmtCountdown(remaining)}
+                    </div>
+                    <div style={{ font: "var(--text-fine)", fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
+                      {amount} unlocks automatically — come back then
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="primary" className="cel-press" disabled={busy} onClick={() => claim(p.id)} style={{ width: "100%", marginTop: 14, fontSize: 17, minHeight: 50 }}>
+                    Claim {amount}
+                  </Button>
+                )}
               </div>
             );
           })}
@@ -249,6 +298,21 @@ const claimCardStyle = (isClaimable) => ({
   border: `1px solid ${isClaimable ? "var(--ok-line)" : "var(--container-highest)"}`,
   padding: 16,
 });
+
+const countdownStyle = {
+  marginTop: 14,
+  width: "100%",
+  minHeight: 50,
+  borderRadius: "var(--radius-control)",
+  background: "var(--surface-low)",
+  border: "1px solid var(--container-highest)",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+  padding: "10px 16px",
+};
 
 const claimIconStyle = {
   width: 44,
