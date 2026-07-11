@@ -189,15 +189,16 @@ a:focus-visible {
   pointer-events: none;
 }
 
-/* logo stage: both PNGs stacked & centered so they cross-fade in place.
-   The dove sits in the same spot in both marks, so the wordmark appears to
-   grow out of the bird. Fully fluid — scales to any phone width. */
+/* logo stage: the standalone dove and the wide dove+wordmark lockup are
+   stacked and centered so they cross-fade in place — the bird dissolves
+   into the full lockup. The lockup is a wide graphic (~3.45:1), so the
+   stage is sized by width and its height follows the content rather than
+   being forced square. Fully fluid — scales to any phone width. */
 .cel-splash-stage {
   position: relative;
   display: grid;
   place-items: center;
-  width: min(86%, 288px);
-  aspect-ratio: 1;
+  width: min(78%, 300px);
   margin-bottom: clamp(10px, 2.4vw, 18px);
   animation: celRise 900ms cubic-bezier(.2, .7, .2, 1) both, celBreathe 5.4s ease-in-out 1000ms infinite;
 }
@@ -205,12 +206,13 @@ a:focus-visible {
   grid-area: 1 / 1;
   display: block;
   height: auto;
-  filter: drop-shadow(0 14px 24px rgba(22, 69, 45, 0.18));
+  filter: drop-shadow(0 12px 22px rgba(22, 69, 45, 0.16));
 }
-/* bird only — animated: visible first, then fades out.
+/* bird only — animated: visible first, then fades out. Sized to roughly
+   match the lockup's bird so the dissolve reads as one mark settling.
    base state (reduced motion): hidden, since the lockup carries the wordmark. */
 .cel-logo-bird {
-  width: 74%;
+  width: 42%;
   opacity: 0;
   animation: celBirdCycle 3200ms ease-in-out both;
 }
