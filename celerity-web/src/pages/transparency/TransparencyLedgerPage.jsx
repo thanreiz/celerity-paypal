@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import CountUp from "../../design/CountUp";
 import { allPools, view } from "../../lib/celerity";
 import { fmtUnits, short } from "../../lib/config";
 import { toPHP } from "../../lib/anchor";
@@ -37,7 +38,7 @@ export default function TransparencyLedgerPage({ onBack }) {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>No login required</span>
           {onBack && (
-            <button onClick={onBack} style={{ border: "none", background: "var(--container-high)", borderRadius: 999, padding: "8px 16px", cursor: "pointer", fontFamily: "var(--font-sans)", fontWeight: 700 }}>
+            <button onClick={onBack} className="cel-press" style={{ border: "none", background: "var(--container-high)", borderRadius: 999, padding: "8px 16px", cursor: "pointer", fontFamily: "var(--font-sans)", fontWeight: 700 }}>
               ← Back
             </button>
           )}
@@ -48,11 +49,11 @@ export default function TransparencyLedgerPage({ onBack }) {
           <div>
             <p style={{ margin: 0, font: "var(--text-label)", textTransform: "uppercase", color: "var(--text-faint)" }}>Total Disbursed Across All Relief Efforts</p>
             <p style={{ margin: "8px 0 0", font: "var(--text-display)", fontSize: 40, color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>
-              {toPHP(totalUnits)}
+              <CountUp units={totalUnits} format="full" placeholder={loading ? toPHP(0) : undefined} />
             </p>
           </div>
           <span style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--container-high)", padding: "8px 16px", borderRadius: 999, font: "var(--text-label)", textTransform: "uppercase", color: "var(--text-dim)" }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--primary)" }} /> Live Stellar Testnet
+            <span className="cel-pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--primary)" }} /> Live Stellar Testnet
           </span>
         </section>
 
@@ -64,7 +65,21 @@ export default function TransparencyLedgerPage({ onBack }) {
             <div style={{ padding: 24, font: "var(--text-fine)", color: "var(--text-faint)" }}>No releases yet — they appear the moment a signed event settles.</div>
           )}
           {releases.map((r, i) => (
-            <div key={`${r.event_id}-${r.pool_id}-${r.farmer}-${i}`} style={{ padding: 20, borderBottom: i < releases.length - 1 ? "1px solid var(--container-highest)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div
+              key={`${r.event_id}-${r.pool_id}-${r.farmer}-${i}`}
+              className="cel-row"
+              style={{
+                padding: 20,
+                borderBottom: i < releases.length - 1 ? "1px solid var(--container-highest)" : "none",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 16,
+                flexWrap: "wrap",
+                animation: "celFadeUp 420ms cubic-bezier(.2,.7,.2,1) both",
+                animationDelay: `${Math.min(i, 12) * 35}ms`,
+              }}
+            >
               <div>
                 <span style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>event #{String(r.event_id)} · pool #{String(r.pool_id)}{r.region !== undefined ? ` · region ${r.region}` : ""}</span>
                 <p style={{ margin: "4px 0 0", font: "var(--text-body-lg)" }}>

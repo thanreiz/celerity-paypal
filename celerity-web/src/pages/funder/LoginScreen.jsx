@@ -41,6 +41,7 @@ export default function LoginScreen({ onLogin, onBackToFarmer }) {
       {onBackToFarmer && (
         <button
           onClick={onBackToFarmer}
+          className="cel-press"
           style={{
             position: "absolute",
             top: 20,
@@ -67,10 +68,11 @@ export default function LoginScreen({ onLogin, onBackToFarmer }) {
           Choose your institution — every action signs with that funder's key.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 18, textAlign: "left" }}>
+        <div className="cel-stagger" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 18, textAlign: "left" }}>
           {FUNDERS.map((f) => (
             <div
               key={f.role}
+              className="cel-raise"
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--container-highest)",

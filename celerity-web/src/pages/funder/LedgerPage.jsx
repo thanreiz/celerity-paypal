@@ -1,5 +1,6 @@
 import React from "react";
 import Table from "../../design/Table";
+import CountUp from "../../design/CountUp";
 import { fmtUnits, short, CONTRACT_ID } from "../../lib/config";
 import { phpValue } from "../../lib/anchor";
 import { poolName } from "../../lib/poolNames";
@@ -12,12 +13,12 @@ export default function LedgerPage({ ledger, pools }) {
   const poolById = Object.fromEntries(pools.map((p) => [String(p.id), p]));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: "8px 28px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+    <div className="cel-stagger" style={{ display: "flex", flexDirection: "column", gap: 24, padding: "8px 28px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
         <div style={{ textAlign: "right" }}>
           <p style={{ margin: 0, font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Total Disbursed</p>
           <p style={{ margin: "4px 0 0", font: "var(--text-h1)", fontSize: 26, color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>
-            {phpValue(totalUnits)}{" "}
+            <CountUp units={totalUnits} />{" "}
             <span style={{ font: "var(--text-meta)", color: "var(--text-faint)" }}>
               ≈ {totalUnits.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
             </span>

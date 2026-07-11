@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import StatusPill from "../../design/StatusPill";
 import Button from "../../design/Button";
+import CountUp from "../../design/CountUp";
 import RuleSentence from "../../design/RuleSentence";
 import { invoke } from "../../lib/celerity";
 import { fmtUnits, short, toStroops, CONTRACT_ID } from "../../lib/config";
@@ -37,6 +38,7 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto }) {
 
   return (
     <article
+      className="cel-raise"
       style={{
         background: paused ? "var(--surface-low)" : "var(--surface)",
         border: `1px ${paused ? "dashed" : "solid"} ${aff ? "var(--warn-line)" : "var(--container-highest)"}`,
@@ -101,7 +103,7 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto }) {
         <div style={{ fontVariantNumeric: "tabular-nums" }}>
           <p style={{ margin: 0, font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Escrowed</p>
           <div style={{ font: "var(--text-money)", fontSize: 21, color: paused ? "var(--text-dim)" : "var(--primary)" }}>
-            {phpValue(unitsOf(pool.balance))}
+            <CountUp units={unitsOf(pool.balance)} />
           </div>
           <div style={{ font: "var(--text-fine)", fontSize: 12, color: "var(--text-faint)" }}>≈ {fmtUnits(pool.balance)} XLM</div>
         </div>
@@ -109,7 +111,7 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto }) {
           <p style={{ margin: 0, font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Released so far</p>
           {history.count > 0 ? (
             <>
-              <div style={{ font: "var(--text-money)", fontSize: 21, color: "var(--ok-text)" }}>{phpValue(history.units)}</div>
+              <div style={{ font: "var(--text-money)", fontSize: 21, color: "var(--ok-text)" }}><CountUp units={history.units} /></div>
               <div style={{ font: "var(--text-fine)", fontSize: 12, color: "var(--text-faint)" }}>
                 {history.count} release{history.count === 1 ? "" : "s"} · {history.farmers} farmer{history.farmers === 1 ? "" : "s"} ·{" "}
                 <button
@@ -202,6 +204,7 @@ function IslandGroup({ island, pools, bulletin, children }) {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
+        className="cel-press"
         style={{
           width: "100%",
           display: "flex",
@@ -259,7 +262,7 @@ function IslandGroup({ island, pools, bulletin, children }) {
           {phpValue(totalUnits)}
         </span>
       </button>
-      {open && <div style={{ padding: "14px 2px 4px", display: "flex", flexDirection: "column", gap: 16 }}>{children}</div>}
+      {open && <div className="cel-expand cel-stagger" style={{ padding: "14px 2px 4px", display: "flex", flexDirection: "column", gap: 16 }}>{children}</div>}
     </div>
   );
 }
@@ -334,6 +337,7 @@ export default function PoolsPage({ myPools, loaded, ledger, bulletin, who, me, 
             <button
               key={f.role}
               onClick={() => onSwitchWho(f.role)}
+              className="cel-press"
               style={{
                 border: "1px solid var(--container-highest)",
                 background: who === f.role ? "var(--primary-chip)" : "var(--surface)",
@@ -415,15 +419,15 @@ export default function PoolsPage({ myPools, loaded, ledger, bulletin, who, me, 
       )}
 
       {/* summary strip — released-to-date on the happy path, exhausted alert only when real */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
-        <SummaryStat label="Total escrowed" value={phpValue(totalUnits)} sub={`≈ ${totalUnits.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM`} />
+      <div className="cel-stagger" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+        <SummaryStat label="Total escrowed" value={<CountUp units={totalUnits} />} sub={`≈ ${totalUnits.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM`} />
         <SummaryStat label="Active pools" value={active} sub={`of ${myPools.length} deployed`} />
         {exhausted > 0 ? (
           <SummaryStat label="Exhausted pools" value={exhausted} sub="need a top-up" tone="bad" />
         ) : (
           <SummaryStat
             label="Released to date"
-            value={phpValue(releasedUnits)}
+            value={<CountUp units={releasedUnits} />}
             sub={`${ledger.length} release${ledger.length === 1 ? "" : "s"} · all on-chain`}
             tone="ok"
           />

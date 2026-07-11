@@ -6,6 +6,7 @@ import React from "react";
 export default function Toast({ message, error = false }) {
   return (
     <div
+      className="cel-toast"
       style={{
         position: "fixed",
         bottom: 24,

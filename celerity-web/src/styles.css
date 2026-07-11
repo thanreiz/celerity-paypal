@@ -25,3 +25,415 @@ a:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ============================================================
+   App-wide motion utilities (scoped .cel-*)
+   Used across BOTH the farmer app (Home / Activity / Profile /
+   overlays) and the funder + ledger views (portal, pools,
+   ledger, oracle, login, public ledger). The reduced-motion
+   rule above disables all of these globally, and every element's
+   resting state is its final state, so the UI is fully usable
+   with motion off.
+   ============================================================ */
+
+/* staggered entrance for cards/sections on mount */
+.cel-fade { animation: celFadeUp 460ms cubic-bezier(.2, .7, .2, 1) both; }
+.cel-fade-1 { animation-delay: 60ms; }
+.cel-fade-2 { animation-delay: 120ms; }
+.cel-fade-3 { animation-delay: 180ms; }
+.cel-fade-4 { animation-delay: 240ms; }
+.cel-fade-5 { animation-delay: 300ms; }
+.cel-fade-6 { animation-delay: 360ms; }
+@keyframes celFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* auto-staggered entrance: drop on a container and its direct
+   children fade up in sequence — no need to hand-number each one.
+   Caps at 10 so a long list doesn't feel laggy at the tail. */
+.cel-stagger > * { animation: celFadeUp 460ms cubic-bezier(.2, .7, .2, 1) both; }
+.cel-stagger > *:nth-child(1) { animation-delay: 40ms; }
+.cel-stagger > *:nth-child(2) { animation-delay: 90ms; }
+.cel-stagger > *:nth-child(3) { animation-delay: 140ms; }
+.cel-stagger > *:nth-child(4) { animation-delay: 190ms; }
+.cel-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.cel-stagger > *:nth-child(6) { animation-delay: 290ms; }
+.cel-stagger > *:nth-child(7) { animation-delay: 340ms; }
+.cel-stagger > *:nth-child(8) { animation-delay: 390ms; }
+.cel-stagger > *:nth-child(9) { animation-delay: 440ms; }
+.cel-stagger > *:nth-child(n+10) { animation-delay: 490ms; }
+
+/* press feedback for buttons and tappable tiles */
+.cel-press { transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast), filter var(--transition-fast); }
+.cel-press:active { transform: scale(0.96); }
+.cel-press:disabled { transform: none; }
+
+/* card hover lift — for tappable cards/tiles that aren't list rows.
+   Rests flat; on hover it rises a hair and deepens its shadow. */
+.cel-raise { transition: transform var(--transition-base), box-shadow var(--transition-base); }
+.cel-raise:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+.cel-raise:active { transform: translateY(0); }
+
+/* tappable list rows: subtle lift on hover, press-in on active */
+.cel-row { transition: background-color var(--transition-fast), transform var(--transition-fast); }
+.cel-row:hover { background: var(--surface-low); }
+.cel-row:active { transform: scale(0.99); }
+
+/* full-screen overlays slide up as they open */
+.cel-overlay { animation: celSlideUp 260ms cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes celSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* plain opacity fade — for backdrops/scrims where any transform would
+   nudge a full-screen element and flash a gap. */
+.cel-fadein { animation: celFadeIn 220ms ease both; }
+@keyframes celFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* toast: slides up from the bottom while staying horizontally centered.
+   Needs its own keyframe because the toast holds translateX(-50%) for
+   centering, which a plain translateY animation would clobber. */
+.cel-toast { animation: celToastIn 300ms cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes celToastIn {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* soft cross-fade for content that swaps in place (e.g. funder page
+   switch) — no vertical travel, just a settle. */
+.cel-swap { animation: celSwapIn 320ms cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes celSwapIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* success pop (claim confirmation, etc.) */
+.cel-pop { animation: celPop 360ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes celPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* collapsible section body (island groups): expands from the top. */
+.cel-expand { animation: celExpand 260ms cubic-bezier(.2, .7, .2, 1) both; transform-origin: top; }
+@keyframes celExpand {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* inline spinner for pending/working states (oracle "signing…"). */
+.cel-spin {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--container-highest);
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: celSpin 720ms linear infinite;
+  vertical-align: -2px;
+}
+@keyframes celSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* live status dot: a gentle pulse to signal "on-chain, live". */
+.cel-pulse { animation: celPulse 2.4s ease-in-out infinite; }
+@keyframes celPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+
+/* ============================================================
+   Farmer app — Opening (splash) + Connect screens
+   Scoped under .cel-* so nothing here collides with the rest of
+   the app. Brand type is Quicksand via --font-sans (tokens.css).
+   Base (non-animated) state deliberately shows the FINAL look —
+   lockup + tagline visible, bird hidden — so that when the global
+   reduced-motion rule above disables animations, the screen still
+   reads correctly and the JS timer advances it.
+   ============================================================ */
+
+/* ---------- Opening / splash ---------- */
+.cel-splash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background:
+    radial-gradient(120% 80% at 50% 22%, #ffffff 0%, var(--paper-page) 46%, var(--paper-inset) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6% 6% 0;
+  font-family: var(--font-sans);
+  animation: celSplashIn 480ms ease both;
+}
+.cel-splash.is-leaving {
+  animation: celSplashOut 460ms ease both;
+}
+.cel-splash-halo {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: min(78%, 300px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(22, 69, 45, 0.10) 0%, rgba(22, 69, 45, 0) 68%);
+  pointer-events: none;
+}
+
+/* logo stage: both PNGs stacked & centered so they cross-fade in place.
+   The dove sits in the same spot in both marks, so the wordmark appears to
+   grow out of the bird. Fully fluid — scales to any phone width. */
+.cel-splash-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(86%, 288px);
+  aspect-ratio: 1;
+  margin-bottom: clamp(10px, 2.4vw, 18px);
+  animation: celRise 900ms cubic-bezier(.2, .7, .2, 1) both, celBreathe 5.4s ease-in-out 1000ms infinite;
+}
+.cel-splash-stage img {
+  grid-area: 1 / 1;
+  display: block;
+  height: auto;
+  filter: drop-shadow(0 14px 24px rgba(22, 69, 45, 0.18));
+}
+/* bird only — animated: visible first, then fades out.
+   base state (reduced motion): hidden, since the lockup carries the wordmark. */
+.cel-logo-bird {
+  width: 74%;
+  opacity: 0;
+  animation: celBirdCycle 3200ms ease-in-out both;
+}
+/* bird + wordmark — animated: reveals via cross-fade.
+   base state (reduced motion): fully visible. */
+.cel-logo-lockup {
+  width: 100%;
+  opacity: 1;
+  animation: celLockupCycle 3200ms ease-in-out both;
+}
+.cel-splash-tag {
+  margin: 0;
+  font-size: clamp(16px, 4.6vw, 19px);
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.01em;
+  opacity: 1; /* base: visible under reduced motion */
+  animation: celTagCycle 3200ms ease-in-out both;
+}
+.cel-splash-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(24px, 5%, 40px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.cel-splash-dots {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.cel-splash-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--container-highest);
+  display: block;
+}
+.cel-splash-dots i.on {
+  background: var(--primary);
+  width: 18px;
+}
+
+/* shared trust chip (splash + connect) */
+.cel-trust {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ok-text);
+}
+.cel-trust svg {
+  display: block;
+}
+
+@keyframes celSplashIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes celSplashOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.04); }
+}
+@keyframes celRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes celBreathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-5px) scale(1.025); }
+}
+/* one-shot (3.2s): bird shows first, hands off to the lockup ~0.8–1.1s */
+@keyframes celBirdCycle {
+  0% { opacity: 1; }
+  25% { opacity: 1; }
+  34% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes celLockupCycle {
+  0% { opacity: 0; }
+  25% { opacity: 0; }
+  36% { opacity: 1; }
+  100% { opacity: 1; }
+}
+/* tagline rises ~1.6s, holds to the hand-off */
+@keyframes celTagCycle {
+  0%, 46% { opacity: 0; transform: translateY(6px); }
+  58% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Connect / "This is me" ---------- */
+.cel-connect {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 22px 24px;
+  font-family: var(--font-sans);
+  background: var(--paper-page);
+  animation: celSplashIn 320ms ease both;
+}
+.cel-connect-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.cel-connect-logo {
+  width: min(58%, 190px);
+  height: auto;
+}
+.cel-connect-h {
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  margin: 4px 0 0;
+  color: var(--text);
+  text-wrap: balance;
+}
+.cel-connect-sub {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--text-dim);
+  max-width: 30ch;
+}
+.cel-id-card {
+  position: relative;
+  margin-top: clamp(20px, 5vw, 30px);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--container-highest);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+.cel-id-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ok-text);
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-line);
+  padding: 5px 9px;
+  border-radius: 999px;
+}
+.cel-id-badge svg { display: block; }
+.cel-id-avatar {
+  width: 74px;
+  height: 74px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+  background: linear-gradient(155deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-raised);
+}
+.cel-id-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  margin: 0;
+  color: var(--text);
+}
+.cel-id-region {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 1px 0 0;
+}
+.cel-id-addr {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: var(--surface-low);
+  border: 1px solid var(--container-highest);
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.cel-id-addr svg { display: block; opacity: 0.8; }
+.cel-connect-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.cel-connect-ready {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-align: center;
+}
+.cel-connect-ready svg { display: block; color: var(--ok-text); }
+.cel-connect-foot { margin-top: 2px; }

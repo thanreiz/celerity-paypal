@@ -79,8 +79,21 @@ export default function App() {
     );
   }
 
+  // Farmer app sits centered on a warm-paper backdrop so it reads as a phone
+  // with margins on desktop (on an actual phone the column just fills the width).
   return (
-    <div style={{ minHeight: "100dvh" }}>
+    <div
+      style={{
+        height: "100dvh",
+        overflow: "hidden",
+        background: "var(--paper-inset)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "clamp(0px, 4vh, 32px) clamp(0px, 4vw, 32px)",
+        boxSizing: "border-box",
+      }}
+    >
       <FarmerApp
         pools={pools}
         receipts={receipts}

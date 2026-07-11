@@ -1,16 +1,23 @@
 import React from "react";
 import { fmtUnits, UNIT } from "../../lib/config";
 import { funderLabel } from "../../lib/celerity";
+import { regionName } from "../../lib/regions";
 
 /** The 4 Home quick-action tiles each open one of these — real pool/receipt
  * data reshaped into a friendlier, non-technical view. */
 export default function DetailScreen({ kind, pools, registration, onBack }) {
   const recurring = pools.filter((p) => p.installments > 1);
+  const myRegion = registration ? Number(registration.region) : null;
+  const regionPools = myRegion != null ? pools.filter((p) => Number(p.region) === myRegion) : [];
+  const armedPools = regionPools.filter((p) => p.status === "Active");
+  const minSignal = armedPools.length
+    ? Math.min(...armedPools.map((p) => Number(p.signal_threshold)))
+    : null;
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 20 }}>
+    <div className="cel-overlay" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 20px 8px" }}>
-        <button onClick={onBack} aria-label="Back" style={backBtnStyle}>←</button>
+        <button onClick={onBack} aria-label="Back" className="cel-press" style={backBtnStyle}>←</button>
         <div style={{ font: "var(--text-h2)", fontSize: 18 }}>{TITLES[kind]}</div>
       </div>
 
@@ -42,11 +49,42 @@ export default function DetailScreen({ kind, pools, registration, onBack }) {
 
         {kind === "region" && (
           <>
+            {/* status hero */}
+            <div style={regionHero}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.16)", display: "grid", placeItems: "center", color: "#fff" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" stroke="currentColor" strokeWidth="1.7" /><circle cx="12" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.7" /></svg>
+                </div>
+                <div>
+                  <div style={{ font: "var(--text-h2)", fontSize: 19, color: "#fff" }}>{myRegion != null ? regionName(myRegion) : "Not registered"}</div>
+                  <div style={{ font: "var(--text-fine)", color: "rgba(255,255,255,0.78)" }}>Your registered region</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: armedPools.length ? "#8ff0b0" : "rgba(255,255,255,0.5)" }} />
+                <span style={{ font: "var(--text-body-lg)", fontSize: 14, color: "#fff", fontWeight: 700 }}>
+                  {armedPools.length ? "Relief is armed and ready" : "No active relief right now"}
+                </span>
+              </div>
+              {minSignal != null && (
+                <div style={{ font: "var(--text-fine)", color: "rgba(255,255,255,0.78)", marginTop: 4 }}>
+                  Releases automatically at typhoon signal {minSignal}+
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <MiniStat value={String(armedPools.length)} label={armedPools.length === 1 ? "Program armed" : "Programs armed"} />
+              <MiniStat value={String(regionPools.length)} label="Total in region" />
+            </div>
+
             <InfoCard>
-              <InfoRow k="Region" v={registration ? String(registration.region) : "Not registered"} />
-              <InfoRow k="Registered by" v={registration ? String(registration.registered_by).slice(0, 4) + "…" + String(registration.registered_by).slice(-4) : "—"} />
-              <InfoRow k="Active programs here" v={String(pools.length)} />
+              {regionPools.map((p) => (
+                <InfoRow key={String(p.id)} k={funderLabel(p.funder)} v={p.status === "Active" ? "Armed" : p.status} />
+              ))}
+              {regionPools.length === 0 && <div style={{ padding: 16, font: "var(--text-fine)", color: "var(--text-faint)" }}>No relief programs in your region yet.</div>}
             </InfoCard>
+
             <Honesty text="Relief releases when an official typhoon signal is confirmed for your region — you don't need to file anything." />
           </>
         )}
@@ -101,8 +139,25 @@ function ListItem({ icon, title, subtitle }) {
 }
 
 function InfoCard({ children }) {
-  return <div style={{ background: "#fff", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)" }}>{children}</div>;
+  return <div style={{ background: "#fff", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", border: "1px solid var(--container-highest)", overflow: "hidden" }}>{children}</div>;
 }
+
+function MiniStat({ value, label }) {
+  return (
+    <div style={{ background: "#fff", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", border: "1px solid var(--container-highest)", padding: "14px 16px", textAlign: "center" }}>
+      <div style={{ font: "var(--text-hero)", fontSize: 26, color: "var(--primary)", fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{value}</div>
+      <div style={{ font: "var(--text-label)", fontSize: 10.5, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)", marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+const regionHero = {
+  background: "linear-gradient(158deg, var(--primary) 0%, var(--primary-hover) 100%)",
+  borderRadius: "var(--radius-card)",
+  boxShadow: "var(--shadow-raised)",
+  padding: "20px",
+  color: "#fff",
+};
 
 function InfoRow({ k, v, faint }) {
   return (

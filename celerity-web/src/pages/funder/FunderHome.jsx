@@ -1,5 +1,6 @@
 import React from "react";
 import DemoGuide from "./DemoGuide";
+import CountUp from "../../design/CountUp";
 import { phpValue } from "../../lib/anchor";
 import { fmtUnits, short, CONTRACT_ID } from "../../lib/config";
 import { poolName } from "../../lib/poolNames";
@@ -115,7 +116,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
     .slice(0, 2);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: "8px 28px 48px", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+    <div className="cel-stagger" style={{ display: "flex", flexDirection: "column", gap: 20, padding: "8px 28px 48px", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* hero — one number, one quiet line */}
       <div
         style={{
@@ -130,7 +131,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
           Still escrowed
         </span>
         <div style={{ font: "var(--text-hero)", fontSize: 44, letterSpacing: "-0.02em", margin: "6px 0 2px", fontVariantNumeric: "tabular-nums" }}>
-          {loaded ? phpValue(totalUnits) : "₱ —"}
+          <CountUp units={totalUnits} placeholder={loaded ? undefined : "₱ —"} />
         </div>
         <div style={{ font: "var(--text-fine)", color: "rgba(255,255,255,.78)", fontVariantNumeric: "tabular-nums" }}>
           {loaded
@@ -138,8 +139,8 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
             : "reading your pools from Stellar Testnet…"}
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-          <button onClick={onCreatePool} style={heroBtn}>＋ New Escrow Pool</button>
-          <button onClick={() => onGoto("pools")} style={heroBtn}>↑ Withdraw unspent</button>
+          <button onClick={onCreatePool} className="cel-press" style={heroBtn}>＋ New Escrow Pool</button>
+          <button onClick={() => onGoto("pools")} className="cel-press" style={heroBtn}>↑ Withdraw unspent</button>
         </div>
       </div>
 
@@ -161,6 +162,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
           <button
             key={a.page}
             onClick={() => onGoto(a.page)}
+            className="cel-press"
             style={{
               display: "flex",
               flexDirection: "column",
@@ -176,7 +178,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
               minWidth: 92,
             }}
           >
-            <span style={{ width: 54, height: 54, borderRadius: 18, background: "var(--container)", color: "var(--primary)", display: "grid", placeItems: "center" }}>
+            <span className="cel-raise" style={{ width: 54, height: 54, borderRadius: 18, background: "var(--container)", color: "var(--primary)", display: "grid", placeItems: "center" }}>
               {a.icon}
             </span>
             {a.label}
@@ -243,6 +245,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
           {loaded && ledger.length > 0 && (
             <button
               onClick={() => onGoto("ledger")}
+              className="cel-row"
               style={{
                 display: "block",
                 width: "100%",

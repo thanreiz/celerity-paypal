@@ -15,6 +15,7 @@ export default function Button({
   onClick,
   type = "button",
   style,
+  className = "",
   ...rest
 }) {
   const base = {
@@ -66,6 +67,7 @@ export default function Button({
       type={type}
       disabled={disabled}
       onClick={onClick}
+      className={`cel-press ${className}`.trim()}
       style={{ ...base, ...variants[variant], ...style }}
       {...rest}
     >

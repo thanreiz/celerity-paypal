@@ -44,13 +44,11 @@ export default function BottomNav({ active, onNavigate }) {
   return (
     <nav
       style={{
-        position: "sticky",
-        bottom: 0,
+        flexShrink: 0,
         width: "100%",
         background: "var(--surface)",
         borderTop: "1px solid var(--container-highest)",
         boxShadow: "0 -4px 20px rgba(42,42,40,0.04)",
-        borderRadius: "16px 16px 0 0",
         display: "flex",
         justifyContent: "space-around",
         alignItems: "center",
@@ -67,6 +65,7 @@ export default function BottomNav({ active, onNavigate }) {
             key={it.key}
             onClick={() => onNavigate && onNavigate(it.key)}
             aria-label={it.label}
+            className="cel-press"
             style={{
               display: "flex",
               flexDirection: "column",

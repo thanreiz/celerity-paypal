@@ -33,6 +33,7 @@ function AvatarButton({ initials, onClick, title }) {
     <button
       onClick={onClick}
       title={title}
+      className="cel-press"
       style={{
         width: 38,
         height: 38,
@@ -56,6 +57,7 @@ function MiniButton({ onClick, children }) {
   return (
     <button
       onClick={onClick}
+      className="cel-press"
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -193,6 +195,7 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
             <button
               onClick={() => setPage("home")}
               aria-label="Back to home"
+              className="cel-press"
               style={{
                 width: 40,
                 height: 40,
@@ -220,37 +223,41 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
 
       <div style={{ height: 20 }} />
 
-      {page === "home" && (
-        <FunderHome
-          myPools={myPools}
-          loaded={loaded}
-          ledger={ledger}
-          farmerCount={farmerCount}
-          onGoto={setPage}
-          onCreatePool={() => setShowCreate(true)}
-        />
-      )}
-      {page === "pools" && (
-        <PoolsPage
-          myPools={myPools}
-          loaded={loaded}
-          ledger={ledger}
-          bulletin={bulletin}
-          who={who}
-          me={me}
-          busy={busy}
-          run={run}
-          onCreatePool={() => setShowCreate(true)}
-          onSwitchWho={switchTo}
-          onGoto={setPage}
-        />
-      )}
-      {page === "farmers" && <FarmersPage groups={farmerGroups} busy={busy} run={run} />}
-      {page === "ledger" && <LedgerPage ledger={ledger} pools={myPools} />}
-      {page === "oracle" && (
-        <OraclePage pools={pools} myPools={myPools} who={who} busy={busy} run={run} refresh={refresh} onBulletin={setBulletin} />
-      )}
-      {page === "settings" && <SettingsPage who={who} me={me} funders={[...new Set(pools.map((p) => p.funder))]} />}
+      {/* Keying on `page` remounts the body on every navigation, so the
+          cel-swap entrance replays each time the funder changes screens. */}
+      <div key={page} className="cel-swap">
+        {page === "home" && (
+          <FunderHome
+            myPools={myPools}
+            loaded={loaded}
+            ledger={ledger}
+            farmerCount={farmerCount}
+            onGoto={setPage}
+            onCreatePool={() => setShowCreate(true)}
+          />
+        )}
+        {page === "pools" && (
+          <PoolsPage
+            myPools={myPools}
+            loaded={loaded}
+            ledger={ledger}
+            bulletin={bulletin}
+            who={who}
+            me={me}
+            busy={busy}
+            run={run}
+            onCreatePool={() => setShowCreate(true)}
+            onSwitchWho={switchTo}
+            onGoto={setPage}
+          />
+        )}
+        {page === "farmers" && <FarmersPage groups={farmerGroups} busy={busy} run={run} />}
+        {page === "ledger" && <LedgerPage ledger={ledger} pools={myPools} />}
+        {page === "oracle" && (
+          <OraclePage pools={pools} myPools={myPools} who={who} busy={busy} run={run} refresh={refresh} onBulletin={setBulletin} />
+        )}
+        {page === "settings" && <SettingsPage who={who} me={me} funders={[...new Set(pools.map((p) => p.funder))]} />}
+      </div>
 
       {showCreate && <CreatePoolModal onClose={() => setShowCreate(false)} who={who} me={me} busy={busy} run={run} />}
     </div>

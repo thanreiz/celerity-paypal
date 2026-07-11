@@ -36,6 +36,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
 
   return (
     <div
+      className="cel-fadein"
       style={{
         position: "fixed",
         inset: 0,
@@ -52,6 +53,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="cel-overlay"
         style={{
           background: "#fff",
           width: "min(720px, 100%)",
@@ -71,7 +73,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
               Deposit — money locks now, moves only on a signed signal.
             </p>
           </div>
-          <button onClick={onClose} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 18, color: "var(--text-faint)" }}>
+          <button onClick={onClose} className="cel-press" style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 18, color: "var(--text-faint)" }}>
             ✕
           </button>
         </div>

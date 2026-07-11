@@ -174,6 +174,7 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
               const f = e.dataTransfer.files?.[0];
               if (f) readFile(f);
             }}
+            className="cel-raise"
             style={{ ...dropzoneStyle, borderColor: drag ? "var(--primary)" : "var(--outline)", background: drag ? "var(--surface-low)" : "var(--surface)" }}
           >
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--primary-chip)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -212,6 +213,7 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
       {(state.kind === "parsed" || state.kind === "done") && (
         <>
           <div
+            className="cel-swap"
             style={{
               background: "var(--surface)",
               border: "1px solid var(--container-highest)",
@@ -274,10 +276,10 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
                               : "no pools — will skip"}
                       </span>
                       {p && (
-                        <span style={{ marginLeft: "auto", font: "var(--text-fine)", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: p.state === "done" ? "var(--ok-text)" : p.state === "error" ? "var(--bad-text)" : "var(--text-faint)" }}>
-                          {p.state === "pending" && "queued…"}
-                          {p.state === "running" && "signing + settling…"}
-                          {p.state === "done" && `✓ event #${String(p.eventId)} · ${p.released} release${p.released === 1 ? "" : "s"}`}
+                        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 7, font: "var(--text-fine)", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: p.state === "done" ? "var(--ok-text)" : p.state === "error" ? "var(--bad-text)" : "var(--text-faint)" }}>
+                          {p.state === "pending" && <><span className="cel-spin" />queued…</>}
+                          {p.state === "running" && <><span className="cel-spin" />signing + settling…</>}
+                          {p.state === "done" && <span className="cel-pop">{`✓ event #${String(p.eventId)} · ${p.released} release${p.released === 1 ? "" : "s"}`}</span>}
                           {p.state === "error" && "✗ flagged — continuing with the rest"}
                         </span>
                       )}
@@ -321,6 +323,7 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
                 <button
                   key={n}
                   onClick={() => setManualSignal(n)}
+                  className="cel-press"
                   style={{
                     width: 44,
                     height: 44,

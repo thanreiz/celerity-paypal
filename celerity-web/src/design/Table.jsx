@@ -38,9 +38,11 @@ export default function Table({ columns, rows, emptyText = "Nothing here yet.", 
         {rows.map((row, i) => (
           <tr
             key={rowKey(row, i)}
+            className="cel-row"
             style={{
               background: mineKey && mineKey(row) ? "rgba(232,245,233,0.55)" : "transparent",
-              transition: "background-color var(--transition-fast)",
+              animation: "celFadeUp 420ms cubic-bezier(.2,.7,.2,1) both",
+              animationDelay: `${Math.min(i, 12) * 35}ms`,
             }}
           >
             {columns.map((c) => (

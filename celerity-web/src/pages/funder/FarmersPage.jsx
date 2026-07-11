@@ -109,9 +109,10 @@ export default function FarmersPage({ groups, busy, run }) {
         </div>
       )}
 
-      {groups.map((group) => (
+      {groups.map((group, gi) => (
         <div
           key={group.region}
+          className={`cel-fade cel-fade-${Math.min(gi + 1, 6)}`}
           style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", overflow: "hidden" }}
         >
           <div style={{ padding: "12px 24px", background: "var(--surface-low)", borderBottom: "1px solid var(--container-highest)", display: "flex", alignItems: "center", gap: 8 }}>
