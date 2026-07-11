@@ -105,7 +105,7 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   if (stage === "connect") {
     return (
       <div style={frameStyle}>
-        <ConnectScreen me={me} farmerName={farmerName} onConnected={() => setStage("app")} />
+        <ConnectScreen me={me} farmerName={farmerName} onConnected={() => setStage("app")} onNotMe={() => setStage("splash")} />
       </div>
     );
   }

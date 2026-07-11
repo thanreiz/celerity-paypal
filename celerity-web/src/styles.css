@@ -418,6 +418,104 @@ a:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .cel-id-addr svg { display: block; opacity: 0.8; }
+
+/* ---- farmer-first identity card (extends .cel-id-*) ----
+   Person-first "Is this you?" treatment: the avatar/name grow so a
+   first-time user recognises themselves at a glance, plus a plain
+   reassurance line and a tucked-away wallet ID. Same tokens/shadows
+   as the base card, so it reads as the same product. */
+.cel-id-card--person {
+  margin-top: clamp(14px, 3.2vw, 22px);
+  padding: 24px 20px 20px;
+  gap: 0;
+}
+.cel-id-avatar--lg {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  font-size: 34px;
+  margin-bottom: 12px;
+}
+/* verified check riding the avatar like a friendly sticker */
+.cel-id-check {
+  position: absolute;
+  right: -3px;
+  bottom: -1px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--ok-text);
+  color: var(--surface);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 4px var(--surface);
+  animation: celStamp 520ms cubic-bezier(.2, .9, .3, 1) 260ms both;
+}
+.cel-id-check svg { display: block; }
+.cel-id-name--lg { font-size: 26px; }
+.cel-id-region--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  margin-top: 4px;
+}
+.cel-id-region--icon svg { display: block; color: var(--primary-chip); }
+.cel-id-reassure {
+  margin: 14px 0 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  line-height: 1.45;
+  max-width: 28ch;
+}
+/* wallet ID — quiet inset row, tap to reveal. Same chip language as
+   .cel-id-addr, but a button that toggles the address. */
+.cel-id-wallet {
+  margin-top: 16px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--surface-low);
+  border: 1px solid var(--container-highest);
+  border-radius: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.cel-id-wallet:hover { background: var(--container); }
+.cel-id-wallet svg { display: block; opacity: 0.85; }
+.cel-id-wallet-lbl { color: var(--text-dim); }
+.cel-id-wallet-val { color: var(--text-dim); }
+.cel-id-wallet-chev { margin-left: 2px; transition: transform var(--transition-base); }
+.cel-id-wallet.is-open .cel-id-wallet-chev { transform: rotate(90deg); }
+/* quiet "This isn't me" escape hatch */
+.cel-id-notme {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  padding: 8px 14px;
+  border-radius: var(--radius-control);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.cel-id-notme:hover { color: var(--text-dim); background: var(--surface-low); }
+@keyframes celStamp {
+  0% { opacity: 0; transform: scale(1.6); }
+  55% { opacity: 1; transform: scale(0.88); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 .cel-connect-actions {
   margin-top: auto;
   display: flex;
