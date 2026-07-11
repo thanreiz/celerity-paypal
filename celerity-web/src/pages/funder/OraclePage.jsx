@@ -1,9 +1,9 @@
 import React, { useRef, useState } from "react";
 import Badge from "../../design/Badge";
 import Button from "../../design/Button";
-import Input from "../../design/Input";
+import Select from "../../design/Select";
 import { reportAndSettle, reportAndSettleMany } from "../../lib/celerity";
-import { regionName, islandOf, ISLANDS } from "../../lib/regions";
+import { regionName, islandOf, ISLANDS, REGION_OPTIONS } from "../../lib/regions";
 
 // ---------------------------------------------------------------------------
 // DEMO ORACLE — this screen stands in for the PAGASA/JMA feed. The bulletin
@@ -315,7 +315,7 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
           Manual fallback — sign a single-region event
         </summary>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", padding: "16px 0 0" }}>
-          <Input label="Region" type="number" min="1" value={manualRegion} onChange={(e) => setManualRegion(e.target.value)} />
+          <Select label="Region" value={manualRegion} onChange={(e) => setManualRegion(e.target.value)} options={REGION_OPTIONS} />
           <div>
             <p style={{ margin: "0 0 5px", font: "var(--text-label)", textTransform: "uppercase", color: "var(--text-dim)" }}>Typhoon Signal</p>
             <div style={{ display: "flex", gap: 6 }}>
