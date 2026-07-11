@@ -26,7 +26,7 @@ export default function ConnectScreen({ me, farmerName = "Mang Ramon", region = 
   return (
     <div className="cel-connect">
       <div className="cel-connect-top">
-        <img className="cel-connect-logo" src="/logo-lockup.png" alt="Celerity" />
+        <img className="cel-connect-logo" src="/logo-wordmark.png" alt="Celerity" />
         <h1 className="cel-connect-h">Is this you?</h1>
         <p className="cel-connect-sub">Take a look. If it's you, tap the green button.</p>
       </div>

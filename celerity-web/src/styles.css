@@ -323,12 +323,16 @@ a:focus-visible {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: clamp(20px, 6vw, 40px);
 }
+/* logo-wordmark.png is cropped tight to the ink (~3.25:1), so it can be
+   sized by width without reserving dead vertical space. Sit the heading
+   a comfortable distance below it rather than glued on. */
 .cel-connect-logo {
-  width: min(58%, 190px);
+  width: min(50%, 176px);
   height: auto;
+  margin-bottom: clamp(18px, 6vw, 40px);
 }
 .cel-connect-h {
   font-size: 23px;
@@ -517,7 +521,10 @@ a:focus-visible {
 }
 
 .cel-connect-actions {
-  margin-top: auto;
+  /* Bounded gap instead of pure `auto`: keeps the CTA low for thumb
+     reach, but stops all the slack from pooling into one big void
+     between the card and the button on a tall frame. */
+  margin-top: clamp(28px, 7vh, 60px);
   display: flex;
   flex-direction: column;
   align-items: center;
