@@ -171,7 +171,7 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 6% 6% 0;
+  padding: 6%;
   font-family: var(--font-sans);
   animation: celSplashIn 480ms ease both;
 }
