@@ -209,10 +209,12 @@ a:focus-visible {
   filter: drop-shadow(0 12px 22px rgba(22, 69, 45, 0.16));
 }
 /* bird only — animated: visible first, then fades out. Sized to roughly
-   match the lockup's bird so the dissolve reads as one mark settling.
-   base state (reduced motion): hidden, since the lockup carries the wordmark. */
+   match the lockup's bird so the dissolve reads as one mark settling. The dove
+   PNG is cropped tight to its ink (fills ~89% of its square canvas), so this
+   width is smaller than the canvas fraction — tuned by eye against the lockup's
+   internal bird. base state (reduced motion): hidden, the lockup carries the wordmark. */
 .cel-logo-bird {
-  width: 42%;
+  width: 31%;
   opacity: 0;
   animation: celBirdCycle 3200ms ease-in-out both;
 }

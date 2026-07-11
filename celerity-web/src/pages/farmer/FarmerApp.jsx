@@ -148,7 +148,7 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
       {/* top bar: dove logo + a visible Funder button (presenter shortcut) */}
       <div style={topBarStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <img src="/logo-dove.png" alt="Celerity" style={{ height: 26, width: "auto" }} />
+          <img src="/logo-dove.png" alt="Celerity" style={{ height: 30, width: "auto", display: "block" }} />
           {pageTitle && <span style={{ font: "var(--text-h2)", fontSize: 17, color: "var(--text)" }}>{pageTitle}</span>}
         </div>
         <button onClick={onOpenDev} className="cel-press" style={funderBtnStyle} aria-label="Open funder console">

@@ -1,23 +1,36 @@
 // Activity timestamps + date grouping.
 //
 // On-chain relief receipts carry NO timestamp (the contract records only
-// event/pool/funder/amount), so for the demo we synthesize a plausible date
-// from each receipt's on-chain order: the most recent receipt reads as earlier
-// today, and each older one steps back roughly a day. Cash-outs use their real
-// `when`. These synthesized dates are demo-only and never presented as
-// on-chain facts.
+// event/pool/funder/amount), so for the demo we synthesize a plausible time
+// from each receipt's on-chain order. The demo is a single live event, so every
+// pre-seeded receipt reads as TODAY — the newest a few minutes ago and each
+// older one a bit earlier — instead of marching a day into the past per row
+// (which made a payout that just happened read as "Yesterday" / "Thursday").
+// Cash-outs and in-app claims use their real `when`. These synthesized times are
+// demo-only and never presented as on-chain facts.
 
-const HOUR = 3600 * 1000;
+const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
+
+// Spacing between consecutive receipts, counting back from the newest. Small
+// enough that a realistic run of receipts all stays within today.
+const RECEIPT_STEP = 23 * MIN;
+const RECEIPT_HEAD = 4 * MIN; // how long ago the newest receipt reads
 
 /**
  * Synthesize a timestamp for a receipt given its position counted from the
- * newest (0 = most recent). Newest lands a few hours ago (so it's "Today");
- * each older one steps back ~1 day, with a small offset so they don't all sit
- * at midnight.
+ * newest (0 = most recent). The newest lands ~4 min ago; each older one steps
+ * back ~23 min, so the whole set reads as "Today" for the live demo. Clamped so
+ * it never crosses midnight into "Yesterday" — a long history compresses toward
+ * the start of today rather than spilling to prior days.
  */
 export function receiptWhen(indexFromNewest, nowMs) {
-  return nowMs - (3 * HOUR + indexFromNewest * DAY + indexFromNewest * 37 * 60 * 1000);
+  const startOfToday = new Date(nowMs);
+  startOfToday.setHours(0, 0, 0, 0);
+  const proposed = nowMs - (RECEIPT_HEAD + indexFromNewest * RECEIPT_STEP);
+  // Keep it inside today (leave a 1-min cushion after midnight).
+  return Math.max(startOfToday.getTime() + MIN, proposed);
 }
 
 /** Which section a timestamp falls into, relative to `nowMs`. */
