@@ -3,8 +3,9 @@ import StatusPill from "../../design/StatusPill";
 import Button from "../../design/Button";
 import CountUp from "../../design/CountUp";
 import RuleSentence from "../../design/RuleSentence";
+import TopUpModal from "./TopUpModal";
 import { invoke } from "../../lib/celerity";
-import { fmtUnits, short, toStroops, CONTRACT_ID } from "../../lib/config";
+import { fmtUnits, short, CONTRACT_ID } from "../../lib/config";
 import { phpValue } from "../../lib/anchor";
 import { FUNDERS } from "../../lib/funders";
 import { poolName } from "../../lib/poolNames";
@@ -31,7 +32,7 @@ const MIX_COLORS = {
   Exhausted: { bg: "var(--bad-bg)", text: "var(--bad-text)", line: "var(--bad-line)" },
 };
 
-function PoolCard({ pool, history, bulletin, who, busy, run, onGoto }) {
+function PoolCard({ pool, history, bulletin, who, busy, run, onGoto, onTopUp }) {
   const st = displayStatus(pool, bulletin);
   const aff = poolAffected(pool, bulletin);
   const paused = pool.status === "Paused";
@@ -141,7 +142,7 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto }) {
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Top up", () => invoke(who, "top_up", { pool_id: pool.id, amount: toStroops(1) }))}>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => onTopUp(pool)}>
             Top-up
           </Button>
           {paused ? (
@@ -271,6 +272,7 @@ function IslandGroup({ island, pools, bulletin, children }) {
  * island, with a typhoon-context banner on top. Whatever renders for ADB
  * renders for PCIC: it's one code path over `myPools`. */
 export default function PoolsPage({ myPools, loaded, ledger, bulletin, who, me, busy, run, onCreatePool, onSwitchWho, onGoto }) {
+  const [topUpPool, setTopUpPool] = useState(null);
   const totalUnits = myPools.reduce((s, p) => s + unitsOf(p.balance), 0);
   const active = myPools.filter((p) => p.status === "Active").length;
   const exhausted = myPools.filter((p) => p.status === "Exhausted").length;
@@ -441,7 +443,7 @@ export default function PoolsPage({ myPools, loaded, ledger, bulletin, who, me, 
       {groups.map((g) => (
         <IslandGroup key={g.island} island={g.island} pools={g.pools} bulletin={bulletin}>
           {g.pools.map((p) => (
-            <PoolCard key={String(p.id)} pool={p} history={historyFor(p)} bulletin={bulletin} who={who} busy={busy} run={run} onGoto={onGoto} />
+            <PoolCard key={String(p.id)} pool={p} history={historyFor(p)} bulletin={bulletin} who={who} busy={busy} run={run} onGoto={onGoto} onTopUp={setTopUpPool} />
           ))}
         </IslandGroup>
       ))}
@@ -452,6 +454,10 @@ export default function PoolsPage({ myPools, loaded, ledger, bulletin, who, me, 
         <p style={{ font: "var(--text-body)", color: "var(--text-faint)" }}>
           No pools yet under this identity — create the first one above.
         </p>
+      )}
+
+      {topUpPool && (
+        <TopUpModal pool={topUpPool} who={who} busy={busy} run={run} onClose={() => setTopUpPool(null)} />
       )}
     </div>
   );
