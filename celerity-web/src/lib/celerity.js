@@ -53,22 +53,53 @@ export async function view(method, args) {
   return tx.result;
 }
 
-/** All pools, by scanning ids upward until the first missing pool. */
+/** True only for a genuine "this pool id doesn't exist" — the contract's
+ * PoolNotFound (Error #3). A network/RPC flake ("Failed to fetch", timeouts,
+ * 5xx) is NOT this and must not end the scan. */
+function isPoolNotFound(e) {
+  const raw = String((e && (e.message || e)) || "");
+  return /Error\(Contract, #3\)/.test(raw);
+}
+
+/**
+ * All pools, by scanning ids upward until the first pool that genuinely
+ * doesn't exist (PoolNotFound). Critically, a transient RPC error must NOT be
+ * mistaken for the end of the scan — doing so truncates the list (often to
+ * empty), which then reads every funder's ledger as gone and makes a farmer's
+ * receipts vanish on refresh. So each read retries a couple times on a flake,
+ * and if it still can't complete we THROW rather than silently return a short
+ * list — the caller keeps its last-good state instead of blanking the wallet.
+ */
 export async function allPools() {
   const pools = [];
   for (let id = 1n; ; id++) {
     let p;
-    try {
-      p = await view("pool", { pool_id: id });
-    } catch {
-      break; // PoolNotFound: end of scan
+    let lastErr;
+    let got = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        p = await view("pool", { pool_id: id });
+        got = true;
+        break;
+      } catch (e) {
+        if (isPoolNotFound(e)) return pools; // real end of scan
+        lastErr = e; // transient — back off and retry
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
     }
-    // Depending on SDK version a missing pool can also surface as an
-    // empty/valueless simulation result rather than a throw.
-    if (!p || p.status === undefined) break;
+    if (!got) {
+      // Couldn't read this id after retries, and it wasn't a genuine
+      // PoolNotFound. Returning what we have would silently DROP the pools
+      // after this id (and every receipt paid from them) — the exact "my
+      // money disappeared" bug. So fail the whole read; the caller keeps its
+      // last-good state and the poll retries a moment later.
+      throw lastErr || new Error("Could not read pools (RPC unavailable)");
+    }
+    // A genuinely-missing pool can also surface as an empty/valueless
+    // simulation result (SDK-version dependent) rather than a throw.
+    if (!p || p.status === undefined) return pools;
     pools.push({ id, ...p, status: p.status.tag ?? p.status });
   }
-  return pools;
 }
 
 /** Every release paid to `farmer`, across all funders' ledgers. Demo scale. */
