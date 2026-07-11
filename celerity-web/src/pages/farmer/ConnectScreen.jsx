@@ -28,7 +28,6 @@ export default function ConnectScreen({ me, farmerName = "Mang Ramon", region = 
       <div className="cel-connect-top">
         <img className="cel-connect-logo" src="/logo-lockup.png" alt="Celerity" />
         <h1 className="cel-connect-h">Is this you?</h1>
-        <p className="cel-connect-sub">Take a look. If it's you, tap the green button.</p>
       </div>
 
       <div className="cel-id-card cel-id-card--person">
@@ -78,14 +77,6 @@ export default function ConnectScreen({ me, farmerName = "Mang Ramon", region = 
       </div>
 
       <div className="cel-connect-actions">
-        <div className="cel-connect-ready">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
-            <path d="M4.5 7 6.2 8.7 9.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Your wallet is ready — no setup needed
-        </div>
-
         <Button variant="primary" onClick={onConnected} style={{ width: "100%", fontSize: 16, minHeight: 52 }}>
           Yes, this is me
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ marginLeft: 2 }}>
