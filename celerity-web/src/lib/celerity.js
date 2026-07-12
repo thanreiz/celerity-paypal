@@ -1,7 +1,7 @@
 // Thin wrapper around the generated Soroban contract client.
 // One client per demo identity; the client is built from the on-chain
 // contract spec, so method names/args match lib.rs exactly.
-import { Keypair, contract } from "@stellar/stellar-sdk";
+import { Keypair, contract, rpc } from "@stellar/stellar-sdk";
 import { Buffer } from "buffer";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL, SECRETS, short } from "./config";
 import { FUNDERS } from "./funders";
@@ -49,6 +49,19 @@ export async function invoke(role, method, args) {
 export async function view(method, args) {
   const c = await clientFor("funder"); // any source account works for reads
   const tx = await c[method](args);
+  // A contract panic (e.g. FarmerNotFound, PoolNotFound) surfaces as a
+  // successfully-resolved simulation carrying an error, not a thrown JS
+  // error — tx.result ends up a truthy-but-empty { error: {...} } shape
+  // instead of rejecting. Left unchecked, callers that rely on try/catch
+  // (e.g. "farmer not registered yet") see a malformed object instead of the
+  // expected empty/error branch. Detect it via the SDK's own simulation
+  // error shape (tx.simulation.error, a raw "HostError: Error(Contract, #N)"
+  // string) and throw with that message so every existing .catch() — and
+  // isPoolNotFound's regex — keeps working.
+  if (tx.result && typeof tx.result === "object" && "error" in tx.result) {
+    const simError = tx.simulation && rpc.Api.isSimulationError(tx.simulation) ? tx.simulation.error : null;
+    throw new Error(simError || "Simulation error");
+  }
   return tx.result;
 }
 
