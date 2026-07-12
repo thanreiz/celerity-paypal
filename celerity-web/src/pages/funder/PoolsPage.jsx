@@ -155,8 +155,23 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto, onTopUp }) 
             </Button>
           )}
           <Button size="sm" variant="ghost" disabled={busy} onClick={() => run("Withdraw unspent", () => invoke(who, "withdraw_unspent", { pool_id: pool.id }))}>
-            Withdraw
+            Withdraw unspent
           </Button>
+          {!paused && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={() =>
+                run("End event", async () => {
+                  await invoke(who, "withdraw_unspent", { pool_id: pool.id });
+                  await invoke(who, "pause_pool", { pool_id: pool.id });
+                })
+              }
+            >
+              End event
+            </Button>
+          )}
         </div>
       </div>
     </article>
