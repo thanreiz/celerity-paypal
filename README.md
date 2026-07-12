@@ -1,3 +1,7 @@
+<p align="center">
+  <img alt="Celerity" src="https://raw.githubusercontent.com/thanreiz/Celerity/main/celerity-web/public/logo-dove.png" width="120" />
+</p>
+
 <h1 align="center">Celerity</h1>
 
 <p align="center">
