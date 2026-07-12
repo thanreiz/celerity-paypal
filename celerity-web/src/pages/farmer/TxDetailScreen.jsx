@@ -2,6 +2,7 @@ import React from "react";
 import { short, CONTRACT_ID } from "../../lib/config";
 import { funderLabel } from "../../lib/celerity";
 import { formatDate } from "../../lib/activityTime";
+import { regionName } from "../../lib/regions";
 
 /**
  * Transaction detail — a plain-language overview of one movement.
@@ -45,7 +46,7 @@ export default function TxDetailScreen({ tx, me, pools, onBack }) {
         {/* from → to flow */}
         <div style={cardStyle}>
           <FlowNode
-            title={isReceived ? "Celerity escrow contract" : "Your wallet"}
+            title={isReceived ? "Celerity relief fund" : "Your wallet"}
             sub={isReceived ? short(CONTRACT_ID) : short(me)}
             tone={isReceived ? "primary" : "you"}
           />
@@ -65,15 +66,14 @@ export default function TxDetailScreen({ tx, me, pools, onBack }) {
           <Row k="Amount" v={amountStr} strong />
           {tx.when != null && <Row k="Date" v={formatDate(tx.when, Date.now())} />}
           {isReceived && <Row k="From funder" v={funderLabel(tx.funder)} />}
-          {region != null && <Row k="Region" v={`Region ${region}`} />}
-          {tx.pool_id != null && <Row k="Relief pool" v={`Pool #${String(tx.pool_id)}`} />}
+          {region != null && <Row k="Region" v={regionName(region)} />}
           <Row k="Type" v={isReceived ? "Relief received" : "Cash-out (demo)"} last />
         </div>
 
         {/* plain explanation */}
         <p style={{ font: "var(--text-body)", fontSize: 14, color: "var(--text-dim)", lineHeight: 1.5, margin: "0 2px", textAlign: "center" }}>
           {isReceived
-            ? `A signed typhoon signal for Region ${region ?? "your area"} released this relief from the ${funderLabel(tx.funder)} pool straight to your wallet — no forms, no waiting.`
+            ? `A signed typhoon signal for ${region != null ? regionName(region) : "your area"} released this relief from ${funderLabel(tx.funder)} straight to your wallet — no forms, no waiting.`
             : `You moved ${amountStr.replace("−", "")} out of your wallet to ${tx.destLabel}. In production this settles through a licensed Stellar anchor; here it's simulated for the demo.`}
         </p>
 

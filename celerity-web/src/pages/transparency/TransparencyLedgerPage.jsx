@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import CountUp from "../../design/CountUp";
 import { allPools, view } from "../../lib/celerity";
 import { fmtUnits, short } from "../../lib/config";
-import { toPHP } from "../../lib/anchor";
+import { toPHP, ANCHOR_LABEL } from "../../lib/anchor";
+import { friendlyError } from "../../lib/errors";
 
 export default function TransparencyLedgerPage({ onBack }) {
   const [releases, setReleases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  // A single RPC flake must never leave this page stuck on "Loading…" forever
+  // in front of an audience — retry on a short timer until it succeeds, same
+  // resilience pattern as the farmer wallet's refresh poll.
+  const load = useCallback(async (signal) => {
+    try {
       const pools = await allPools();
       const regionByPool = Object.fromEntries(pools.map((p) => [String(p.id), p.region]));
       const funders = [...new Set(pools.map((p) => p.funder))];
@@ -19,17 +23,30 @@ export default function TransparencyLedgerPage({ onBack }) {
         const ledger = await view("funder_ledger", { funder });
         all.push(...ledger);
       }
-      if (!cancelled) {
-        setReleases(all.map((r) => ({ ...r, region: regionByPool[String(r.pool_id)] })));
-        setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      if (signal.cancelled) return;
+      all.sort((a, b) => Number(b.event_id) - Number(a.event_id) || Number(a.pool_id) - Number(b.pool_id));
+      setReleases(all.map((r) => ({ ...r, region: regionByPool[String(r.pool_id)] })));
+      setError(null);
+      setLoading(false);
+    } catch (e) {
+      if (signal.cancelled) return;
+      setError(friendlyError(e));
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    const signal = { cancelled: false };
+    load(signal);
+    const timer = setInterval(() => load(signal), 15000);
+    return () => {
+      signal.cancelled = true;
+      clearInterval(timer);
+    };
+  }, [load]);
+
   const totalUnits = releases.reduce((sum, r) => sum + Number(BigInt(r.amount)) / 1e7, 0);
+  const unitLabel = (amount) => (Number(BigInt(amount)) / 1e7 === 1 ? "unit" : "units");
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--paper-page)", fontFamily: "var(--font-sans)" }}>
@@ -49,7 +66,10 @@ export default function TransparencyLedgerPage({ onBack }) {
           <div>
             <p style={{ margin: 0, font: "var(--text-label)", textTransform: "uppercase", color: "var(--text-faint)" }}>Total Disbursed Across All Relief Efforts</p>
             <p style={{ margin: "8px 0 0", font: "var(--text-display)", fontSize: 40, color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>
-              <CountUp units={totalUnits} format="full" placeholder={loading ? toPHP(0) : undefined} />
+              <CountUp units={loading ? 0 : totalUnits} format="full" />
+            </p>
+            <p style={{ margin: "6px 0 0", font: "var(--text-fine)", fontSize: 11.5, color: "var(--text-faint)" }}>
+              Peso figures: {ANCHOR_LABEL}. Unit amounts are real and settled on Stellar Testnet.
             </p>
           </div>
           <span style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--container-high)", padding: "8px 16px", borderRadius: 999, font: "var(--text-label)", textTransform: "uppercase", color: "var(--text-dim)" }}>
@@ -61,7 +81,12 @@ export default function TransparencyLedgerPage({ onBack }) {
           {loading && (
             <div style={{ padding: 24, font: "var(--text-fine)", color: "var(--text-faint)" }}>Loading on-chain releases…</div>
           )}
-          {!loading && releases.length === 0 && (
+          {!loading && error && (
+            <div style={{ padding: 24, font: "var(--text-fine)", color: "var(--warn-text)" }}>
+              Couldn't reach Stellar Testnet right now ({error}) — retrying automatically…
+            </div>
+          )}
+          {!loading && !error && releases.length === 0 && (
             <div style={{ padding: 24, font: "var(--text-fine)", color: "var(--text-faint)" }}>No releases yet — they appear the moment a signed event settles.</div>
           )}
           {releases.map((r, i) => (
@@ -83,11 +108,11 @@ export default function TransparencyLedgerPage({ onBack }) {
               <div>
                 <span style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>event #{String(r.event_id)} · pool #{String(r.pool_id)}{r.region !== undefined ? ` · region ${r.region}` : ""}</span>
                 <p style={{ margin: "4px 0 0", font: "var(--text-body-lg)" }}>
-                  {short(r.funder)} released {fmtUnits(r.amount)} units to {short(r.farmer)}
+                  {short(r.funder)} released {fmtUnits(r.amount)} {unitLabel(r.amount)} to {short(r.farmer)}
                 </p>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-                <div style={{ font: "var(--text-money)", color: "var(--primary)" }}>{fmtUnits(r.amount)} units</div>
+                <div style={{ font: "var(--text-money)", color: "var(--primary)" }}>{fmtUnits(r.amount)} {unitLabel(r.amount)}</div>
                 <div style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>≈ {toPHP(Number(BigInt(r.amount)) / 1e7)}</div>
               </div>
             </div>

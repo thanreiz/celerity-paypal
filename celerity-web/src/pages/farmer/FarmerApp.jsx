@@ -12,6 +12,7 @@ import { addr, invoke, view } from "../../lib/celerity";
 import { friendlyError } from "../../lib/errors";
 import { UNIT } from "../../lib/config";
 import { toPHPNumber } from "../../lib/anchor";
+import { pendingClaims } from "../../lib/activityRows";
 
 // Seeded "recent recipients" so the cash-out forms aren't empty on stage.
 // dest matches CashOutFlow destinations; detail is the number/account shown.
@@ -56,10 +57,16 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
       // Record it now: drives the instant activity row + the cooldown timer.
       const pool = pools.find((p) => String(p.id) === String(poolId));
       const units = pool ? Number(BigInt(pool.payout_per_farmer)) / Number(UNIT) : 0;
+      // Snapshot how many on-chain receipts this pool has RIGHT NOW (before the
+      // claim's own receipt lands) — buildActivityRows uses this to know when
+      // the claim's receipt has arrived, without depending on synthesized
+      // timestamps. Fixes the first-claim-of-a-pool case, where settle_event's
+      // auto-paid installment #1 would otherwise be mistaken for this claim.
+      const receiptCountAtClaim = receipts.filter((r) => String(r.pool_id) === String(poolId)).length;
       claimSeq.current += 1;
       setClaims((prev) => [
         ...prev,
-        { id: `cl-${claimSeq.current}`, poolId: String(poolId), units, php: toPHPNumber(units), when: Date.now() },
+        { id: `cl-${claimSeq.current}`, poolId: String(poolId), units, php: toPHPNumber(units), when: Date.now(), receiptCountAtClaim },
       ]);
       notify("Installment claimed ✓");
       await new Promise((r) => setTimeout(r, 1500));
@@ -72,8 +79,12 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   };
 
   const receivedUnits = receipts.reduce((sum, r) => sum + Number(BigInt(r.amount)) / Number(UNIT), 0);
+  // Include claims still pending their on-chain receipt (same rule Activity
+  // uses) so the hero balance moves the instant a claim's "Arriving" row
+  // appears, instead of lagging ~1.5s behind until refresh() lands it.
+  const pendingUnits = pendingClaims(claims, receipts).reduce((sum, c) => sum + c.units, 0);
   const cashedOutUnits = cashOuts.reduce((sum, c) => sum + c.units, 0);
-  const availableUnits = Math.max(0, receivedUnits - cashedOutUnits);
+  const availableUnits = Math.max(0, receivedUnits + pendingUnits - cashedOutUnits);
 
   // When each pool's next installment unlocks: the most recent in-app claim's
   // time + its claim_period. Only reflects claims made this session (the

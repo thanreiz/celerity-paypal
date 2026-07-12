@@ -1,7 +1,10 @@
 import React from "react";
-import { fmtUnits, UNIT } from "../../lib/config";
+import { UNIT } from "../../lib/config";
+import { phpValue } from "../../lib/anchor";
 import { funderLabel } from "../../lib/celerity";
 import { regionName } from "../../lib/regions";
+
+const unitsOf = (stroops) => Number(BigInt(stroops)) / Number(UNIT);
 
 /** The 4 Home quick-action tiles each open one of these — real pool/receipt
  * data reshaped into a friendlier, non-technical view. */
@@ -29,7 +32,7 @@ export default function DetailScreen({ kind, pools, registration, onBack }) {
                 key={String(p.id)}
                 icon="🌾"
                 title={funderLabel(p.funder)}
-                subtitle={`${fmtUnits(p.payout_per_farmer)} units${p.installments > 1 ? ` × ${p.installments} installments` : " one-time relief"} · Region ${p.region}`}
+                subtitle={`${phpValue(unitsOf(p.payout_per_farmer))}${p.installments > 1 ? ` × ${p.installments} installments` : " one-time relief"} · ${regionName(p.region)}`}
               />
             ))}
             {pools.length === 0 && <Empty text="No relief programs active yet." />}
@@ -40,7 +43,7 @@ export default function DetailScreen({ kind, pools, registration, onBack }) {
         {kind === "installments" && (
           <>
             {recurring.map((p) => (
-              <ListItem key={String(p.id)} icon="📅" title={`Pool #${String(p.id)}`} subtitle={`${fmtUnits(p.payout_per_farmer)} units per installment · every ${String(p.claim_period_secs)}s`} />
+              <ListItem key={String(p.id)} icon="📅" title={funderLabel(p.funder)} subtitle={`${phpValue(unitsOf(p.payout_per_farmer))} per installment · every ${String(p.claim_period_secs)}s`} />
             ))}
             {recurring.length === 0 && <Empty text="No recurring installments yet." />}
             <Honesty text="Installments unlock automatically on schedule — nothing to request, nothing to wait on a case worker for." />

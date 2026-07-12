@@ -4,6 +4,7 @@
 import { Keypair, contract } from "@stellar/stellar-sdk";
 import { Buffer } from "buffer";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL, SECRETS, short } from "./config";
+import { FUNDERS } from "./funders";
 
 export const keypairs = Object.fromEntries(
   Object.entries(SECRETS).map(([role, secret]) => [role, Keypair.fromSecret(secret)])
@@ -11,13 +12,11 @@ export const keypairs = Object.fromEntries(
 
 export const addr = (role) => keypairs[role].publicKey();
 
-// Farmer-facing friendly names for the two demo funders — mirrors the
-// FUNDERS list in FunderPortal.jsx, but keyed by address since receipts only
-// carry the funder's public key, not their role string.
-const FUNDER_LABELS = {
-  [addr("funder")]: "ADB Typhoon Relief",
-  [addr("funder2")]: "PCIC Crop Support",
-};
+// Farmer-facing funder name, keyed by address (receipts carry the funder's
+// public key, not its role string). Derived from the SAME FUNDERS list the
+// funder console uses, so an institution is never named two different ways
+// depending which app a judge happens to be looking at.
+const FUNDER_LABELS = Object.fromEntries(FUNDERS.map((f) => [addr(f.role), f.label]));
 export const funderLabel = (funderAddr) => FUNDER_LABELS[funderAddr] ?? `Relief program (${short(funderAddr)})`;
 
 // Memoize the PROMISE, not the resolved client: concurrent first calls (App

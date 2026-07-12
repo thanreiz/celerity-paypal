@@ -20,9 +20,29 @@ import { UNIT } from "./config";
 import { toPHPNumber } from "./anchor";
 import { funderLabel } from "./celerity";
 import { receiptWhen } from "./activityTime";
+import { regionName } from "./regions";
 
-const subtitleFor = (region, poolId) =>
-  `${region != null ? `Region ${region} · ` : ""}Pool #${String(poolId)}`;
+// Plain-language subtitle: region only. No "Pool #" — that's contract
+// vocabulary, not something a farmer should ever read on their own wallet.
+const subtitleFor = (region) => (region != null ? regionName(region) : "");
+
+function receiptCountsByPool(receipts) {
+  const m = new Map();
+  for (const r of receipts) {
+    const k = String(r.pool_id);
+    m.set(k, (m.get(k) || 0) + 1);
+  }
+  return m;
+}
+
+/** A claim is still pending (not yet reflected by an on-chain receipt) when
+ * the pool's current receipt count hasn't risen past what it was at claim
+ * time. Shared by buildActivityRows and the balance calc so they can never
+ * disagree about which claims are "in" vs already landed. */
+export function pendingClaims(claims, receipts) {
+  const counts = receiptCountsByPool(receipts);
+  return claims.filter((c) => (counts.get(String(c.poolId)) || 0) <= (c.receiptCountAtClaim ?? 0));
+}
 
 /**
  * @returns rows sorted newest-first, each:
@@ -53,7 +73,7 @@ export function buildActivityRows({ receipts = [], claims = [], cashOuts = [], p
       key: `r-${i}`,
       kind: "received",
       title: `Received · ${funderLabel(r.funder)}`,
-      subtitle: subtitleFor(region, r.pool_id),
+      subtitle: subtitleFor(region),
       amountPhp: toPHPNumber(units),
       funder: r.funder,
       pool_id: r.pool_id,
@@ -62,32 +82,26 @@ export function buildActivityRows({ receipts = [], claims = [], cashOuts = [], p
     };
   });
 
-  // Reconcile claims against receipts, per pool: the first N claims (N = number
-  // of on-chain receipts for that pool) are already represented by receiptRows,
-  // so only the surplus — claims still in flight — become their own rows.
-  const receiptCountByPool = new Map();
-  for (const r of receipts) {
-    const k = String(r.pool_id);
-    receiptCountByPool.set(k, (receiptCountByPool.get(k) || 0) + 1);
-  }
-  const seenByPool = new Map(); // how many claims we've walked past for a pool
+  // Reconcile claims against receipts, per pool. A claim is "pending" (shows
+  // its own instant row) until the pool's on-chain receipt count rises above
+  // what it was WHEN THE CLAIM WAS MADE (claim.receiptCountAtClaim, captured
+  // by FarmerApp.claim() at claim time — a stable fact, unlike the receipts'
+  // synthesized display timestamps, which are recomputed relative to "now" on
+  // every render and can't be compared against a real clock).
+  //
+  // This also fixes the "first claim of a pool" case: settle_event auto-pays
+  // installment #1 as its own on-chain receipt before the farmer ever taps
+  // Claim, so that receipt is already counted in receiptCountAtClaim for
+  // every subsequent manual claim — it can never be mistaken for one.
   const pendingClaimRows = [];
-  // Oldest-first so the earliest claims are the ones considered "already
-  // on-chain"; the most recent surplus claim is the one that stays pending.
-  const claimsOldestFirst = [...claims].sort((a, b) => a.when - b.when);
-  for (const c of claimsOldestFirst) {
-    const k = String(c.poolId);
-    const seen = seenByPool.get(k) || 0;
-    seenByPool.set(k, seen + 1);
-    const onChain = receiptCountByPool.get(k) || 0;
-    if (seen < onChain) continue; // this claim is already shown as a receipt
+  for (const c of pendingClaims(claims, receipts)) {
     const pool = pools.find((p) => String(p.id) === String(c.poolId));
     const region = regionOf(c.poolId);
     pendingClaimRows.push({
       key: c.id,
       kind: "received",
       title: `Claimed · ${pool ? funderLabel(pool.funder) : "relief"}`,
-      subtitle: subtitleFor(region, c.poolId),
+      subtitle: subtitleFor(region),
       amountPhp: c.php,
       funder: pool?.funder,
       pool_id: c.poolId,

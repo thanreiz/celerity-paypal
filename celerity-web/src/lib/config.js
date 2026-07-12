@@ -25,5 +25,11 @@ export const fmtUnits = (stroops) =>
   (Number(BigInt(stroops)) / Number(UNIT)).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
-export const toStroops = (units) => BigInt(Math.round(Number(units) * Number(UNIT)));
+// Guards against a cleared/empty number input: Number("") is NaN, and
+// BigInt(NaN) throws a raw RangeError that would otherwise surface as an
+// unfriendly toast. Treat anything non-finite as 0 rather than crash.
+export const toStroops = (units) => {
+  const n = Number(units) * Number(UNIT);
+  return Number.isFinite(n) ? BigInt(Math.round(n)) : 0n;
+};
 export const short = (addr) => `${addr.slice(0, 4)}…${addr.slice(-4)}`;

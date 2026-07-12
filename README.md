@@ -254,11 +254,13 @@ cd celerity-web && node ../tools/seed-demo.mjs
 
 ## Demo Flow
 
-1. Open the funder console and log in as **ADB APDRF**; tap the **PCIC** switcher and watch the
-   whole dashboard re-scope — strict funder isolation.
-2. On **Escrow Pools**, read a plain-language rule: *"When typhoon signal ≥ 3 hits Bicol →
-   release the payout per registered farmer."* (Demo amounts are small Testnet XLM shown as
-   pesos at a fixed demo rate, so the escrow doesn't drain the demo accounts.)
+1. Open the funder console and log in as **ADB APDRF**. On **Escrow Pools**, read a
+   plain-language rule: *"When typhoon signal ≥ 3 hits Bicol → release the payout per
+   registered farmer."* (Demo amounts are small Testnet XLM shown as pesos at a fixed demo
+   rate, so the escrow doesn't drain the demo accounts.)
+2. Tap the **PCIC** pill in the "Acting as" switcher (top of Escrow Pools) and watch the whole
+   dashboard — pools, totals, ledger — re-scope to PCIC's own money. Strict funder isolation:
+   neither funder ever sees the other's balance.
 3. In **Farmers (LGU)**, show the registry belongs to the government, not the funders.
 4. Open **Trigger Typhoon**, drop the PAGASA bulletin, and watch it settle every matching region
    at once — one signed bulletin, many releases.
