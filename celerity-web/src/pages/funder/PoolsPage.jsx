@@ -10,13 +10,19 @@ import { phpValue } from "../../lib/anchor";
 import { FUNDERS } from "../../lib/funders";
 import { poolName } from "../../lib/poolNames";
 import { regionName, regionShort, ISLANDS } from "../../lib/regions";
+import { isEnded, markEnded, clearEnded } from "../../lib/endedPools";
 
 const unitsOf = (stroops) => Number(BigInt(stroops)) / 1e7;
 
 /** Display status: the chain says "Active", the design language says "Armed";
- * a pool whose region settled under the loaded bulletin reads "Released". */
+ * a pool whose region settled under the loaded bulletin reads "Released".
+ * "Ended" isn't a real on-chain status (the contract only has Active/Paused/
+ * Exhausted) — a formally-ended pool is Paused on-chain, distinguished here
+ * by the local endedPools marker (see lib/endedPools.js) so it reads as
+ * "this typhoon is over, closed on purpose" rather than "paused for now". */
 function displayStatus(pool, bulletin) {
   if (pool.status === "Active" && bulletin?.settled?.includes(Number(pool.region))) return "Released";
+  if (pool.status === "Paused" && isEnded(pool.id)) return "Ended";
   return pool.status === "Active" ? "Armed" : pool.status;
 }
 
@@ -30,12 +36,14 @@ const MIX_COLORS = {
   Released: { bg: "var(--primary-chip)", text: "#fff", line: "var(--primary-chip)" },
   Paused: { bg: "var(--warn-bg)", text: "var(--warn-text)", line: "var(--warn-line)" },
   Exhausted: { bg: "var(--bad-bg)", text: "var(--bad-text)", line: "var(--bad-line)" },
+  Ended: { bg: "var(--neutral-bg)", text: "var(--neutral-text)", line: "var(--neutral-line)" },
 };
 
 function PoolCard({ pool, history, bulletin, who, busy, run, onGoto, onTopUp }) {
   const st = displayStatus(pool, bulletin);
   const aff = poolAffected(pool, bulletin);
   const paused = pool.status === "Paused";
+  const ended = st === "Ended";
 
   return (
     <article
@@ -49,7 +57,7 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto, onTopUp }) 
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        opacity: pool.status === "Exhausted" ? 0.85 : 1,
+        opacity: pool.status === "Exhausted" || ended ? 0.85 : 1,
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -146,7 +154,14 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto, onTopUp }) 
             Top-up
           </Button>
           {paused ? (
-            <Button size="sm" variant="primary" disabled={busy} onClick={() => run("Resume", () => invoke(who, "resume_pool", { pool_id: pool.id }))}>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={busy}
+              onClick={() =>
+                run("Resume", () => invoke(who, "resume_pool", { pool_id: pool.id })).then(() => clearEnded(pool.id))
+              }
+            >
               Resume
             </Button>
           ) : (
@@ -166,7 +181,7 @@ function PoolCard({ pool, history, bulletin, who, busy, run, onGoto, onTopUp }) 
                 run("End event", async () => {
                   await invoke(who, "withdraw_unspent", { pool_id: pool.id });
                   await invoke(who, "pause_pool", { pool_id: pool.id });
-                })
+                }).then(() => markEnded(pool.id))
               }
             >
               End event
