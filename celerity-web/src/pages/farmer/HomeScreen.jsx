@@ -297,7 +297,7 @@ const countdownStyle = {
   marginTop: 14,
   width: "100%",
   minHeight: 50,
-  borderRadius: "var(--radius-control)",
+  borderRadius: "var(--radius-card)",
   background: "var(--surface-low)",
   border: "1px solid var(--container-highest)",
   display: "flex",
