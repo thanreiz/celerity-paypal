@@ -13,6 +13,7 @@ import { friendlyError } from "../../lib/errors";
 import { UNIT } from "../../lib/config";
 import { toPHPNumber } from "../../lib/anchor";
 import { pendingClaims } from "../../lib/activityRows";
+import { loadCashOuts, saveCashOuts, loadRecipients, saveRecipients } from "../../lib/farmerDemoState";
 
 // Seeded "recent recipients" so the cash-out forms aren't empty on stage.
 // dest matches CashOutFlow destinations; detail is the number/account shown.
@@ -30,7 +31,9 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   // Demo-only cash-out ledger. The chain is the source of truth for what
   // ARRIVED (receipts); these track what the farmer has cashed out locally so
   // the spendable balance can move live on stage. Clearly labeled "Demo" in UI.
-  const [cashOuts, setCashOuts] = useState([]); // { id, units, php, destLabel, when, dest, detail, name }
+  // Persisted to localStorage (lib/farmerDemoState.js) so a page refresh
+  // mid-demo doesn't silently erase cash-out history and spendable balance.
+  const [cashOuts, setCashOuts] = useState(loadCashOuts); // { id, units, php, destLabel, when, dest, detail, name }
   // Session record of installments claimed in-app. The on-chain funder_ledger
   // is still the source of truth (refresh() re-reads it); this gives instant,
   // correctly-timed feedback — the activity row appears the moment a claim
@@ -40,7 +43,8 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   const claimSeq = useRef(0);
   // Saved payout destinations shown as "recent recipients" on the cash-out
   // forms. Seeded so the list isn't empty on stage; real ones get appended.
-  const [recipients, setRecipients] = useState(SEED_RECIPIENTS);
+  // Persisted the same way as cashOuts, so a saved recipient survives refresh.
+  const [recipients, setRecipients] = useState(() => loadRecipients(SEED_RECIPIENTS));
   const [txDetail, setTxDetail] = useState(null); // selected activity row, or null
   const cashOutSeq = useRef(0);
   const me = addr("farmer");
@@ -49,6 +53,9 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   useEffect(() => {
     view("farmer", { addr: me }).then(setRegistration).catch(() => setRegistration(null));
   }, [me, pools]);
+
+  useEffect(() => saveCashOuts(cashOuts), [cashOuts]);
+  useEffect(() => saveRecipients(recipients), [recipients]);
 
   const claim = async (poolId) => {
     setBusy(true);
