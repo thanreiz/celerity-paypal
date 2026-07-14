@@ -44,12 +44,13 @@ cross-border settlement layer *underneath* them.
 
 > **Key links**
 >
-> - **Contract address (Stellar Testnet):** `CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG)
+> - **Live demo:** [celerity-chi.vercel.app](https://celerity-chi.vercel.app)
+> - **Contract address (Stellar Testnet):** `CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2)
 > - **Pitch & spec:** [`Celerity_Hackathon_Doc.md`](Celerity_Hackathon_Doc.md)
 > - **Design rules & win condition:** [`CLAUDE.md`](CLAUDE.md)
 > - **Design system:** [`design.md`](design.md)
-> - **On-chain QA sweeps:** [`qa-reports/`](qa-reports/)
+> - **App screenshots:** [`screenshots/`](screenshots/)
 
 ---
 
@@ -181,7 +182,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG` |
+| Contract address | `CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2` |
 
 ## Repo Layout
 
@@ -197,7 +198,7 @@ celerity-web/            React frontend
   src/lib/               celerity.js (contract client), regions.js, funders.js, anchor.js
 oracle/                  Node.js Ed25519 oracle signer (demo stub for the weather feed)
 tools/seed-demo.mjs      Repeatable demo-slate seed (pools + farmers, no event fired)
-qa-reports/              On-chain QA sweeps, per phase
+screenshots/             Every screen in the live app, farmer + funder + transparency
 deployments.json         Public Testnet deployment metadata + contract-id history
 ```
 

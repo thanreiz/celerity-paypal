@@ -1,7 +1,7 @@
 # Changelog
 
 Human-readable log of changes, newest first. Contract redeploys are also tracked
-in `deployments.json` (`previous_contract_ids`), and QA sweeps in `qa-reports/`.
+in `deployments.json` (`previous_contract_ids`).
 
 ---
 
