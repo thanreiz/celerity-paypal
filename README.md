@@ -48,9 +48,8 @@ cross-border settlement layer *underneath* them.
 > - **Contract address (Stellar Testnet):** `CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2`
 >   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2)
 > - **Pitch & spec:** [`Celerity_Hackathon_Doc.md`](Celerity_Hackathon_Doc.md)
-> - **Design rules & win condition:** [`CLAUDE.md`](CLAUDE.md)
-> - **Design system:** [`design.md`](design.md)
-> - **App screenshots:** [`screenshots/`](screenshots/)
+> - **Demo Video** [`Demo Video`](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
+> - **Presentation:** [`Celerity - Presentation`](https://canva.link/ydnjf2yvz0dybpw)
 
 ---
 
