@@ -13,7 +13,7 @@ import { friendlyError } from "../../lib/errors";
 import { UNIT } from "../../lib/config";
 import { toPHPNumber } from "../../lib/anchor";
 import { pendingClaims } from "../../lib/activityRows";
-import { loadCashOuts, saveCashOuts, loadRecipients, saveRecipients } from "../../lib/farmerDemoState";
+import { loadCashOuts, saveCashOuts, loadRecipients, saveRecipients, resetDemoState } from "../../lib/farmerDemoState";
 
 // Seeded "recent recipients" so the cash-out forms aren't empty on stage.
 // dest matches CashOutFlow destinations; detail is the number/account shown.
@@ -125,6 +125,17 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
     notify(`Cashed out to ${destLabel} ✓`);
   };
 
+  // Presenter helper: wipe demo-only cash-out history + saved recipients so a
+  // live run starts from a guaranteed-clean wallet, even on a machine with
+  // stale localStorage from earlier testing. Chain state (receipts) is
+  // untouched — only the local demo ledger resets.
+  const resetDemo = () => {
+    resetDemoState();
+    setCashOuts([]);
+    setRecipients(SEED_RECIPIENTS);
+    notify("Demo wallet reset — cash-out history cleared");
+  };
+
   // Fixed-height phone "screen": rounded, shadowed, clips its overflow so the
   // page content scrolls INSIDE it (bottom nav stays pinned) rather than the
   // browser page scrolling. On a real phone this is just the full viewport.
@@ -197,7 +208,7 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
           <ActivityScreen receipts={receipts} pools={pools} cashOuts={cashOuts} claims={claims} onOpenTx={setTxDetail} />
         )}
         {page === "profile" && (
-          <ProfileScreen me={me} registration={registration} farmerName={farmerName} receipts={receipts} pools={pools} />
+          <ProfileScreen me={me} registration={registration} farmerName={farmerName} receipts={receipts} pools={pools} onResetDemo={resetDemo} />
         )}
       </div>
       <BottomNav active={page} onNavigate={setPage} />

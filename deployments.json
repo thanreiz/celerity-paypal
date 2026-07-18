@@ -3,12 +3,12 @@
   "testnet": {
     "network_passphrase": "Test SDF Network ; September 2015",
     "rpc_url": "https://soroban-testnet.stellar.org:443",
-    "contract_id": "CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2",
+    "contract_id": "CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD",
     "deployer_identity": "alice",
     "settlement_token": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC (native XLM SAC)",
     "oracle_public_key_hex": "12811b0d23c5d2738042963d57cb3dfa1705bfce3880b86aa258182df3b77941",
     "oracle_note": "public key only — the signing secret lives in oracle/.env (gitignored)",
-    "phase": "6 — fully fresh contract instance for hands-on testing, zero pools/farmers/events. Same wasm as phase 5; oracle key and token reused.",
+    "phase": "7 — presentation demo slate: fresh contract, seeded via tools/seed-demo.mjs (ADB + PCIC pools across Bicol/N.Mindanao/E.Visayas, farmers registered, all Armed, ledger empty, no event fired). Same wasm rebuilt from current source; oracle key and token reused.",
     "previous_contract_ids": {
       "phase_0": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX",
       "phase_1_pre_review_fix": "CBLBN25BUURXCPAWJWO6MNRIVGRFSCOYVH7WAVFXNEGUCPLF35STK7ED",
@@ -16,7 +16,8 @@
       "phase_2": "CAL64YFBWUAE4OXLA3ZYSEQ7WZW73DPHDLPHW4F4AVEJ2TMPAJ5GAWZ7",
       "phase_3": "CDWFQPHFK5PT55AQWAJYE2FSQ4XLXCBRWTFZFJXVYJ4IYM4IOSV7KWMM",
       "phase_4_5_pre_reset": "CBOC7QW3EZUABZST4KO2FHYNRUZPN3KF6QTLJSZ4H77VZKOHTJFKI2Q2",
-      "phase_5": "CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG"
+      "phase_5": "CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG",
+      "phase_6_scratch": "CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2"
     }
   }
 }

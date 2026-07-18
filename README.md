@@ -45,11 +45,13 @@ cross-border settlement layer *underneath* them.
 > **Key links**
 >
 > - **Live demo:** [celerity-chi.vercel.app](https://celerity-chi.vercel.app)
-> - **Contract address (Stellar Testnet):** `CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2)
-> - **Pitch & spec:** [`Celerity_Hackathon_Doc.md`](Celerity_Hackathon_Doc.md)
-> - **Demo Video** [`Demo Video`](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
-> - **Presentation:** [`Celerity - Presentation`](https://canva.link/ydnjf2yvz0dybpw)
+> - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
+> - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
+> - **Contract address (Stellar Testnet):** `CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD)
+> - **Design rules & win condition:** [`CLAUDE.md`](CLAUDE.md)
+> - **Design system:** [`design.md`](design.md)
+> - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
 
 ---
 
@@ -112,6 +114,25 @@ every peso auditable.
 6. **Value cashes out to PHP and every release is logged.**
    Released value routes through a SEP-31 anchor to spendable pesos, and `funder_ledger` gives
    each funder a per-release, on-chain record.
+
+## Stellar Integrations
+
+Celerity isn't "an app with a Stellar payout at the end" — Stellar is the trust layer the
+whole design leans on. What's actually in use, all live on Testnet:
+
+| # | Integration | Where / how |
+| --- | --- | --- |
+| 1 | **Soroban smart contract** | The full escrow, trigger, and settlement logic runs as a Rust contract on Stellar, not a backend server — funds and rules live on-chain. |
+| 2 | **Stellar Asset Contract (SAC) transfers** | Payouts move with `token::TokenClient::new(&e, &get_token(&e)).transfer(...)` — native Stellar asset transfers, not an internal ledger entry. |
+| 3 | **On-chain signature verification (Ed25519)** | `e.crypto().ed25519_verify(...)` in `report_event` checks the oracle's signature natively inside the contract — the typhoon trigger is verified by Stellar's own crypto primitive, not a server we control. |
+| 4 | **Per-address authorization** | Every state-changing call (`deposit`, `register_farmer`, `claim`, …) requires `.require_auth()` from the correct Stellar account — funder isolation is enforced by the protocol, not just app logic. |
+| 5 | **On-chain persistent storage** | Sub-pools, farmer registry, and settled-event keys live in `e.storage().persistent()` / `.instance()` — the state judges can audit is the same state the contract runs on. |
+| 6 | **On-chain event log** | Every release publishes via `e.events().publish(...)`, giving each funder a verifiable, independent release trail — not an app database log. |
+| 7 | **Ledger-timestamped scheduling** | Recurring installment cooldowns are enforced against `e.ledger().timestamp()`, so claim pacing can't be gamed by a client clock. |
+| 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
+
+Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
+per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD).
 
 ## Features
 
@@ -181,7 +202,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2` |
+| Contract address | `CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD` |
 
 ## Repo Layout
 
@@ -200,6 +221,89 @@ tools/seed-demo.mjs      Repeatable demo-slate seed (pools + farmers, no event f
 screenshots/             Every screen in the live app, farmer + funder + transparency
 deployments.json         Public Testnet deployment metadata + contract-id history
 ```
+
+## Screenshots
+
+Every screen and sub-screen of the live app, captured from the deployed build. Full-size
+originals are in [`screenshots/`](screenshots/).
+
+<details open>
+<summary><strong>Farmer app</strong> (mobile)</summary>
+
+<br />
+
+<table>
+<tr>
+<td align="center"><img src="screenshots/03-farmer-home.png" width="200" alt="Farmer home" /><br /><sub>Home</sub></td>
+<td align="center"><img src="screenshots/04-farmer-activity.png" width="200" alt="Farmer activity" /><br /><sub>Activity</sub></td>
+<td align="center"><img src="screenshots/07-farmer-installments.png" width="200" alt="Installments" /><br /><sub>Installments</sub></td>
+<td align="center"><img src="screenshots/05-farmer-profile.png" width="200" alt="Farmer profile" /><br /><sub>Profile</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/06-farmer-relief-programs.png" width="200" alt="Relief programs" /><br /><sub>Relief programs</sub></td>
+<td align="center"><img src="screenshots/08-farmer-my-region.png" width="200" alt="My region" /><br /><sub>My region</sub></td>
+<td align="center"><img src="screenshots/10-farmer-tx-detail.png" width="200" alt="Transaction detail" /><br /><sub>Tx detail</sub></td>
+<td align="center"><img src="screenshots/09-farmer-help.png" width="200" alt="Help" /><br /><sub>Help</sub></td>
+</tr>
+</table>
+
+**Cash-out flow (SEP-31 anchor stub → PHP):**
+
+<table>
+<tr>
+<td align="center"><img src="screenshots/11-farmer-cashout-destination.png" width="200" alt="Cash-out destination" /><br /><sub>Destination</sub></td>
+<td align="center"><img src="screenshots/12-farmer-cashout-recipient.png" width="200" alt="Cash-out recipient" /><br /><sub>Recipient</sub></td>
+<td align="center"><img src="screenshots/13-farmer-cashout-amount.png" width="200" alt="Cash-out amount" /><br /><sub>Amount</sub></td>
+<td align="center"><img src="screenshots/14-farmer-cashout-confirm.png" width="200" alt="Cash-out confirm" /><br /><sub>Confirm</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/15-farmer-cashout-success.png" width="200" alt="Cash-out success" /><br /><sub>Success</sub></td>
+<td align="center"><img src="screenshots/01-farmer-splash.png" width="200" alt="Splash" /><br /><sub>Splash</sub></td>
+<td align="center"><img src="screenshots/02-farmer-connect.png" width="200" alt="Connect" /><br /><sub>Connect</sub></td>
+<td></td>
+</tr>
+</table>
+
+</details>
+
+<details open>
+<summary><strong>Funder console</strong> (desktop)</summary>
+
+<br />
+
+<table>
+<tr>
+<td align="center"><img src="screenshots/16-funder-login.png" width="260" alt="Funder login" /><br /><sub>Login (pick institution)</sub></td>
+<td align="center"><img src="screenshots/17-funder-summary.png" width="260" alt="Funder home" /><br /><sub>Home / escrow summary</sub></td>
+<td align="center"><img src="screenshots/18-funder-pools.png" width="260" alt="Escrow pools" /><br /><sub>Escrow pools</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/19-funder-create-pool-modal.png" width="260" alt="Create pool" /><br /><sub>Create pool</sub></td>
+<td align="center"><img src="screenshots/20-funder-topup-modal.png" width="260" alt="Top up" /><br /><sub>Top up pool</sub></td>
+<td align="center"><img src="screenshots/21-funder-farmers.png" width="260" alt="Farmers registry" /><br /><sub>Farmers registry</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/22-funder-farmers-lgu-mode.png" width="260" alt="LGU registrar mode" /><br /><sub>LGU registrar mode</sub></td>
+<td align="center"><img src="screenshots/23-funder-trigger-empty.png" width="260" alt="Trigger Typhoon, empty" /><br /><sub>Trigger Typhoon (empty)</sub></td>
+<td align="center"><img src="screenshots/24-funder-trigger-parsed.png" width="260" alt="Trigger Typhoon, parsed bulletin" /><br /><sub>Bulletin parsed</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/25-funder-trigger-manual-fallback.png" width="260" alt="Manual single-region fallback" /><br /><sub>Manual fallback</sub></td>
+<td align="center"><img src="screenshots/26-funder-ledger.png" width="260" alt="Funder ledger" /><br /><sub>Ledger</sub></td>
+<td align="center"><img src="screenshots/27-funder-settings.png" width="260" alt="Settings" /><br /><sub>Settings</sub></td>
+</tr>
+</table>
+
+</details>
+
+<details open>
+<summary><strong>Public transparency ledger</strong></summary>
+
+<br />
+
+<img src="screenshots/28-transparency-ledger.png" width="700" alt="Public transparency ledger" />
+
+</details>
 
 ## Run Locally
 

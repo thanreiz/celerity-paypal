@@ -40,11 +40,17 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], claims = []
   const shownUnits = useCountUp(availableUnits);
 
   const regionOf = (poolId) => pools.find((p) => String(p.id) === String(poolId))?.region;
-  const claimedCount = (pool) =>
+  const receivedCount = (pool) =>
     receipts.filter((r) => String(r.pool_id) === String(pool.id)).length;
-  // Only pools with something still to claim — fully-paid ones are hidden so
-  // Home stays uncluttered (they're still visible under Installments).
-  const claimable = pools.filter((p) => p.installments > 1 && claimedCount(p) < p.installments);
+  // "Claimable" means relief has ACTUALLY arrived: the farmer has at least one
+  // on-chain receipt from this pool (settlement paid the first installment),
+  // and installments remain. Without the received-check, a recurring pool would
+  // show "Relief has arrived · Claim" before any typhoon settled — and tapping
+  // Claim would revert on-chain (NothingToClaim). Gating on receipts keeps Home
+  // honest with the contract: nothing to claim until money has moved.
+  const claimable = pools.filter(
+    (p) => p.installments > 1 && receivedCount(p) > 0 && receivedCount(p) < p.installments
+  );
 
   // Tick every second only while a claim is actually on cooldown, so the
   // "next unlocks in M:SS" countdown stays live without a permanent timer.
@@ -125,7 +131,7 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], claims = []
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <p style={sectionLabel}>Relief to claim</p>
           {claimable.map((p, i) => {
-            const done = claimedCount(p);
+            const done = receivedCount(p);
             const total = p.installments;
             const amount = phpValue(Number(BigInt(p.payout_per_farmer)) / Number(UNIT));
             const unlockAt = nextClaimAtByPool[String(p.id)]?.unlockAt ?? 0;

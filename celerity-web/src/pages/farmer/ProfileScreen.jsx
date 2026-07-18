@@ -2,7 +2,7 @@ import React from "react";
 import { short, UNIT } from "../../lib/config";
 import { toPHP } from "../../lib/anchor";
 
-export default function ProfileScreen({ me, registration, farmerName, receipts = [], pools = [] }) {
+export default function ProfileScreen({ me, registration, farmerName, receipts = [], pools = [], onResetDemo }) {
   const totalUnits = receipts.reduce((sum, r) => sum + Number(BigInt(r.amount)) / Number(UNIT), 0);
   const payouts = receipts.length;
   const programs = new Set(receipts.map((r) => String(r.pool_id))).size;
@@ -70,6 +70,22 @@ export default function ProfileScreen({ me, registration, farmerName, receipts =
           <InfoRow k="Report a problem" v="Talk to your co-op officer" faint last />
         </div>
       </div>
+
+      {/* demo controls — clears local cash-out history for a clean live run */}
+      {onResetDemo && (
+        <div className="cel-fade cel-fade-4" style={{ marginTop: 2 }}>
+          <button onClick={onResetDemo} style={resetButtonStyle} className="cel-press">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
+            </svg>
+            Reset demo wallet
+            <span style={demoTag}>DEMO</span>
+          </button>
+          <p style={{ margin: "6px 8px 0", font: "var(--text-fine)", fontSize: 11.5, color: "var(--text-faint)", textAlign: "center" }}>
+            Clears local cash-out history only. On-chain relief is untouched.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -155,4 +171,34 @@ const infoCardStyle = {
   borderRadius: "var(--radius-card)",
   boxShadow: "var(--shadow-card)",
   border: "1px solid var(--container-highest)",
+};
+
+const resetButtonStyle = {
+  width: "100%",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  background: "var(--warn-bg)",
+  color: "var(--warn-text)",
+  border: "1px solid var(--warn-line)",
+  borderRadius: "var(--radius-control)",
+  padding: "12px 16px",
+  font: "var(--text-fine)",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "var(--font-sans)",
+  boxSizing: "border-box",
+};
+
+const demoTag = {
+  font: "var(--text-label)",
+  fontSize: 9.5,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: "var(--tracking-label)",
+  background: "var(--warn-text)",
+  color: "var(--warn-bg)",
+  borderRadius: 999,
+  padding: "1px 7px",
 };

@@ -41,3 +41,16 @@ export function loadRecipients(seed) {
 export function saveRecipients(recipients) {
   save(RECIPIENTS_KEY, recipients);
 }
+
+/** Wipe all demo-only farmer state (cash-out history + saved recipients) from
+ * localStorage. Used by the "Reset demo data" control so a presenter can get a
+ * guaranteed-clean wallet before a live run, even on a machine that has stale
+ * cash-outs from earlier testing. Does not touch the chain. */
+export function resetDemoState() {
+  try {
+    localStorage.removeItem(CASHOUTS_KEY);
+    localStorage.removeItem(RECIPIENTS_KEY);
+  } catch {
+    // storage unavailable — nothing persisted to clear
+  }
+}
