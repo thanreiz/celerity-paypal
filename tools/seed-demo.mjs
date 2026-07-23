@@ -74,12 +74,12 @@ async function invoke(role, method, args) {
   return result;
 }
 
-// Extra registry-only payees (generated addresses; no keys needed to receive).
-// Fixed here so re-deploys use the same faces the mockups established.
+// Extra registry-only payees (fixed addresses; no keys needed to receive).
+// Hardcoded so re-deploys keep the same faces the mockups established.
 const EXTRA_FARMERS = [
-  { name: "Aling Nena", region: 5, addr: Keypair.random().publicKey() },
-  { name: "Ka Danilo", region: 10, addr: Keypair.random().publicKey() },
-  { name: "Aling Rosa", region: 8, addr: Keypair.random().publicKey() },
+  { name: "Aling Nena", region: 5, addr: "GDIC6CFR5XLCZ37LSHSLE3MZYSMKTVXUBUYVQISBVJFLWM4X7UGPCAF4" },
+  { name: "Ka Danilo", region: 10, addr: "GB77JCESFNHQJF54KOSPFGVLBWTKFVT4ABYL2SRJNFCW6HVCA7GLYYSL" },
+  { name: "Aling Rosa", region: 8, addr: "GDBNIDHTUKJBJIGSDGDPOYAZOD4C2ZVGLR4A2X5GOLRVI5FNCGOREF4O" },
 ];
 
 async function main() {

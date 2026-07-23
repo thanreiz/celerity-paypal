@@ -62,16 +62,13 @@ a sidebar console to a login-first, isolation-safe product.
   so the trigger is live on stage.
 
 ### QA
-- **New** `qa-reports/2026-07-10-fullstack-gate.md` — full-stack gate: contract
-  `cargo test` 46/46, frontend build clean, 18-check headless sweep of the live stack
-  (both identities, funder isolation, oracle bulletin analysis, no console errors,
-  390px no-overflow). Verdict PASS.
+- Full-stack gate (2026-07-10): contract `cargo test` 46/46, frontend build clean,
+  18-check headless sweep of the live stack (both identities, funder isolation,
+  oracle bulletin analysis, no console errors, 390px no-overflow). Verdict PASS.
 
 ### Docs / submission
 - **Updated** `Celerity_Hackathon_Doc.md` §7 (demo stage script → real UI: login-first,
   PCIC not NGO, in-app bulletin drop, multi-region) and §8 (build timeline →
   actual-progress record with the redesign, multi-region oracle, all-18-regions, and
   fresh slate; "win condition — met").
-- **New** `submission-idea-answers.md` — paste-ready answers for the 8 idea-submission
-  form fields, drafted from the doc and updated to what's built.
 - **New** `CHANGELOG.md` — this file.

@@ -24,5 +24,11 @@ dist
 .DS_Store
 .gstack/
 
+# Local agent / tooling scratch (never commit)
+.claude/
+.claude-dev-helper/
+.dist/
+.context/
+
 # VS Code MCP config carries the Stitch API key — never commit
 .vscode/
