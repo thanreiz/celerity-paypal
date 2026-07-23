@@ -12,10 +12,9 @@
 //! underfunded pool mid-event we flag, never silently fail. Releases are
 //! idempotent on a composite settled-key.
 //!
-//! Phase 1 implements the core escrow (deposit / top_up / withdraw_unspent /
-//! pause_pool) and the farmer registry. The oracle path (report_event),
-//! settlement (settle_event), and recurring claim remain stubs until
-//! Phases 2–4.
+//! Phase 1–4 are shipped: core escrow (deposit / top_up / withdraw_unspent /
+//! pause_pool / resume_pool), farmer registry, Ed25519 oracle path
+//! (report_event), multi-pool settlement (settle_event), and recurring claim.
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, token,
