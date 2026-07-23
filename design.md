@@ -24,7 +24,7 @@ is the human-readable map on top of them.
 4. **Honest stubs, always labeled.** The oracle signer and the SEP-31 anchor
    cash-out are simulated for the hackathon. Every stubbed boundary gets an
    amber `Badge` next to it — never disguised as working infrastructure
-   (see CLAUDE.md rule 6).
+   (see PROJECT.md rule 6).
 5. **Plain language on the farmer side.** The farmer app never says
    "escrow," "pool," or "disbursement." It says "relief funds," "claim," and
    "withdraw to pesos." Money is always shown in pesos on that surface —

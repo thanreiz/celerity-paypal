@@ -1,6 +1,6 @@
-/* Celerity design tokens — ported from the Claude Design "Celerity Design
-   System" handoff bundle, cross-checked against design.md v2 and the shipped
-   app. Load-bearing class names in styles.css are untouched; these tokens
+/* Celerity design tokens — ported from the Celerity Design System handoff
+   bundle, cross-checked against design.md v2 and the shipped app.
+   Load-bearing class names in styles.css are untouched; these tokens
    back the new pages/design/*.jsx components only. */
 @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
 

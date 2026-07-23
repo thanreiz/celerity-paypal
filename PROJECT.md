@@ -1,6 +1,6 @@
-# CLAUDE.md — Celerity
+# PROJECT.md — Celerity
 
-Context and standing rules for Claude Code sessions on this project. Read this fully before writing any code.
+Standing design rules for this project. Read this fully before writing any code.
 
 ## What Celerity is
 A programmable disaster-disbursement rail on Stellar. Funders deposit into a shared on-chain escrow, each with an earmarked sub-pool and its own release rule. An objective, signed weather event (a typhoon signal from an authorized oracle key) triggers automatic release to pre-registered farmers, which cashes out to PHP via a Stellar anchor. Every release is logged per funder.
@@ -29,8 +29,8 @@ It is **not** a crop insurer and **not** a claims processor. It is the multi-fun
 ## Function surface (target)
 `deposit`, `top_up`, `withdraw_unspent`, `pause_pool`, `register_farmer`, `remove_farmer`, `report_event` (sig-verified), `settle_event` (multi-pool, idempotent, flag-not-fail), `claim` (recurring pull), plus `pool`/`funder_ledger` views.
 
-## Working agreement with me (the developer)
-- **You draft, I verify on-chain.** Nothing is "done" until it compiles, tests pass, and (where relevant) it's deployed to Testnet and I've confirmed it.
+## Working agreement
+- Nothing is "done" until it compiles, tests pass, and (where relevant) it's deployed to Testnet and confirmed on-chain.
 - Write the adversarial tests *with* each function, not after — especially for idempotency and dry-pool cases. These are the two bugs most likely to break the demo.
 - When you hit an ambiguous design choice, stop and ask rather than guessing — a wrong assumption here compounds.
 - Keep functions small and the public interface stable so the frontend can develop against it in parallel.

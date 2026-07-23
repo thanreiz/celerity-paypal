@@ -7,7 +7,7 @@
 //! automatic release to pre-registered farmers. Every release is logged per
 //! funder.
 //!
-//! Design rules (see CLAUDE.md): the contract never interprets documents; it
+//! Design rules (see PROJECT.md): the contract never interprets documents; it
 //! verifies a signature and compares numbers. Funders are independent. On an
 //! underfunded pool mid-event we flag, never silently fail. Releases are
 //! idempotent on a composite settled-key.

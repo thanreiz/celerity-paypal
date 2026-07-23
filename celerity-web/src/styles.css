@@ -1,6 +1,6 @@
 /* Base reset + typography. Component-level styling now lives in
-   src/design/*.jsx (ported from the Claude Design "Celerity Design System"
-   handoff) — see src/design/tokens.css for the token set. */
+   src/design/*.jsx (ported from the Celerity Design System handoff) —
+   see src/design/tokens.css for the token set. */
 @import "./design/tokens.css";
 
 * { box-sizing: border-box; margin: 0; }

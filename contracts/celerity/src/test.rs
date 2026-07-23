@@ -2,7 +2,7 @@
 //! Phase 1 tests: core escrow (deposit / top_up / withdraw_unspent /
 //! pause_pool) and the farmer registry.
 //!
-//! The adversarial cases matter most (see CLAUDE.md): a funder must never be
+//! The adversarial cases matter most (see PROJECT.md): a funder must never be
 //! able to touch another funder's pool, and only the admin may touch the
 //! registry. Negative auth tests use `mock_auths` with ONLY the attacker's
 //! auth mocked — if a function forgot its `require_auth`, the call would

@@ -49,7 +49,7 @@ cross-border settlement layer *underneath* them.
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
 > - **Contract address (Stellar Testnet):** `CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD`
 >   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD)
-> - **Design rules & win condition:** [`CLAUDE.md`](CLAUDE.md)
+> - **Design rules & win condition:** [`PROJECT.md`](PROJECT.md)
 > - **Design system:** [`design.md`](design.md)
 > - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
 

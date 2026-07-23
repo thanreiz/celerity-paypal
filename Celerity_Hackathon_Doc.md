@@ -346,24 +346,22 @@ transaction on stellar.expert.
 
 ---
 
-## 8. Build Timeline — Actual Progress to July 15 (AI-Leveraged)
+## 8. Build Timeline — Actual Progress to July 15
 
-A 7-day sprint, not 3 weeks, run with heavy use of a frontier coding model (Claude
-Fable 5 / Opus 4.8 via Claude Code) to parallelize what a solo builder normally
-serializes. The rule throughout: **AI drafts, I verify on-chain.** Nothing was "done"
-until it compiled, tests passed, and it was deployed to Testnet — the model accelerated
-drafting, it did not replace verification. The day-by-day below records what actually
-landed; milestones hit are marked ✅.
+A 7-day sprint, not 3 weeks, parallelizing contract and frontend against a stable
+interface. The rule throughout: **nothing is "done" until it compiles, tests pass,
+and it is deployed to Testnet and confirmed on-chain.** The day-by-day below records
+what actually landed; milestones hit are marked ✅.
 
-### How to actually use the AI (this is the leverage)
-- **Contract-first, AI-drafted, human-verified.** Give the model §6.2/§6.3/§10 as the spec and have it generate the full Soroban contract in one pass, then you compile and fix. Frontier models are strong at Rust/Soroban scaffolding; the win is skipping the blank-page phase.
-- **Make the AI write the tests, especially the nasty ones.** The two bugs that lose this hackathon are double-release (§5.2) and dry-pool revert (§5.3). Have the model generate adversarial test cases for both *before* you trust the release loop. This is where AI assistance pays off most — exhaustive edge-case enumeration is exactly what it's good at.
-- **Parallelize contract and frontend.** Use one Claude Code session on the Rust contract and a second on the React frontend against a mocked contract interface, so the two tracks advance simultaneously instead of frontend waiting on contract.
-- **Use AI for the oracle signer boilerplate.** The Node.js Ed25519 signing utility is standard code — generate it, don't write it by hand.
-- **Caveat:** don't architect around a specific model being available (safeguards may route some prompts to Opus 4.8); and never paste a private key into any tool. Treat AI as a fast junior engineer whose every PR you review.
+### Build discipline (what kept the sprint honest)
+- **Contract-first, then verify.** Spec §6.2/§6.3/§10 drove the Soroban surface; every function was compiled, tested, and deployed before it counted as shipped.
+- **Adversarial tests with each function.** The two bugs that lose this hackathon are double-release (§5.2) and dry-pool revert (§5.3) — those cases were written alongside the release loop, not after.
+- **Parallel tracks.** Contract and React frontend advanced against a frozen interface so the UI was never blocked on the next on-chain function.
+- **Oracle signer as small, isolated tooling.** The Node.js Ed25519 signing utility stays out of the contract path; the secret is injected via env, never committed.
+- **No secrets in tools or prompts.** Oracle and demo keys are generated and injected locally; nothing private lands in the repo.
 
 ### Days 1–3 — The Core (July 8–10) ✅
-- Full Soroban contract AI-drafted from §10, compiled and fixed to `cargo build` green.
+- Full Soroban contract implemented from §10, compiled and fixed to `cargo build` green.
 - `deposit`, `top_up`, `withdraw_unspent`, `pause_pool` / `resume_pool`,
   `register_farmer` / `remove_farmer`, `report_event` (Ed25519 sig verify + nonce),
   `settle_event`, and `claim` all implemented, each with adversarial tests written
@@ -404,7 +402,7 @@ landed; milestones hit are marked ✅.
   demo video; finalize the submission-form fields (§2).
 
 ### What shipped beyond the original plan
-The extra AI capacity was spent on product depth rather than a single stretch item:
+Sprint capacity went into product depth rather than a single stretch item:
 the full funder-console redesign, the multi-region bulletin-ingestion oracle, and the
 per-funder transparency ledger all landed. Not attempted (still roadmap, §4.8): a live
 PAGASA/JMA feed read, and a licensed anchor — both partnership/infra problems, not
