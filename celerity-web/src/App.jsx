@@ -158,6 +158,28 @@ export default function App() {
     />
   );
 
+  // FarmerApp / FunderPortal call addr() during render — must not mount until
+  // loadAddresses() finishes, or the throw aborts commit and boot never runs.
+  if (!bootReady) {
+    return (
+      <div
+        style={{
+          height: "100dvh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--paper-inset, #f3f1ec)",
+          color: "var(--ink-muted, #5c5a54)",
+          fontFamily: "var(--font-sans, system-ui, sans-serif)",
+          fontSize: 14,
+        }}
+      >
+        Loading Celerity…
+        {toast && <Toast message={toast.msg} error={toast.isError} />}
+      </div>
+    );
+  }
+
   if (devOpen) {
     return (
       <div style={{ minHeight: "100dvh" }}>

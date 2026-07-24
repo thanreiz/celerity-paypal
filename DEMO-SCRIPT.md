@@ -6,8 +6,7 @@
 
 ---
 
-**Official demo URL:** https://stellar-celerity.me/  
-(Fallback alias: https://celerity-chi.vercel.app — same deployment)
+**Official demo URL:** https://stellar-celerity.me/
 
 ## Pre-flight (T−30 min)
 
