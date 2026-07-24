@@ -317,8 +317,9 @@ cp .env.example .env   # fill in: contract ID from deployments.json, demo secret
 npm run dev
 ```
 
-The UI signs with throwaway Testnet demo identities from `.env` (gitignored) — no wallet
-extension to flake on stage. Requires `@stellar/stellar-sdk` ≥ 16 (older majors can't parse
+The UI never embeds signing secrets. Money-moving calls go through gated `/api/*`
+server routes (Vercel serverless + Vite dev middleware). Presenters unlock with
+`DEMO_GATE` (session PIN). Requires `@stellar/stellar-sdk` ≥ 16 (older majors can't parse
 current-protocol transaction metadata).
 
 ### Prerequisites (contract build / deploy)
@@ -378,13 +379,17 @@ cd celerity-web && node ../tools/seed-demo.mjs
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `VITE_RPC_URL` | yes | Soroban Testnet RPC |
-| `VITE_NETWORK_PASSPHRASE` | yes | Testnet passphrase |
-| `VITE_CONTRACT_ID` | yes | Deployed contract id (from `deployments.json`) |
-| `VITE_FUNDER_SECRET` | yes | Funder + registry admin demo key (alice) |
-| `VITE_FUNDER2_SECRET` | yes | Second funder demo key (PCIC / mallory) |
-| `VITE_FARMER_SECRET` | yes | Farmer demo key (farmer1) |
-| `VITE_ORACLE_SECRET` | yes | Oracle signer key (same as `oracle/.env`) — powers the in-app trigger |
+| `VITE_RPC_URL` | yes | Soroban Testnet RPC (**public** — safe in the browser bundle) |
+| `VITE_NETWORK_PASSPHRASE` | yes | Testnet passphrase (**public**) |
+| `VITE_CONTRACT_ID` | yes | Deployed contract id from `deployments.json` (**public**) |
+| `FUNDER_SECRET` | yes | Server-only — funder + registry admin (alice). **Never** use a `VITE_` prefix |
+| `FUNDER2_SECRET` | yes | Server-only — second funder (PCIC / mallory) |
+| `FARMER_SECRET` | yes | Server-only — Mang Ramon |
+| `FARMER2_SECRET` | yes | Server-only — Aling Nena |
+| `ORACLE_SECRET` | yes | Server-only — same key as `oracle/.env` |
+| `DEMO_GATE` | yes | Stage PIN for `X-Celerity-Gate` on `/api/invoke` and `/api/oracle-sign` |
+
+Do **not** set `VITE_*_SECRET` in Vercel Production — Vite would bake them into the public JS bundle.
 
 ## Team
 

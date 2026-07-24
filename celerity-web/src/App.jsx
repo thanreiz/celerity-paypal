@@ -3,7 +3,9 @@ import FunderPortal from "./pages/funder/FunderPortal";
 import FarmerApp from "./pages/farmer/FarmerApp";
 import TransparencyLedgerPage from "./pages/transparency/TransparencyLedgerPage";
 import Toast from "./design/Toast";
-import { farmerReceipts, addr } from "./lib/celerity";
+import GateModal from "./design/GateModal";
+import { farmerReceipts, addr, loadAddresses } from "./lib/celerity";
+import { registerGatePrompt } from "./lib/gate";
 import { friendlyError } from "./lib/errors";
 
 const FARMER_ROLE_KEY = "celerity.farmer.activeRole";
@@ -26,12 +28,12 @@ export default function App() {
   const loadedRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
-  // View-as: Mang Ramon (farmer) or Aling Nena (farmer2).
+  const [bootReady, setBootReady] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
+  const gateResolver = useRef(null);
   const [farmerRole, setFarmerRole] = useState(loadFarmerRole);
   const farmerRoleRef = useRef(farmerRole);
   farmerRoleRef.current = farmerRole;
-  // Which identity the current `receipts` array belongs to — so an empty
-  // read for Nena doesn't revive Ramon's last-good balance (and vice versa).
   const receiptsRoleRef = useRef(farmerRole);
 
   const notify = useCallback((msg, isError = false) => {
@@ -39,14 +41,39 @@ export default function App() {
     setTimeout(() => setToast(null), isError ? 12000 : 5000);
   }, []);
 
+  useEffect(() => {
+    registerGatePrompt(
+      () =>
+        new Promise((resolve, reject) => {
+          gateResolver.current = { resolve, reject };
+          setGateOpen(true);
+        })
+    );
+    return () => registerGatePrompt(null);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAddresses()
+      .then(() => {
+        if (!cancelled) setBootReady(true);
+      })
+      .catch((e) => {
+        if (!cancelled) notify(friendlyError(e), true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [notify]);
+
   const refresh = useCallback(async () => {
+    await loadAddresses();
     const role = farmerRoleRef.current;
     const { pools, receipts } = await farmerReceipts(addr(role));
     setPools((prev) => (pools.length === 0 && prev.length > 0 ? prev : pools));
     setReceipts((prev) => {
       const sameIdentity = receiptsRoleRef.current === role;
       if (receipts.length === 0 && prev.length > 0 && sameIdentity) {
-        // Transient empty for the SAME farmer — keep last-good.
         return prev;
       }
       receiptsRoleRef.current = role;
@@ -76,6 +103,7 @@ export default function App() {
   );
 
   useEffect(() => {
+    if (!bootReady) return;
     let cancelled = false;
     let timer;
     const tick = async () => {
@@ -93,7 +121,7 @@ export default function App() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [refresh, notify, farmerRole]);
+  }, [refresh, notify, farmerRole, bootReady]);
 
   const run = useCallback(
     async (label, fn) => {
@@ -112,6 +140,22 @@ export default function App() {
       }
     },
     [refresh, notify]
+  );
+
+  const gateModal = (
+    <GateModal
+      open={gateOpen}
+      onSubmit={async (pin) => {
+        gateResolver.current?.resolve(pin);
+        gateResolver.current = null;
+        setGateOpen(false);
+      }}
+      onCancel={() => {
+        gateResolver.current?.reject(new Error("Demo PIN cancelled"));
+        gateResolver.current = null;
+        setGateOpen(false);
+      }}
+    />
   );
 
   if (devOpen) {
@@ -134,6 +178,7 @@ export default function App() {
         {devSurface === "public" && <TransparencyLedgerPage onBack={() => setDevSurface("funder")} />}
 
         {toast && <Toast message={toast.msg} error={toast.isError} />}
+        {gateModal}
       </div>
     );
   }
@@ -163,6 +208,7 @@ export default function App() {
         onOpenDev={() => setDevOpen(true)}
       />
       {toast && <Toast message={toast.msg} error={toast.isError} />}
+      {gateModal}
     </div>
   );
 }

@@ -18,12 +18,26 @@
 // once per redeploy.
 
 import { readFileSync } from "node:fs";
-import { Keypair, contract } from "@stellar/stellar-sdk";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(join(__dirname, "../celerity-web/package.json"));
+const { Keypair, contract } = require("@stellar/stellar-sdk");
 
 // Load celerity-web/.env by hand (no dotenv dep in celerity-web — Vite injects
-// env itself). Run from celerity-web/, so .env is in the cwd.
+// env itself). Prefer cwd .env when run from celerity-web/, else sibling path.
+const envPath = join(process.cwd(), ".env");
+const envFile = (() => {
+  try {
+    return readFileSync(envPath, "utf8");
+  } catch {
+    return readFileSync(join(__dirname, "../celerity-web/.env"), "utf8");
+  }
+})();
 const env = Object.fromEntries(
-  readFileSync(".env", "utf8")
+  envFile
     .split("\n")
     .filter((l) => l.trim() && !l.trim().startsWith("#") && l.includes("="))
     .map((l) => {
@@ -32,10 +46,12 @@ const env = Object.fromEntries(
     })
 );
 
-const need = (k) => {
-  const v = env[k];
-  if (!v) throw new Error(`Missing ${k} in celerity-web/.env`);
-  return v;
+const need = (k, ...alts) => {
+  for (const key of [k, ...alts]) {
+    const v = env[key];
+    if (v) return v;
+  }
+  throw new Error(`Missing ${k} in celerity-web/.env`);
 };
 
 const CONTRACT_ID = need("VITE_CONTRACT_ID");
@@ -43,10 +59,11 @@ const NETWORK_PASSPHRASE = need("VITE_NETWORK_PASSPHRASE");
 const RPC_URL = need("VITE_RPC_URL");
 
 const kp = {
-  alice: Keypair.fromSecret(need("VITE_FUNDER_SECRET")), // funder + registry admin
-  mallory: Keypair.fromSecret(need("VITE_FUNDER2_SECRET")), // second funder (PCIC)
-  farmer1: Keypair.fromSecret(need("VITE_FARMER_SECRET")),
-  farmer2: Keypair.fromSecret(need("VITE_FARMER2_SECRET")), // Aling Nena — View-as
+  // Prefer server-only names; fall back to legacy VITE_* for older .env files.
+  alice: Keypair.fromSecret(need("FUNDER_SECRET", "VITE_FUNDER_SECRET")), // funder + registry admin
+  mallory: Keypair.fromSecret(need("FUNDER2_SECRET", "VITE_FUNDER2_SECRET")), // second funder (PCIC)
+  farmer1: Keypair.fromSecret(need("FARMER_SECRET", "VITE_FARMER_SECRET")),
+  farmer2: Keypair.fromSecret(need("FARMER2_SECRET", "VITE_FARMER2_SECRET")), // Aling Nena — View-as
 };
 
 // 1 XLM = 10^7 stroops

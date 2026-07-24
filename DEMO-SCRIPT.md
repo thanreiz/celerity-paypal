@@ -16,9 +16,11 @@
 - [ ] **Never cold-open a farmer wallet at ₱0 on the money-shot.** Pre-open Ramon on a second window *after* a rehearsal settle, or keep farmer app on Connect until settle lands — then open Home with balance visible
 - [ ] Rehearse View-as Ramon ↔ Nena **only after both have receipts** (empty Nena home looks broken on camera)
 - [ ] Coach tours: Skip (×) on stage if rehearsed; leave funder **Tutorial** panel open for judges exploring after; Profile → Replay tutorial tips if needed
+- [ ] **Demo PIN** (`DEMO_GATE`): enter once when the Stage unlock modal appears (first deposit / settle / claim). Keys are server-side — without the PIN, visitors cannot sign. Confirm PIN with the laptop that will present.
+- [ ] Confirm production JS has **no** Stellar `S…` secrets (View Source / Network → main bundle search)
 
-**Live contract (as of last prep):** `CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD`  
-Dry-run confirmed: one region-5 settle paid Ramon + Nena from ADB pool #1 and PCIC pool #3; re-settle returned **0**.
+**Live contract (as of last prep):** `CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ`  
+Keys are server-side behind DEMO_GATE (see `celerity-web/.rotate-pubs.json` locally — not committed). Prior Phase-7 contract retired after secret rotation.
 
 ---
 
