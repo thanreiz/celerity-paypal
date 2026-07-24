@@ -8,9 +8,21 @@ import Select from "../../design/Select";
 import Switch from "../../design/Switch";
 import { registerFarmer, removeFarmer } from "../../lib/celerity";
 import { short } from "../../lib/config";
+import { farmerLabel } from "../../lib/farmers";
 import { regionName, REGION_OPTIONS } from "../../lib/regions";
 
 function initialsFor(addr) {
+  const label = farmerLabel(addr);
+  if (label && !label.includes("…")) {
+    return label
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(-2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
   return addr.slice(0, 2).toUpperCase();
 }
 
@@ -37,7 +49,8 @@ export default function FarmersPage({ groups, busy, run }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Avatar initials={initialsFor(r.addr)} size={32} />
           <div>
-            <div style={{ fontWeight: 700 }}>{short(r.addr)}</div>
+            <div style={{ fontWeight: 700 }}>{farmerLabel(r.addr)}</div>
+            <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", fontVariantNumeric: "tabular-nums" }}>{short(r.addr)}</div>
           </div>
         </div>
       ),

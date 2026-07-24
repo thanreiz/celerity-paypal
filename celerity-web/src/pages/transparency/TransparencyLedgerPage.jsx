@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import CountUp from "../../design/CountUp";
-import { allPools, view } from "../../lib/celerity";
-import { fmtUnits, short } from "../../lib/config";
+import { allPools, view, funderLabel } from "../../lib/celerity";
+import { fmtUnits } from "../../lib/config";
 import { toPHP, ANCHOR_LABEL } from "../../lib/anchor";
+import { farmerLabel } from "../../lib/farmers";
 import { friendlyError } from "../../lib/errors";
 
 export default function TransparencyLedgerPage({ onBack }) {
@@ -108,7 +109,7 @@ export default function TransparencyLedgerPage({ onBack }) {
               <div>
                 <span style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>event #{String(r.event_id)} · pool #{String(r.pool_id)}{r.region !== undefined ? ` · region ${r.region}` : ""}</span>
                 <p style={{ margin: "4px 0 0", font: "var(--text-body-lg)" }}>
-                  {short(r.funder)} released {fmtUnits(r.amount)} {unitLabel(r.amount)} to {short(r.farmer)}
+                  {funderLabel(r.funder)} released {fmtUnits(r.amount)} {unitLabel(r.amount)} to {farmerLabel(r.farmer)}
                 </p>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>

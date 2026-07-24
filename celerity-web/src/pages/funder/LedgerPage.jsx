@@ -1,8 +1,9 @@
 import React from "react";
 import Table from "../../design/Table";
 import CountUp from "../../design/CountUp";
-import { fmtUnits, short, CONTRACT_ID } from "../../lib/config";
+import { fmtUnits, CONTRACT_ID } from "../../lib/config";
 import { phpValue } from "../../lib/anchor";
+import { farmerLabel } from "../../lib/farmers";
 import { poolName } from "../../lib/poolNames";
 import { regionName } from "../../lib/regions";
 
@@ -49,7 +50,7 @@ export default function LedgerPage({ ledger, pools }) {
                 return p ? regionName(p.region) : "—";
               },
             },
-            { key: "farmer", label: "Farmer", render: (r) => short(r.farmer) },
+            { key: "farmer", label: "Farmer", render: (r) => farmerLabel(r.farmer) },
             {
               key: "amount",
               label: "Amount",

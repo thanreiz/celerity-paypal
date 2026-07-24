@@ -108,10 +108,6 @@ export default function LoginScreen({ onLogin, onBackToFarmer }) {
             </div>
           ))}
         </div>
-
-        <p style={{ margin: "26px 0 0", font: "var(--text-fine)", color: "var(--text-faint)" }}>
-          Demo identities — keys are injected from the environment, there is no real authentication.
-        </p>
       </div>
     </div>
   );

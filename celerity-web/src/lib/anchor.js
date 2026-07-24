@@ -1,21 +1,24 @@
 // ============================================================================
-// SEP-31 ANCHOR — DEMO STUB. THIS IS NOT A REAL ANCHOR INTEGRATION.
+// FX + display helpers for the demo settlement unit → PHP.
 // ============================================================================
-// In production this leg is a licensed Stellar anchor (a Coins.ph-class VASP)
-// receiving the on-chain asset over SEP-31 and paying out PHP to the farmer's
-// wallet or cash-out point. That requires a compliance partnership, not code,
-// so the hackathon build mocks it — visibly and honestly.
+// On Testnet the escrow asset is XLM standing in for a USD stablecoin
+// (1 unit ≈ $1). Farmers and PCIC think in pesos; ADB thinks in dollars.
+// DEMO_USDPHP is the fixed demo FX — not an "XLM price."
 //
-// Everything before this point (escrow, trigger, release, ledger) is real and
-// live on Testnet. Only this currency conversion is simulated.
+// The live cash-out path is the SEP-31 mock in sep31.js (PDAX UAT target).
+// Everything before that (escrow, trigger, release, ledger) is real Testnet.
 
-export const ANCHOR_LABEL = "SEP-31 anchor stub — demo conversion, not a real cash-out";
+/** Fixed demo FX: 1 settlement unit (≈ $1 USDC stand-in) → PHP. */
+export const DEMO_USDPHP = 57.5;
 
-// Demo rate: 1 unit (testnet XLM standing in for a USD stablecoin) → PHP.
-export const DEMO_PHP_RATE = 57.5;
+/** @deprecated Use DEMO_USDPHP — kept so older imports don't break mid-demo. */
+export const DEMO_PHP_RATE = DEMO_USDPHP;
+
+export const ANCHOR_LABEL =
+  "SEP-31 protocol mock · PDAX UAT target — demo conversion, not a live cash-out";
 
 export function toPHPNumber(units) {
-  return Number(units) * DEMO_PHP_RATE;
+  return Number(units) * DEMO_USDPHP;
 }
 
 export function toPHP(units) {
@@ -30,4 +33,21 @@ export function toPHP(units) {
  * for contexts (e.g. "Claim ₱5,000") that already render the ₱ sign. */
 export function phpValue(units) {
   return `₱${Math.round(toPHPNumber(units)).toLocaleString()}`;
+}
+
+/** Settlement units from a USD amount (ADB path). 1 unit ≈ $1. */
+export function unitsFromUsd(usd) {
+  const n = Number(usd);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Settlement units from a PHP amount (PCIC path). */
+export function unitsFromPhp(php) {
+  const n = Number(php);
+  return Number.isFinite(n) ? n / DEMO_USDPHP : 0;
+}
+
+/** Format a USD amount for funder UI. */
+export function usdValue(units) {
+  return `$${Number(units).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }

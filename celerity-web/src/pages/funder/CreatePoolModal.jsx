@@ -4,35 +4,66 @@ import Select from "../../design/Select";
 import Button from "../../design/Button";
 import { invoke } from "../../lib/celerity";
 import { toStroops } from "../../lib/config";
-import { phpValue } from "../../lib/anchor";
+import { phpValue, usdValue, unitsFromUsd, unitsFromPhp, DEMO_USDPHP } from "../../lib/anchor";
+import { mockInteractiveDeposit, sep24Chip, SEP24_LABEL } from "../../lib/sep24";
+import { funderByRole } from "../../lib/funders";
 import { setPoolName } from "../../lib/poolNames";
 import { regionShort, REGION_OPTIONS } from "../../lib/regions";
 
 export default function CreatePoolModal({ onClose, who, me, busy, run }) {
+  const funder = funderByRole(who) || funderByRole("funder");
+  const fiat = funder.currency === "PHP" ? "PHP" : "USD";
+
   const [name, setName] = useState("");
   const [region, setRegion] = useState(5);
   const [threshold, setThreshold] = useState(3);
-  const [amount, setAmount] = useState(5);
-  const [payout, setPayout] = useState(1);
+  // Primary input is in the funder's fiat; converted to settlement units on submit.
+  const [amountFiat, setAmountFiat] = useState(fiat === "PHP" ? 287.5 : 5);
+  const [payoutFiat, setPayoutFiat] = useState(fiat === "PHP" ? 57.5 : 1);
   const [installments, setInstallments] = useState(1);
   const [period, setPeriod] = useState(60);
+  const [sepStatus, setSepStatus] = useState(null);
+  const [onramping, setOnramping] = useState(false);
+
+  const amountUnits = fiat === "PHP" ? unitsFromPhp(amountFiat) : unitsFromUsd(amountFiat);
+  const payoutUnits = fiat === "PHP" ? unitsFromPhp(payoutFiat) : unitsFromUsd(payoutFiat);
 
   const create = async () => {
-    const poolId = await run("Create pool", () =>
-      invoke(who, "deposit", {
-        funder: me,
-        amount: toStroops(amount),
-        region: Number(region),
-        threshold: Number(threshold),
-        payout: toStroops(payout),
-        installments: Number(installments),
-        claim_period_secs: BigInt(installments > 1 ? period : 0),
-      })
-    );
-    // The name/purpose is an app-level label — the contract only knows numbers.
-    if (poolId !== undefined && poolId !== null) setPoolName(poolId, name);
-    onClose();
+    setOnramping(true);
+    setSepStatus("incomplete");
+    try {
+      await mockInteractiveDeposit({
+        amount: Number(amountFiat),
+        fiatCurrency: fiat,
+        onStatus: setSepStatus,
+      });
+      const poolId = await run("Create pool", () =>
+        invoke(who, "deposit", {
+          funder: me,
+          amount: toStroops(amountUnits),
+          region: Number(region),
+          threshold: Number(threshold),
+          payout: toStroops(payoutUnits),
+          installments: Number(installments),
+          claim_period_secs: BigInt(installments > 1 ? period : 0),
+        })
+      );
+      if (poolId !== undefined && poolId !== null) setPoolName(poolId, name);
+      onClose();
+    } finally {
+      setOnramping(false);
+    }
   };
+
+  const suffix = fiat;
+  const amountHint =
+    fiat === "USD"
+      ? `${usdValue(amountUnits)} → ${phpValue(amountUnits)} · FX ${DEMO_USDPHP}`
+      : `${phpValue(amountUnits)} → ${usdValue(amountUnits)} settlement · FX ${DEMO_USDPHP}`;
+  const payoutHint =
+    fiat === "USD"
+      ? `${usdValue(payoutUnits)} → ${phpValue(payoutUnits)}`
+      : `${phpValue(payoutUnits)} → ${usdValue(payoutUnits)} settlement`;
 
   return (
     <div
@@ -70,7 +101,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
           <div>
             <h2 style={{ margin: 0, font: "var(--text-h2)", color: "var(--text)" }}>New Escrow Pool</h2>
             <p style={{ margin: "4px 0 0", font: "var(--text-meta)", color: "var(--text-faint)" }}>
-              Deposit — money locks now, moves only on a signed signal.
+              {funder.label} · deposit in {fiat} via SEP-24, then lock on-chain.
             </p>
           </div>
           <button onClick={onClose} className="cel-press" style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 18, color: "var(--text-faint)" }}>
@@ -103,27 +134,60 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
               Financial Execution
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
-              <Input label={`Escrow amount (${phpValue(amount)})`} type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} suffix="XLM" />
-              <Input label={`Payout / farmer (${phpValue(payout)})`} type="number" min="0" value={payout} onChange={(e) => setPayout(e.target.value)} suffix="XLM" />
+              <div>
+                <Input
+                  label={`Escrow amount (${fiat === "USD" ? usdValue(amountUnits) : phpValue(amountUnits)})`}
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={amountFiat}
+                  onChange={(e) => setAmountFiat(e.target.value)}
+                  suffix={suffix}
+                />
+                <p style={{ margin: "6px 0 0", font: "var(--text-fine)", color: "var(--text-faint)" }}>{amountHint}</p>
+              </div>
+              <div>
+                <Input
+                  label={`Payout / farmer (${fiat === "USD" ? usdValue(payoutUnits) : phpValue(payoutUnits)})`}
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={payoutFiat}
+                  onChange={(e) => setPayoutFiat(e.target.value)}
+                  suffix={suffix}
+                />
+                <p style={{ margin: "6px 0 0", font: "var(--text-fine)", color: "var(--text-faint)" }}>{payoutHint}</p>
+              </div>
               <Input label="Installments" type="number" min="1" value={installments} onChange={(e) => setInstallments(e.target.value)} />
               {Number(installments) > 1 && (
                 <Input label="Period (secs)" type="number" min="1" value={period} onChange={(e) => setPeriod(e.target.value)} />
               )}
             </div>
           </div>
+
+          {(onramping || sepStatus) && (
+            <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: 12, padding: 16 }}>
+              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>{SEP24_LABEL}</p>
+              <p style={{ margin: "8px 0 0", font: "var(--text-body)", fontWeight: 700, color: "var(--primary)" }}>
+                On-ramp status: {sep24Chip(sepStatus)}
+              </p>
+            </div>
+          )}
         </div>
 
         <div style={{ padding: 24, borderTop: "1px solid var(--container-highest)", display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{ background: "var(--ok-bg)", border: "1px solid var(--ok-line)", borderRadius: 12, padding: 16 }}>
             <p style={{ margin: 0, font: "var(--text-body)", color: "var(--ok-text)" }}>
               <strong>When</strong> typhoon signal ≥ {threshold} hits {regionShort(region)} <strong>→ release</strong>{" "}
-              {phpValue(payout)}
+              {phpValue(payoutUnits)}
               {Number(installments) > 1 ? ` ×${installments}` : ""} per registered farmer.
             </p>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-            <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
-            <Button variant="primary" onClick={create} disabled={busy}>Create & Fund Pool</Button>
+            <Button variant="outline" onClick={onClose} disabled={busy || onramping}>Cancel</Button>
+            <Button variant="primary" onClick={create} disabled={busy || onramping}>
+              {onramping ? "On-ramping…" : "Create & Fund Pool"}
+            </Button>
           </div>
         </div>
       </div>

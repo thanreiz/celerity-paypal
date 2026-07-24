@@ -13,62 +13,70 @@ import { friendlyError } from "../../lib/errors";
 import { UNIT } from "../../lib/config";
 import { toPHPNumber } from "../../lib/anchor";
 import { pendingClaims } from "../../lib/activityRows";
+import { demoFarmerByRole, DEMO_FARMERS } from "../../lib/farmers";
 import { loadCashOuts, saveCashOuts, loadRecipients, saveRecipients, resetDemoState } from "../../lib/farmerDemoState";
 
-// Seeded "recent recipients" so the cash-out forms aren't empty on stage.
-// dest matches CashOutFlow destinations; detail is the number/account shown.
-const SEED_RECIPIENTS = [
-  { id: "seed-g1", dest: "gcash", detail: "09171234567", name: "Ramon Dela Cruz", label: "GCash" },
-  { id: "seed-g2", dest: "gcash", detail: "09985550123", name: "Maria Santos", label: "GCash" },
-  { id: "seed-b1", dest: "bank", detail: "001234567890", name: "Ramon Dela Cruz", label: "bank account", bank: "BDO" },
-];
+function seedRecipientsFor(name) {
+  return [
+    { id: "seed-g1", dest: "gcash", detail: "09171234567", name, label: "GCash" },
+    { id: "seed-g2", dest: "gcash", detail: "09985550123", name: "Maria Santos", label: "GCash" },
+    { id: "seed-b1", dest: "bank", detail: "001234567890", name, label: "bank account", bank: "BDO" },
+  ];
+}
 
-export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, notify, onOpenDev }) {
+export default function FarmerApp({
+  farmerRole = "farmer",
+  onSwitchFarmer,
+  pools,
+  receipts,
+  busy,
+  setBusy,
+  refresh,
+  notify,
+  onOpenDev,
+}) {
+  const identity = demoFarmerByRole(farmerRole) || DEMO_FARMERS[0];
+  const me = addr(identity.role);
+  const farmerName = identity.name;
+  const seedRecipients = seedRecipientsFor(farmerName);
+
   const [stage, setStage] = useState("splash"); // "splash" | "connect" | "app"
   const [page, setPage] = useState("home");
-  const [overlay, setOverlay] = useState(null); // null | "cashout" | "programs" | "installments" | "region" | "help"
+  const [overlay, setOverlay] = useState(null);
   const [registration, setRegistration] = useState(null);
-  // Demo-only cash-out ledger. The chain is the source of truth for what
-  // ARRIVED (receipts); these track what the farmer has cashed out locally so
-  // the spendable balance can move live on stage. Clearly labeled "Demo" in UI.
-  // Persisted to localStorage (lib/farmerDemoState.js) so a page refresh
-  // mid-demo doesn't silently erase cash-out history and spendable balance.
-  const [cashOuts, setCashOuts] = useState(loadCashOuts); // { id, units, php, destLabel, when, dest, detail, name }
-  // Session record of installments claimed in-app. The on-chain funder_ledger
-  // is still the source of truth (refresh() re-reads it); this gives instant,
-  // correctly-timed feedback — the activity row appears the moment a claim
-  // succeeds, and its `when` starts the per-pool cooldown countdown, since the
-  // contract doesn't expose last_ts to read the unlock time back.
-  const [claims, setClaims] = useState([]); // { id, poolId, units, php, when }
+  const [cashOuts, setCashOuts] = useState(() => loadCashOuts(farmerRole));
+  const [claims, setClaims] = useState([]);
   const claimSeq = useRef(0);
-  // Saved payout destinations shown as "recent recipients" on the cash-out
-  // forms. Seeded so the list isn't empty on stage; real ones get appended.
-  // Persisted the same way as cashOuts, so a saved recipient survives refresh.
-  const [recipients, setRecipients] = useState(() => loadRecipients(SEED_RECIPIENTS));
-  const [txDetail, setTxDetail] = useState(null); // selected activity row, or null
+  const [recipients, setRecipients] = useState(() => loadRecipients(seedRecipients, farmerRole));
+  const [txDetail, setTxDetail] = useState(null);
   const cashOutSeq = useRef(0);
-  const me = addr("farmer");
-  const farmerName = "Mang Ramon";
+
+  // Reload local demo ledgers when View-as switches identity.
+  useEffect(() => {
+    const seeds = seedRecipientsFor(identity.name);
+    setCashOuts(loadCashOuts(farmerRole));
+    setRecipients(loadRecipients(seeds, farmerRole));
+    setClaims([]);
+    setTxDetail(null);
+    setOverlay(null);
+    setPage("home");
+    claimSeq.current = 0;
+    cashOutSeq.current = 0;
+  }, [farmerRole, identity.name]);
 
   useEffect(() => {
     view("farmer", { addr: me }).then(setRegistration).catch(() => setRegistration(null));
   }, [me, pools]);
 
-  useEffect(() => saveCashOuts(cashOuts), [cashOuts]);
-  useEffect(() => saveRecipients(recipients), [recipients]);
+  useEffect(() => saveCashOuts(cashOuts, farmerRole), [cashOuts, farmerRole]);
+  useEffect(() => saveRecipients(recipients, farmerRole), [recipients, farmerRole]);
 
   const claim = async (poolId) => {
     setBusy(true);
     try {
-      await invoke("farmer", "claim", { farmer: me, pool_id: poolId });
-      // Record it now: drives the instant activity row + the cooldown timer.
+      await invoke(identity.role, "claim", { farmer: me, pool_id: poolId });
       const pool = pools.find((p) => String(p.id) === String(poolId));
       const units = pool ? Number(BigInt(pool.payout_per_farmer)) / Number(UNIT) : 0;
-      // Snapshot how many on-chain receipts this pool has RIGHT NOW (before the
-      // claim's own receipt lands) — buildActivityRows uses this to know when
-      // the claim's receipt has arrived, without depending on synthesized
-      // timestamps. Fixes the first-claim-of-a-pool case, where settle_event's
-      // auto-paid installment #1 would otherwise be mistaken for this claim.
       const receiptCountAtClaim = receipts.filter((r) => String(r.pool_id) === String(poolId)).length;
       claimSeq.current += 1;
       setClaims((prev) => [
@@ -86,17 +94,10 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   };
 
   const receivedUnits = receipts.reduce((sum, r) => sum + Number(BigInt(r.amount)) / Number(UNIT), 0);
-  // Include claims still pending their on-chain receipt (same rule Activity
-  // uses) so the hero balance moves the instant a claim's "Arriving" row
-  // appears, instead of lagging ~1.5s behind until refresh() lands it.
   const pendingUnits = pendingClaims(claims, receipts).reduce((sum, c) => sum + c.units, 0);
   const cashedOutUnits = cashOuts.reduce((sum, c) => sum + c.units, 0);
   const availableUnits = Math.max(0, receivedUnits + pendingUnits - cashedOutUnits);
 
-  // When each pool's next installment unlocks: the most recent in-app claim's
-  // time + its claim_period. Only reflects claims made this session (the
-  // contract doesn't expose last_ts), which is enough to show a live countdown
-  // after the farmer claims and prevent an immediate "not due yet" error.
   const nextClaimAtByPool = {};
   for (const c of claims) {
     const pool = pools.find((p) => String(p.id) === String(c.poolId));
@@ -114,7 +115,6 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
       ...prev,
       { id: `co-${cashOutSeq.current}`, units, php, destLabel, dest, detail, name, when: Date.now() },
     ]);
-    // Save/refresh this recipient at the top of the recents (dedupe by dest+detail).
     if (dest && detail) {
       setRecipients((prev) => {
         const key = `${dest}:${detail}`;
@@ -125,20 +125,20 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
     notify(`Cashed out to ${destLabel} ✓`);
   };
 
-  // Presenter helper: wipe demo-only cash-out history + saved recipients so a
-  // live run starts from a guaranteed-clean wallet, even on a machine with
-  // stale localStorage from earlier testing. Chain state (receipts) is
-  // untouched — only the local demo ledger resets.
   const resetDemo = () => {
-    resetDemoState();
+    resetDemoState(farmerRole);
     setCashOuts([]);
-    setRecipients(SEED_RECIPIENTS);
+    setRecipients(seedRecipientsFor(farmerName));
     notify("Demo wallet reset — cash-out history cleared");
   };
 
-  // Fixed-height phone "screen": rounded, shadowed, clips its overflow so the
-  // page content scrolls INSIDE it (bottom nav stays pinned) rather than the
-  // browser page scrolling. On a real phone this is just the full viewport.
+  const handleSwitch = (role) => {
+    if (role === farmerRole || !onSwitchFarmer) return;
+    onSwitchFarmer(role);
+    setStage("connect");
+    notify(`Viewing as ${demoFarmerByRole(role)?.name || role}`);
+  };
+
   const frameStyle = {
     width: "100%",
     maxWidth: 400,
@@ -153,8 +153,6 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
     boxShadow: "0 24px 60px -18px rgba(22,69,45,0.28), 0 8px 20px -10px rgba(42,42,40,0.16)",
   };
 
-  // Pre-app launch flow: opening splash → one-tap wallet confirm → the app.
-  // Rendered inside the same phone frame so all stages share the 430px column.
   if (stage === "splash") {
     return (
       <div style={frameStyle}>
@@ -165,7 +163,15 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
   if (stage === "connect") {
     return (
       <div style={frameStyle}>
-        <ConnectScreen me={me} farmerName={farmerName} onConnected={() => setStage("app")} onNotMe={() => setStage("splash")} />
+        <ConnectScreen
+          me={me}
+          farmerName={farmerName}
+          farmers={DEMO_FARMERS}
+          activeRole={farmerRole}
+          onSwitchFarmer={handleSwitch}
+          onConnected={() => setStage("app")}
+          onNotMe={() => setStage("splash")}
+        />
       </div>
     );
   }
@@ -174,22 +180,24 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
 
   return (
     <div style={frameStyle}>
-      {/* top bar: dove logo + a visible Funder button (presenter shortcut) */}
       <div style={topBarStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <img src="/logo-dove.png" alt="Celerity" style={{ height: 30, width: "auto", display: "block" }} />
           {pageTitle && <span style={{ font: "var(--text-h2)", fontSize: 17, color: "var(--text)" }}>{pageTitle}</span>}
         </div>
-        <button onClick={onOpenDev} className="cel-press" style={funderBtnStyle} aria-label="Open funder console">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 13.5h11M3.5 13.5v-6M12.5 13.5v-6M2 7.5 8 3l6 4.5M6.5 13.5v-3h3v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          Funder
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <ViewAsSwitch activeRole={farmerRole} onSwitch={handleSwitch} />
+          <button onClick={onOpenDev} className="cel-press" style={funderBtnStyle} aria-label="Open funder console">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 13.5h11M3.5 13.5v-6M12.5 13.5v-6M2 7.5 8 3l6 4.5M6.5 13.5v-3h3v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            Funder
+          </button>
+        </div>
       </div>
 
-      {/* scrollable content area — bottom nav stays pinned below */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
         {page === "home" && (
           <HomeScreen
+            farmerShortName={identity.shortName}
             pools={pools}
             receipts={receipts}
             cashOuts={cashOuts}
@@ -227,6 +235,48 @@ export default function FarmerApp({ pools, receipts, busy, setBusy, refresh, not
       {txDetail && (
         <TxDetailScreen tx={txDetail} me={me} pools={pools} onBack={() => setTxDetail(null)} />
       )}
+    </div>
+  );
+}
+
+function ViewAsSwitch({ activeRole, onSwitch }) {
+  return (
+    <div
+      role="group"
+      aria-label="View as farmer"
+      style={{
+        display: "inline-flex",
+        background: "var(--container)",
+        borderRadius: 999,
+        padding: 2,
+        gap: 2,
+      }}
+    >
+      {DEMO_FARMERS.map((f) => {
+        const on = f.role === activeRole;
+        return (
+          <button
+            key={f.role}
+            type="button"
+            onClick={() => onSwitch(f.role)}
+            className="cel-press"
+            style={{
+              border: "none",
+              borderRadius: 999,
+              padding: "5px 10px",
+              font: "var(--text-fine)",
+              fontSize: 11.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "var(--font-sans)",
+              background: on ? "var(--primary)" : "transparent",
+              color: on ? "var(--on-primary)" : "var(--text-dim)",
+            }}
+          >
+            {f.shortName}
+          </button>
+        );
+      })}
     </div>
   );
 }

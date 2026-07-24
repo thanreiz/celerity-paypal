@@ -35,7 +35,7 @@ function fmtCountdown(ms) {
  * "Fully paid out" chip instead of a Claim button, so nothing errors. Copy stays
  * plain and pesos-only.
  */
-export default function HomeScreen({ pools, receipts, cashOuts = [], claims = [], nextClaimAtByPool = {}, availableUnits, busy, claim, onCashOut, onHistory, onDetail, onOpenTx }) {
+export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts, cashOuts = [], claims = [], nextClaimAtByPool = {}, availableUnits, busy, claim, onCashOut, onHistory, onDetail, onOpenTx }) {
   const [hidden, setHidden] = useState(false);
   const shownUnits = useCountUp(availableUnits);
 
@@ -68,7 +68,7 @@ export default function HomeScreen({ pools, receipts, cashOuts = [], claims = []
       {/* greeting */}
       <div className="cel-fade" style={{ padding: "2px 2px 0" }}>
         <span style={{ font: "var(--text-body)", fontSize: 15, fontWeight: 600, color: "var(--text-dim)" }}>
-          Kumusta, <b style={{ color: "var(--text)", fontWeight: 700 }}>Ramon</b> 🌾
+          Kumusta, <b style={{ color: "var(--text)", fontWeight: 700 }}>{farmerShortName}</b> 🌾
         </span>
       </div>
 

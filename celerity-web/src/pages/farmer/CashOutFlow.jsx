@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Button from "../../design/Button";
-import { toPHP, toPHPNumber, DEMO_PHP_RATE } from "../../lib/anchor";
+import { toPHPNumber, DEMO_USDPHP } from "../../lib/anchor";
+import { createSep31Transaction, pollSep31Status, sep31Chip, SEP31_LABEL } from "../../lib/sep31";
 
 const DESTINATIONS = [
   { key: "gcash", icon: "📱", title: "GCash", subtitle: "Send to a GCash number" },
@@ -46,6 +47,7 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
   const [to, setTo] = useState({ name: "", detail: "", bank: "" });
   const [isNew, setIsNew] = useState(false);
   const [amount, setAmount] = useState("");
+  const [sepStatus, setSepStatus] = useState(null);
 
   const availablePhpNumber = Math.round(toPHPNumber(availableUnits));
   const enteredPhp = Number((amount || "").replace(/[^0-9]/g, "")) || 0;
@@ -95,19 +97,32 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
 
   const destLabel = dest === "gcash" ? "GCash" : dest === "bank" ? "bank account" : "Barangay San Isidro Co-op";
 
-  const confirmSend = () => {
+  const confirmSend = async () => {
     setStep(STEP.LOADING);
-    setTimeout(() => {
-      onCashedOut && onCashedOut({
-        units: enteredPhp / DEMO_PHP_RATE,
-        php: enteredPhp,
-        destLabel,
+    setSepStatus("pending_sender");
+    try {
+      const tx = await createSep31Transaction({
+        amountPhp: enteredPhp,
         dest,
-        detail: digitsOnly(to.detail) || to.detail,
-        name: to.name,
+        receiver: { name: to.name, detail: digitsOnly(to.detail) || to.detail },
+        onStatus: setSepStatus,
       });
+      await pollSep31Status(tx, setSepStatus);
+      onCashedOut &&
+        onCashedOut({
+          units: enteredPhp / DEMO_USDPHP,
+          php: enteredPhp,
+          destLabel,
+          dest,
+          detail: digitsOnly(to.detail) || to.detail,
+          name: to.name,
+          sep31Id: tx.id,
+        });
       setStep(STEP.SUCCESS);
-    }, 1100);
+    } catch {
+      setStep(STEP.CONFIRM);
+      setSepStatus(null);
+    }
   };
 
   const numberValid = isValidGcash(to.detail);
@@ -126,7 +141,7 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
                 <BigChoice key={d.key} emoji={d.icon} title={d.title} subtitle={d.subtitle} onClick={() => chooseDest(d.key)} />
               ))}
             </div>
-            <Honesty text="Cash-out is simulated for the demo. In production this is a licensed Stellar anchor converting your balance to real pesos." />
+            <Honesty text={`${SEP31_LABEL}. Demo only — production uses a licensed VASP (PDAX) converting settlement asset → real pesos.`} />
           </Step>
         )}
 
@@ -215,25 +230,40 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
           </Step>
         )}
 
-        {/* loading */}
+        {/* loading — SEP-31 status machine */}
         {step === STEP.LOADING && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" }}>
             <Spinner />
-            <div style={{ font: "var(--text-h2)", fontSize: 19 }}>Sending to {to.name || destTitle}…</div>
-            <div style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>This only takes a moment.</div>
+            <div style={{ font: "var(--text-h2)", fontSize: 19 }}>Cash-out to {to.name || destTitle}…</div>
+            <div
+              style={{
+                marginTop: 4,
+                padding: "6px 12px",
+                borderRadius: 999,
+                background: "var(--container)",
+                font: "var(--text-fine)",
+                fontWeight: 700,
+                color: "var(--primary)",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              SEP-31 · {sep31Chip(sepStatus)}
+            </div>
+            <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", maxWidth: 280 }}>{SEP31_LABEL}</div>
           </div>
         )}
 
-        {/* success */}
+        {/* success — honest mock completion, not live InstaPay */}
         {step === STEP.SUCCESS && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: "32px 8px" }}>
               <div className="cel-pop" style={{ width: 84, height: 84, borderRadius: "50%", background: "var(--ok-bg)", color: "var(--ok-text)", fontSize: 40, display: "grid", placeItems: "center", marginBottom: 8 }}>✓</div>
-              <div style={{ font: "var(--text-h2)", fontSize: 20 }}>Sent!</div>
+              <div style={{ font: "var(--text-h2)", fontSize: 20 }}>SEP-31 mock completed</div>
               <div style={{ font: "var(--text-hero)", fontSize: 34, color: "var(--ok-text)", margin: "8px 0", fontVariantNumeric: "tabular-nums" }}>₱{amount}</div>
-              <div style={{ font: "var(--text-body)", fontSize: 14, color: "var(--text-dim)", maxWidth: 260 }}>
-                Sent to {to.name || destTitle}. It should arrive within a few minutes.
+              <div style={{ font: "var(--text-body)", fontSize: 14, color: "var(--text-dim)", maxWidth: 280 }}>
+                Demo cash-out to {to.name || destTitle} ({destTitle}). In production PDAX would pay real pesos here.
               </div>
+              <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", marginTop: 4 }}>{SEP31_LABEL}</div>
             </div>
             <BigButton onClick={onClose}>Done</BigButton>
           </div>

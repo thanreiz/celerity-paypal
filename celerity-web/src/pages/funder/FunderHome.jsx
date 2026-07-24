@@ -2,7 +2,8 @@ import React from "react";
 import DemoGuide from "./DemoGuide";
 import CountUp from "../../design/CountUp";
 import { phpValue } from "../../lib/anchor";
-import { fmtUnits, short, CONTRACT_ID } from "../../lib/config";
+import { fmtUnits, CONTRACT_ID } from "../../lib/config";
+import { farmerLabel } from "../../lib/farmers";
 import { poolName } from "../../lib/poolNames";
 import { regionName } from "../../lib/regions";
 
@@ -77,7 +78,7 @@ function FeedRow({ row, pool }) {
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ font: "var(--text-body-lg)", fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>
-          {pool ? poolName(pool) : `Pool #${String(row.pool_id)}`} → {short(row.farmer)}
+          {pool ? poolName(pool) : `Pool #${String(row.pool_id)}`} → {farmerLabel(row.farmer)}
         </div>
         <div style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>
           {pool ? regionName(pool.region) : "—"} · pool #{String(row.pool_id)}

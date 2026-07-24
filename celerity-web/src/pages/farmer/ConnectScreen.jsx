@@ -13,7 +13,16 @@ import { short } from "../../lib/config";
  * address stays tucked behind a tap (present for honesty, out of the way).
  * The only trust claim is "Secured on Stellar" — no bank or regulatory language.
  */
-export default function ConnectScreen({ me, farmerName = "Mang Ramon", region = "Bicol Region", onConnected, onNotMe }) {
+export default function ConnectScreen({
+  me,
+  farmerName = "Mang Ramon",
+  region = "Bicol Region",
+  farmers,
+  activeRole,
+  onSwitchFarmer,
+  onConnected,
+  onNotMe,
+}) {
   const [showId, setShowId] = useState(false);
 
   const initials = farmerName
@@ -29,6 +38,35 @@ export default function ConnectScreen({ me, farmerName = "Mang Ramon", region = 
         <img className="cel-connect-logo" src="/logo-lockup.png" alt="Celerity" />
         <h1 className="cel-connect-h">Is this you?</h1>
       </div>
+
+      {farmers?.length > 1 && onSwitchFarmer && (
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12, flexWrap: "wrap" }}>
+          {farmers.map((f) => {
+            const on = f.role === activeRole;
+            return (
+              <button
+                key={f.role}
+                type="button"
+                onClick={() => onSwitchFarmer(f.role)}
+                className="cel-press"
+                style={{
+                  border: on ? "1.5px solid var(--primary)" : "1px solid var(--container-highest)",
+                  background: on ? "var(--ok-bg)" : "#fff",
+                  color: on ? "var(--ok-text)" : "var(--text-dim)",
+                  borderRadius: 999,
+                  padding: "8px 14px",
+                  font: "var(--text-fine)",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                {f.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="cel-id-card cel-id-card--person">
         <span className="cel-id-badge">

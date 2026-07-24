@@ -306,6 +306,31 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
               Read {state.rows.length} regions · {state.settle.length} will settle · one signed event per region, unique nonces, a failed region is flagged and skipped — never the whole typhoon.
             </span>
           </div>
+
+          {state.kind === "done" && (
+            <div
+              className="cel-pop"
+              style={{
+                background: "var(--ok-bg)",
+                border: "1px solid var(--ok-line)",
+                borderRadius: 14,
+                padding: "16px 18px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <strong style={{ font: "var(--text-body-lg)", color: "var(--ok-text)" }}>
+                Signature verified · releases credited on-chain
+              </strong>
+              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--ok-text)", lineHeight: 1.45 }}>
+                Ed25519 oracle signature checked; event nonces burned. Money is already the farmers' — even if their phone was offline. They claim installments and cash out to pesos (SEP-31 · PDAX UAT target) when they reconnect.
+              </p>
+              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>
+                Re-settling the same event pays nothing — composite settled-key is idempotent.
+              </p>
+            </div>
+          )}
         </>
       )}
 

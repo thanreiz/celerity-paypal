@@ -46,6 +46,7 @@ const kp = {
   alice: Keypair.fromSecret(need("VITE_FUNDER_SECRET")), // funder + registry admin
   mallory: Keypair.fromSecret(need("VITE_FUNDER2_SECRET")), // second funder (PCIC)
   farmer1: Keypair.fromSecret(need("VITE_FARMER_SECRET")),
+  farmer2: Keypair.fromSecret(need("VITE_FARMER2_SECRET")), // Aling Nena — View-as
 };
 
 // 1 XLM = 10^7 stroops
@@ -76,8 +77,8 @@ async function invoke(role, method, args) {
 
 // Extra registry-only payees (fixed addresses; no keys needed to receive).
 // Hardcoded so re-deploys keep the same faces the mockups established.
+// Aling Nena is farmer2 (funded keypair) so the Farmer App can View-as her.
 const EXTRA_FARMERS = [
-  { name: "Aling Nena", region: 5, addr: "GDIC6CFR5XLCZ37LSHSLE3MZYSMKTVXUBUYVQISBVJFLWM4X7UGPCAF4" },
   { name: "Ka Danilo", region: 10, addr: "GB77JCESFNHQJF54KOSPFGVLBWTKFVT4ABYL2SRJNFCW6HVCA7GLYYSL" },
   { name: "Aling Rosa", region: 8, addr: "GDBNIDHTUKJBJIGSDGDPOYAZOD4C2ZVGLR4A2X5GOLRVI5FNCGOREF4O" },
 ];
@@ -88,6 +89,7 @@ async function main() {
   // --- Registry (admin = alice) -------------------------------------------
   const farmers = [
     { name: "Mang Ramon (farmer1)", region: 5, addr: kp.farmer1.publicKey() },
+    { name: "Aling Nena (farmer2)", region: 5, addr: kp.farmer2.publicKey() },
     ...EXTRA_FARMERS,
   ];
   for (const f of farmers) {
@@ -95,10 +97,12 @@ async function main() {
     console.log(`  ✓ registered ${f.name} — region ${f.region} — ${f.addr.slice(0, 4)}…${f.addr.slice(-4)}`);
   }
 
-  // --- Pools: small real XLM; frontend renders them as pesos --------------
+  // --- Pools: sized so region-5 Bicol can pay BOTH Mang Ramon + Aling Nena ---
+  // ADB Bicol: 2 farmers × 1 unit × 3 installments = 6 → escrow 8 (headroom).
+  // PCIC Bicol: 2 farmers × 1 unit × 1 installment = 2 → escrow 4.
   // ADB APDRF (alice): Bicol + N. Mindanao. PCIC (mallory): Bicol + E. Visayas.
   const pools = [
-    { role: "alice", name: "ADB · Bicol Typhoon Relief", region: 5, threshold: 3, amount: 5, payout: 1, installments: 3, period: 60 },
+    { role: "alice", name: "ADB · Bicol Typhoon Relief", region: 5, threshold: 3, amount: 8, payout: 1, installments: 3, period: 60 },
     { role: "alice", name: "ADB · N. Mindanao Flood Relief", region: 10, threshold: 3, amount: 4, payout: 1, installments: 1, period: 0 },
     { role: "mallory", name: "PCIC · Bicol Crop-Loss Indemnity", region: 5, threshold: 3, amount: 4, payout: 1, installments: 1, period: 0 },
     { role: "mallory", name: "PCIC · E. Visayas Rice Cover", region: 8, threshold: 3, amount: 3, payout: 1, installments: 1, period: 0, pause: true },

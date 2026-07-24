@@ -13,6 +13,8 @@ export const SECRETS = {
   funder: need("VITE_FUNDER_SECRET"),
   funder2: need("VITE_FUNDER2_SECRET"),
   farmer: need("VITE_FARMER_SECRET"),
+  // Second farmer (Aling Nena) — View-as switch in the farmer app.
+  farmer2: need("VITE_FARMER2_SECRET"),
   oracle: need("VITE_ORACLE_SECRET"),
   // The contract's admin (LGU registrar). In the demo deployment alice holds
   // both roles, but registry calls must sign AS the admin, not as a funder.

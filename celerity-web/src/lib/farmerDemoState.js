@@ -5,8 +5,12 @@
 // relief itself is untouched. Persisting to localStorage keeps the demo
 // state stable across refreshes on the SAME browser — it's still clearly
 // local/fake, just no longer fragile.
-const CASHOUTS_KEY = "celerity.farmer.cashOuts";
-const RECIPIENTS_KEY = "celerity.farmer.recipients";
+//
+// Keys are scoped per farmer role so View-as (Ramon ↔ Nena) never mixes
+// cash-out ledgers.
+
+const cashKey = (role) => `celerity.farmer.${role || "farmer"}.cashOuts`;
+const recipientsKey = (role) => `celerity.farmer.${role || "farmer"}.recipients`;
 
 function load(key, fallback) {
   try {
@@ -26,30 +30,41 @@ function save(key, value) {
   }
 }
 
-export function loadCashOuts() {
-  return load(CASHOUTS_KEY, []);
+export function loadCashOuts(role = "farmer") {
+  return load(cashKey(role), []);
 }
 
-export function saveCashOuts(cashOuts) {
-  save(CASHOUTS_KEY, cashOuts);
+export function saveCashOuts(cashOuts, role = "farmer") {
+  save(cashKey(role), cashOuts);
 }
 
-export function loadRecipients(seed) {
-  return load(RECIPIENTS_KEY, seed);
+export function loadRecipients(seed, role = "farmer") {
+  return load(recipientsKey(role), seed);
 }
 
-export function saveRecipients(recipients) {
-  save(RECIPIENTS_KEY, recipients);
+export function saveRecipients(recipients, role = "farmer") {
+  save(recipientsKey(role), recipients);
 }
 
-/** Wipe all demo-only farmer state (cash-out history + saved recipients) from
- * localStorage. Used by the "Reset demo data" control so a presenter can get a
- * guaranteed-clean wallet before a live run, even on a machine that has stale
- * cash-outs from earlier testing. Does not touch the chain. */
-export function resetDemoState() {
+/** Wipe demo-only state for one farmer (or both demo faces). */
+export function resetDemoState(role) {
   try {
-    localStorage.removeItem(CASHOUTS_KEY);
-    localStorage.removeItem(RECIPIENTS_KEY);
+    if (role) {
+      localStorage.removeItem(cashKey(role));
+      localStorage.removeItem(recipientsKey(role));
+      // Legacy unscoped keys from before View-as.
+      if (role === "farmer") {
+        localStorage.removeItem("celerity.farmer.cashOuts");
+        localStorage.removeItem("celerity.farmer.recipients");
+      }
+    } else {
+      for (const r of ["farmer", "farmer2"]) {
+        localStorage.removeItem(cashKey(r));
+        localStorage.removeItem(recipientsKey(r));
+      }
+      localStorage.removeItem("celerity.farmer.cashOuts");
+      localStorage.removeItem("celerity.farmer.recipients");
+    }
   } catch {
     // storage unavailable — nothing persisted to clear
   }

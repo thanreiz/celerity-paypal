@@ -6,42 +6,75 @@ import Toast from "./design/Toast";
 import { farmerReceipts, addr } from "./lib/celerity";
 import { friendlyError } from "./lib/errors";
 
+const FARMER_ROLE_KEY = "celerity.farmer.activeRole";
+
+function loadFarmerRole() {
+  try {
+    const r = localStorage.getItem(FARMER_ROLE_KEY);
+    return r === "farmer2" ? "farmer2" : "farmer";
+  } catch {
+    return "farmer";
+  }
+}
+
 export default function App() {
   const [devOpen, setDevOpen] = useState(false);
   const [devSurface, setDevSurface] = useState("funder");
   const [pools, setPools] = useState([]);
   const [receipts, setReceipts] = useState([]);
-  const [loaded, setLoaded] = useState(false); // first successful chain read
-  const loadedRef = useRef(false); // mirror for the polling closure
+  const [loaded, setLoaded] = useState(false);
+  const loadedRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+  // View-as: Mang Ramon (farmer) or Aling Nena (farmer2).
+  const [farmerRole, setFarmerRole] = useState(loadFarmerRole);
+  const farmerRoleRef = useRef(farmerRole);
+  farmerRoleRef.current = farmerRole;
+  // Which identity the current `receipts` array belongs to — so an empty
+  // read for Nena doesn't revive Ramon's last-good balance (and vice versa).
+  const receiptsRoleRef = useRef(farmerRole);
 
-  const refresh = useCallback(async () => {
-    const { pools, receipts } = await farmerReceipts(addr("farmer"));
-    // Guard against a flaky read blanking a populated wallet: if the chain
-    // read comes back empty but we already had pools/receipts, keep the
-    // last-good state instead of wiping it. A genuine empty only stands on the
-    // first load (nothing to lose) — once we've seen data, an empty result is
-    // treated as a transient miss, not "everything is gone". allPools() already
-    // throws rather than returning [] on an RPC flake; this is the belt-and-
-    // suspenders for the ledger reads too.
-    setPools((prev) => (pools.length === 0 && prev.length > 0 ? prev : pools));
-    setReceipts((prev) => (receipts.length === 0 && prev.length > 0 ? prev : receipts));
-    loadedRef.current = true;
-    setLoaded(true);
-  }, []);
-
-  // Errors linger long enough to read from the back row; successes clear fast.
   const notify = useCallback((msg, isError = false) => {
     setToast({ msg, isError });
     setTimeout(() => setToast(null), isError ? 12000 : 5000);
   }, []);
 
-  // Initial load + resilient polling. Testnet reads flake, and a single failed
-  // read must never leave the wallet stuck empty. So: keep the chain in view on
-  // a slow poll, and retry faster until the first data arrives. Combined with
-  // the last-good guards in refresh(), a receipt that's on-chain can't silently
-  // vanish — the next tick brings it back.
+  const refresh = useCallback(async () => {
+    const role = farmerRoleRef.current;
+    const { pools, receipts } = await farmerReceipts(addr(role));
+    setPools((prev) => (pools.length === 0 && prev.length > 0 ? prev : pools));
+    setReceipts((prev) => {
+      const sameIdentity = receiptsRoleRef.current === role;
+      if (receipts.length === 0 && prev.length > 0 && sameIdentity) {
+        // Transient empty for the SAME farmer — keep last-good.
+        return prev;
+      }
+      receiptsRoleRef.current = role;
+      return receipts;
+    });
+    loadedRef.current = true;
+    setLoaded(true);
+  }, []);
+
+  const switchFarmer = useCallback(
+    (role) => {
+      const next = role === "farmer2" ? "farmer2" : "farmer";
+      try {
+        localStorage.setItem(FARMER_ROLE_KEY, next);
+      } catch {
+        /* ignore */
+      }
+      farmerRoleRef.current = next;
+      receiptsRoleRef.current = next;
+      setFarmerRole(next);
+      setReceipts([]);
+      setLoaded(false);
+      loadedRef.current = false;
+      refresh().catch((e) => notify(friendlyError(e), true));
+    },
+    [refresh, notify]
+  );
+
   useEffect(() => {
     let cancelled = false;
     let timer;
@@ -49,14 +82,9 @@ export default function App() {
       try {
         await refresh();
       } catch (e) {
-        // Only surface an error before the first successful load (the true
-        // "can't reach the chain" case). Once loaded, a failed background tick
-        // is silent — the wallet keeps its last-good state and we just retry,
-        // so an RPC blip doesn't spam error toasts or blank anything.
         if (!cancelled && !loadedRef.current) notify(friendlyError(e), true);
       }
       if (cancelled) return;
-      // Poll fast until we've loaded something, then settle to a calm cadence.
       const next = loadedRef.current ? 15000 : 3000;
       timer = setTimeout(tick, next);
     };
@@ -65,7 +93,7 @@ export default function App() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [refresh, notify]);
+  }, [refresh, notify, farmerRole]);
 
   const run = useCallback(
     async (label, fn) => {
@@ -73,7 +101,7 @@ export default function App() {
       try {
         const result = await fn();
         notify(`${label} ✓`);
-        await new Promise((r) => setTimeout(r, 1500)); // let the RPC catch up to the write
+        await new Promise((r) => setTimeout(r, 1500));
         await refresh();
         return result;
       } catch (e) {
@@ -86,13 +114,9 @@ export default function App() {
     [refresh, notify]
   );
 
-  // The funder console owns its own chrome (login screen, corner cluster) —
-  // no dev strip. Farmer App / Public Ledger are reachable from its corner.
   if (devOpen) {
     return (
       <div style={{ minHeight: "100dvh" }}>
-        {/* keep the portal mounted while the public ledger is open so the
-            logged-in identity survives the round trip */}
         <div style={{ display: devSurface === "funder" ? "block" : "none" }}>
           <FunderPortal
             pools={pools}
@@ -114,8 +138,6 @@ export default function App() {
     );
   }
 
-  // Farmer app sits centered on a warm-paper backdrop so it reads as a phone
-  // with margins on desktop (on an actual phone the column just fills the width).
   return (
     <div
       style={{
@@ -130,6 +152,8 @@ export default function App() {
       }}
     >
       <FarmerApp
+        farmerRole={farmerRole}
+        onSwitchFarmer={switchFarmer}
         pools={pools}
         receipts={receipts}
         busy={busy}

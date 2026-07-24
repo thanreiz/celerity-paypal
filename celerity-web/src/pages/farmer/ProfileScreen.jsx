@@ -2,7 +2,14 @@ import React from "react";
 import { short, UNIT } from "../../lib/config";
 import { toPHP } from "../../lib/anchor";
 
-export default function ProfileScreen({ me, registration, farmerName, receipts = [], pools = [], onResetDemo }) {
+export default function ProfileScreen({
+  me,
+  registration,
+  farmerName,
+  receipts = [],
+  pools = [],
+  onResetDemo,
+}) {
   const totalUnits = receipts.reduce((sum, r) => sum + Number(BigInt(r.amount)) / Number(UNIT), 0);
   const payouts = receipts.length;
   const programs = new Set(receipts.map((r) => String(r.pool_id))).size;
