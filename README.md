@@ -47,8 +47,8 @@ cross-border settlement layer *underneath* them.
 > - **Live demo:** [stellar-celerity.me](https://stellar-celerity.me/)
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
-> - **Contract address (Stellar Testnet):** `CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ)
+> - **Contract address (Stellar Testnet):** `CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7)
 > - **Design rules & win condition:** [`PROJECT.md`](PROJECT.md)
 > - **Design system:** [`design.md`](design.md)
 > - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
@@ -132,7 +132,7 @@ whole design leans on. What's actually in use, all live on Testnet:
 | 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
 
 Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
-per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ).
+per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7).
 
 ## Features
 
@@ -202,7 +202,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ` |
+| Contract address | `CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7` |
 
 ## Repo Layout
 

@@ -21,7 +21,7 @@
 - [ ] **Demo PIN** (`DEMO_GATE`): enter once when the Stage unlock modal appears (first deposit / settle / claim). Keys are server-side — without the PIN, visitors cannot sign. Confirm PIN with the laptop that will present.
 - [ ] Confirm production JS has **no** Stellar `S…` secrets (View Source / Network → main bundle search)
 
-**Live contract (as of last prep):** `CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ`  
+**Live contract (as of last prep):** `CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7`  
 Keys are server-side behind DEMO_GATE (see `celerity-web/.rotate-pubs.json` locally — not committed). Prior Phase-7 contract retired after secret rotation.
 
 ---

@@ -3,12 +3,12 @@
   "testnet": {
     "network_passphrase": "Test SDF Network ; September 2015",
     "rpc_url": "https://soroban-testnet.stellar.org:443",
-    "contract_id": "CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ",
+    "contract_id": "CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7",
     "deployer_identity": "alice (fee payer); constructor admin = rotated funder address",
     "settlement_token": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC (native XLM SAC)",
     "oracle_public_key_hex": "978174400489bcc80ec1e29d77380a3a9bcbd1adfcd1017a32ae5c7df3d30859",
     "oracle_note": "public key only — the signing secret lives in oracle/.env and server FUNDER/ORACLE secrets (gitignored). Rotated 2026-07-24 so prior CDN-bundled S-keys cannot report_event.",
-    "phase": "8 — security harden: secrets off client (/api gate), rotated keys + fresh slate via tools/seed-demo.mjs (ADB + PCIC pools, Ramon+Nena region 5, ledger empty).",
+    "phase": "9 — recurring-schedule deferral + removed-farmer claim gate; mobile shell pin; fresh slate via tools/seed-demo.mjs.",
     "demo_url": "https://stellar-celerity.me/",
     "previous_contract_ids": {
       "phase_0": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX",
@@ -19,7 +19,8 @@
       "phase_4_5_pre_reset": "CBOC7QW3EZUABZST4KO2FHYNRUZPN3KF6QTLJSZ4H77VZKOHTJFKI2Q2",
       "phase_5": "CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG",
       "phase_6_scratch": "CA3Z5H7IMBUNAXNAYREUM2WHTWIMFJDOVTTFAAHICQKIJQNJTU2UAYN2",
-      "phase_7_pre_secret_rotation": "CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD"
+      "phase_7_pre_secret_rotation": "CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD",
+      "phase_8_pre_recurring_fix": "CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ"
     }
   }
 }
