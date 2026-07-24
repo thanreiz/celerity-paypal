@@ -1,9 +1,10 @@
-// First-run coach tours — Celerity-native copy for judges + operators.
+// First-run coach tours — plain language for farmers and funders.
 // Progress persists in localStorage so stage resets are intentional.
+// Bump key versions when steps change so returning users see the new tour.
 
 const KEYS = {
-  farmer: "celerity.tour.farmer.v1",
-  funder: "celerity.tour.funder.v1",
+  farmer: "celerity.tour.farmer.v2",
+  funder: "celerity.tour.funder.v2",
 };
 
 function readDone(key) {
@@ -35,59 +36,101 @@ export function resetTour(kind) {
   writeDone(KEYS[kind] || kind, false);
 }
 
-/** Farmer Home coach — anchors via data-tour on Home / BottomNav. */
+/** Farmer Home coach — short steps, everyday words, clear “what to tap”. */
 export const FARMER_TOUR = [
   {
     id: "balance",
-    title: "Your relief balance",
-    body: "Pesos credited on-chain when a signed typhoon settles your region — already yours even if the phone was offline.",
+    title: "This is your money",
+    body: "When a big storm hits your area and relief is released, the amount shows here in pesos. It is already yours — even if your phone was off.",
     anchor: "balance",
   },
   {
+    id: "cashout",
+    title: "Cash out when you need it",
+    body: "Tap Cash out to send pesos to GCash, a bank account, or a nearby pick-up. Practice anytime — this demo does not move real money.",
+    anchor: "cashout",
+    chip: "Practice only",
+  },
+  {
+    id: "history",
+    title: "See past payments",
+    body: "Tap History to open a list of money that came in and money you sent out. Useful if you need to show a receipt.",
+    anchor: "history",
+  },
+  {
     id: "claim",
-    title: "Claim installments",
-    body: "Recurring pools unlock here after settle. Tap Claim when a card appears — the contract enforces the cooldown.",
+    title: "Claim the next payment",
+    body: "Some relief comes in parts. When a green Claim card appears here, tap it to get the next part. If nothing shows yet, wait until after a storm is settled.",
     anchor: "claim",
   },
   {
-    id: "cashout",
-    title: "Cash out to pesos",
-    body: "Move spendable balance to GCash, bank, or a nearby pick-up when you are ready.",
-    anchor: "cashout",
-    chip: "SEP-31 · demo · PDAX UAT target",
+    id: "shortcuts",
+    title: "Quick help buttons",
+    body: "Use these for Relief Programs, Installments, My Region, and Help. Tap any one to learn more in plain words.",
+    anchor: "shortcuts",
+  },
+  {
+    id: "recent",
+    title: "What just happened",
+    body: "New money and cash-outs show up in Recent activity. Tap a row later to open the details.",
+    anchor: "recent",
   },
   {
     id: "activity",
-    title: "Activity history",
-    body: "Every on-chain receipt and demo cash-out in one place — tap a row for detail.",
+    title: "Activity tab",
+    body: "At the bottom, tap Activity anytime for the full list of payments — not just the latest ones.",
     anchor: "activity",
+  },
+  {
+    id: "profile",
+    title: "Your profile",
+    body: "Tap Profile to see your name, region, and support contacts. You can also Replay this tour from there if you get stuck.",
+    anchor: "profile",
   },
 ];
 
-/** Funder Home coach — escrow isolation + demo loop. */
+/** Funder Home coach — operator walkthrough without crypto jargon. */
 export const FUNDER_TOUR = [
   {
     id: "escrow",
-    title: "Still escrowed",
-    body: "Only this institution’s sub-pools. The other funder’s money never appears here.",
+    title: "Money waiting safely",
+    body: "This big number is only your institution’s relief funds. The other funder’s money never mixes in or shows here.",
     anchor: "escrow",
   },
   {
+    id: "pools",
+    title: "Your relief pools",
+    body: "Tap My Pools to open each pot of money and its rule — for example, which region and how strong a storm must be before payout.",
+    anchor: "pools",
+  },
+  {
+    id: "farmers",
+    title: "Who can receive",
+    body: "Tap Farmers (LGU) to see the government list of enrolled farmers. Funders look; the LGU decides who is on the list.",
+    anchor: "farmers",
+  },
+  {
     id: "tutorial",
-    title: "Live tutorial",
-    body: "Follow the next step in the demo loop — fund, enroll, trigger, then watch releases land.",
+    title: "Follow the checklist",
+    body: "This panel shows the next demo step: fund a pool, enroll farmers, trigger a typhoon, then watch money land. Tap the action button when you are ready.",
     anchor: "tutorial",
   },
   {
     id: "oracle",
-    title: "Trigger Typhoon",
-    body: "Load a PAGASA-style bulletin, then Sign & settle. The contract verifies Ed25519 — it never reads the file.",
+    title: "Trigger the typhoon",
+    body: "Tap Trigger Typhoon, load a sample weather bulletin, then Sign & settle. The system checks a digital signature and the numbers — it does not read the story in the file.",
     anchor: "oracle",
   },
   {
     id: "ledger",
-    title: "Your ledger",
-    body: "Per-funder releases on-chain. Switch ADB ↔ PCIC to show independent pools.",
+    title: "Proof money was sent",
+    body: "Tap Ledger to see every payout from your pools to farmers. Switch ADB ↔ PCIC at the top of Pools to prove each funder only sees their own releases.",
     anchor: "ledger",
+  },
+  {
+    id: "settings",
+    title: "Settings & replay",
+    body: "Tap Settings for demo preferences and technical details. To see these tips again, use Replay coach tips on the Home checklist.",
+    anchor: "settings",
   },
 ];

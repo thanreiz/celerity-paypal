@@ -5,14 +5,14 @@ export default function DemoGuide({ pools, farmerCount, releases, onGoto, onCrea
   const steps = [
     {
       label: "Fund a pool",
-      detail: "Escrow money with a release rule: region + typhoon signal.",
+      detail: "Put money in escrow with a simple rule: which region, and how strong the storm must be.",
       done: pools.length > 0,
       action: "New pool",
       go: onCreatePool,
     },
     {
       label: "Enroll a farmer (as LGU)",
-      detail: "The government keeps the list of who's eligible — not funders, not the contract.",
+      detail: "The government keeps the list of who can receive — not the funders.",
       // Releases imply farmers already exist (registry load can race to 0).
       done: farmerCount > 0 || releases > 0,
       action: "Open registry",
@@ -20,14 +20,14 @@ export default function DemoGuide({ pools, farmerCount, releases, onGoto, onCrea
     },
     {
       label: "Trigger the typhoon",
-      detail: "Drop the PAGASA bulletin — every matching region settles in one pass.",
+      detail: "Load a sample weather bulletin — every matching region pays out in one go.",
       done: releases > 0,
       action: "Open trigger",
       go: () => onGoto("oracle"),
     },
     {
       label: "Watch the money land",
-      detail: "Per-funder ledger here; the farmer sees it in their app.",
+      detail: "Check your ledger here; the farmer sees the same pesos in their app.",
       done: releases > 0,
       action: "Open ledger",
       go: () => onGoto("ledger"),

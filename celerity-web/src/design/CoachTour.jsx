@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import Button from "./Button";
 
-const CARD_H = 210;
+const CARD_H = 240;
 const GAP = 14;
 const PAD = 10;
 

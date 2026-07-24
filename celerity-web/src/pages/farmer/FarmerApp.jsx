@@ -170,6 +170,7 @@ export default function FarmerApp({
         <ConnectScreen
           me={me}
           farmerName={farmerName}
+          region={identity.region}
           farmers={DEMO_FARMERS}
           activeRole={farmerRole}
           onSwitchFarmer={handleSwitch}

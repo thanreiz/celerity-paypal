@@ -148,13 +148,11 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
 
       {/* quick actions */}
       <div className="cel-card-surface cel-quick-actions">
-        {QUICK_ACTIONS.map((a) => {
-          const tourAnchor = a.page === "oracle" || a.page === "ledger" ? a.page : undefined;
-          return (
+        {QUICK_ACTIONS.map((a) => (
             <div
               key={a.page}
-              data-tour={tourAnchor}
-              className={tourAnchor ? "cel-tour-target" : undefined}
+              data-tour={a.page}
+              className="cel-tour-target"
               style={{ width: "100%", maxWidth: 110, display: "flex", justifyContent: "center" }}
             >
               <button
@@ -185,8 +183,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
                 {a.label}
               </button>
             </div>
-          );
-        })}
+          ))}
       </div>
 
       {loaded && (

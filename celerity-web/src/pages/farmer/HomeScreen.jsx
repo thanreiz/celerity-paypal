@@ -128,7 +128,13 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
             Cash out
           </Button>
-          <Button variant="on" className="cel-press" style={{ flex: 1, justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }} onClick={onHistory}>
+          <Button
+            data-tour="history"
+            variant="on"
+            className="cel-press"
+            style={{ flex: 1, justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}
+            onClick={onHistory}
+          >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 3.5h8v9H4z" stroke="currentColor" strokeWidth="1.4" /><path d="M6 6h4M6 8.5h4M6 11h2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
             History
           </Button>
@@ -192,13 +198,17 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
         </>
       ) : (
         <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)", padding: "0 2px" }}>
-          Claim cards appear here after a signed typhoon settles a recurring pool.
+          Claim cards show up here after storm relief is released in parts. Nothing to tap until then.
         </p>
       )}
       </div>
 
       {/* quick actions */}
-      <div className="cel-fade cel-fade-3 cel-card-surface" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, padding: "18px 12px" }}>
+      <div
+        data-tour="shortcuts"
+        className="cel-fade cel-fade-3 cel-card-surface"
+        style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, padding: "18px 12px" }}
+      >
         <QuickAction label="Relief Programs" onClick={() => onDetail("programs")} icon="programs" />
         <QuickAction label="Installments" onClick={() => onDetail("installments")} icon="installments" />
         <QuickAction label="My Region" onClick={() => onDetail("region")} icon="region" />
@@ -206,7 +216,7 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
       </div>
 
       {/* recent activity — merged cash-outs (−) + relief receipts (+) */}
-      <div className="cel-fade cel-fade-4">
+      <div data-tour="recent" className="cel-fade cel-fade-4">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 4px 0" }}>
           <p className="cel-section-label">Recent activity</p>
           {recentRows.length > 0 && (
@@ -217,7 +227,7 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
         </div>
         {recentRows.length === 0 ? (
           <p style={{ margin: "8px 4px 0", font: "var(--text-fine)", color: "var(--text-faint)" }}>
-            Nothing yet — money appears seconds after a signed typhoon signal.
+            Nothing yet — money shows up here soon after a storm release.
           </p>
         ) : (
           <div className="cel-card-surface" style={{ marginTop: 10, overflow: "hidden" }}>

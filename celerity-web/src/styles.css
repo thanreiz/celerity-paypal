@@ -450,7 +450,9 @@ a:focus-visible {
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- Connect / "This is me" ---------- */
+/* ---------- Connect / "This is me" ----------
+   One composition: soft field atmosphere, brand, person, bottom CTA.
+   No floating ID card — the person IS the screen. */
 .cel-connect {
   position: absolute;
   inset: 0;
@@ -458,55 +460,161 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   padding:
-    max(16px, env(safe-area-inset-top))
-    max(16px, env(safe-area-inset-right))
-    max(16px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
+    max(14px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
   font-family: var(--font-sans);
-  background: var(--paper-page);
-  animation: celFadeUp 460ms cubic-bezier(.2, .7, .2, 1) both;
+  background:
+    linear-gradient(180deg, #eef4ec 0%, var(--paper-page) 42%, #f3f6ef 100%);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
-.cel-connect-top {
+.cel-connect-sky {
+  position: absolute;
+  inset: 0 0 45% 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% -10%, rgba(22, 69, 45, 0.14), transparent 62%),
+    radial-gradient(ellipse 50% 40% at 85% 18%, rgba(217, 154, 43, 0.1), transparent 70%);
+}
+.cel-connect-field {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38%;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(22, 69, 45, 0.045) 55%, rgba(22, 69, 45, 0.08) 100%);
+  mask-image: linear-gradient(180deg, transparent, #000 40%);
+}
+.cel-connect-brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-top: clamp(4px, 1.5vh, 12px);
+}
+.cel-connect-logo {
+  width: min(44%, 152px);
+  height: auto;
+}
+.cel-connect-tag {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--primary-chip);
+}
+.cel-connect-body {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 10px;
-  margin-top: clamp(8px, 4vw, 40px);
-  flex-shrink: 0;
-}
-/* logo-wordmark.png is cropped tight to the ink (~3.25:1), so it can be
-   sized by width without reserving dead vertical space. Sit the heading
-   a comfortable distance below it rather than glued on. */
-.cel-connect-logo {
-  width: min(50%, 176px);
-  height: auto;
-  margin-bottom: clamp(10px, 4vw, 40px);
-}
-@media (max-height: 720px) {
-  .cel-connect-logo { width: min(42%, 140px); margin-bottom: 12px; }
-  .cel-connect-h { font-size: 20px; }
-  .cel-id-avatar--lg { width: 72px !important; height: 72px !important; font-size: 26px !important; }
-  .cel-connect-actions { margin-top: clamp(16px, 4vh, 36px); }
+  min-height: 0;
+  padding-top: clamp(10px, 2.5vh, 22px);
 }
 .cel-connect-h {
-  font-size: 23px;
+  font-size: clamp(22px, 5.5vw, 28px);
   font-weight: 700;
   letter-spacing: var(--tracking-tight);
-  margin: 4px 0 0;
+  margin: 0;
   color: var(--text);
   text-wrap: balance;
 }
 .cel-connect-sub {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.5;
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
   font-weight: 500;
   color: var(--text-dim);
-  max-width: 30ch;
+  max-width: 28ch;
+}
+.cel-connect-who {
+  margin-top: 18px;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.cel-connect-who-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.cel-connect-who-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(22, 69, 45, 0.08);
+}
+.cel-connect-who-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: var(--text-fine);
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.cel-connect-who-btn.is-on {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: var(--shadow-raised);
+}
+.cel-connect-person {
+  margin-top: clamp(18px, 3.5vh, 28px);
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 8px 0;
+}
+.cel-connect-enrolled {
+  margin: 10px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1px solid var(--ok-line);
+}
+@media (max-height: 700px) {
+  .cel-connect-logo { width: min(38%, 128px); }
+  .cel-connect-tag { display: none; }
+  .cel-connect-h { font-size: 20px; }
+  .cel-connect-sub { font-size: 13.5px; margin-top: 6px; }
+  .cel-id-avatar--lg { width: 76px !important; height: 76px !important; font-size: 28px !important; }
+  .cel-id-name--lg { font-size: 22px !important; }
+  .cel-connect-who { margin-top: 12px; }
+  .cel-connect-person { margin-top: 12px; }
+  .cel-id-reassure { margin-top: 10px !important; font-size: 13.5px !important; }
 }
 .cel-id-card {
   position: relative;
@@ -583,24 +691,22 @@ a:focus-visible {
 }
 .cel-id-addr svg { display: block; opacity: 0.8; }
 
-/* ---- farmer-first identity card (extends .cel-id-*) ----
-   Person-first "Is this you?" treatment: the avatar/name grow so a
-   first-time user recognises themselves at a glance, plus a plain
-   reassurance line and a tucked-away wallet ID. Same tokens/shadows
-   as the base card, so it reads as the same product. */
-.cel-id-card--person {
-  margin-top: clamp(14px, 3.2vw, 22px);
-  padding: 24px 20px 20px;
-  gap: 0;
-}
+/* ---- farmer-first identity (no floating card) ---- */
 .cel-id-avatar--lg {
   position: relative;
-  width: 96px;
-  height: 96px;
-  font-size: 34px;
-  margin-bottom: 12px;
+  width: 104px;
+  height: 104px;
+  font-size: 36px;
+  margin-bottom: 14px;
+  box-shadow:
+    0 0 0 6px rgba(255, 255, 255, 0.7),
+    0 12px 28px rgba(22, 69, 45, 0.18);
+  animation: celAvatarIn 560ms cubic-bezier(.2, .8, .2, 1) both;
 }
-/* verified check riding the avatar like a friendly sticker */
+@keyframes celAvatarIn {
+  from { opacity: 0; transform: scale(0.86) translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
 .cel-id-check {
   position: absolute;
   right: -3px;
@@ -612,17 +718,17 @@ a:focus-visible {
   color: var(--surface);
   display: grid;
   place-items: center;
-  box-shadow: 0 0 0 4px var(--surface);
-  animation: celStamp 520ms cubic-bezier(.2, .9, .3, 1) 260ms both;
+  box-shadow: 0 0 0 4px rgba(249, 250, 245, 0.95);
+  animation: celStamp 520ms cubic-bezier(.2, .9, .3, 1) 280ms both;
 }
 .cel-id-check svg { display: block; }
-.cel-id-name--lg { font-size: 26px; }
+.cel-id-name--lg { font-size: 28px; line-height: 1.15; }
 .cel-id-region--icon {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 15px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 .cel-id-region--icon svg { display: block; color: var(--primary-chip); }
 .cel-id-reassure {
@@ -631,49 +737,61 @@ a:focus-visible {
   font-weight: 600;
   color: var(--text-dim);
   line-height: 1.45;
-  max-width: 28ch;
+  max-width: 26ch;
 }
-/* wallet ID — quiet inset row, tap to reveal. Same chip language as
-   .cel-id-addr, but a button that toggles the address. */
+/* Quiet account reveal — text control, not a gray slab */
 .cel-id-wallet {
-  margin-top: 16px;
-  width: 100%;
-  display: flex;
+  margin-top: 14px;
+  width: auto;
+  max-width: 100%;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background: var(--surface-low);
-  border: 1px solid var(--container-highest);
-  border-radius: 12px;
-  padding: 11px 14px;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-control);
+  padding: 8px 10px;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  text-decoration: underline;
+  text-decoration-color: rgba(113, 121, 114, 0.35);
+  text-underline-offset: 3px;
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
-.cel-id-wallet:hover { background: var(--container); }
-.cel-id-wallet svg { display: block; opacity: 0.85; }
-.cel-id-wallet-lbl { color: var(--text-dim); }
-.cel-id-wallet-val { color: var(--text-dim); }
-.cel-id-wallet-chev { margin-left: 2px; transition: transform var(--transition-base); }
+.cel-id-wallet:hover { color: var(--text-dim); background: rgba(255, 255, 255, 0.5); }
+.cel-id-wallet svg { display: block; opacity: 0.75; }
+.cel-id-wallet-lbl { color: inherit; }
+.cel-id-wallet-val {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.cel-id-wallet-chev { margin-left: 1px; transition: transform var(--transition-base); }
+.cel-id-wallet.is-open {
+  text-decoration: none;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
 .cel-id-wallet.is-open .cel-id-wallet-chev { transform: rotate(90deg); }
-/* quiet "This isn't me" escape hatch */
 .cel-id-notme {
   border: none;
   background: none;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-faint);
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-radius: var(--radius-control);
   transition: color var(--transition-fast), background var(--transition-fast);
 }
-.cel-id-notme:hover { color: var(--text-dim); background: var(--surface-low); }
+.cel-id-notme:hover { color: var(--text-dim); background: rgba(255, 255, 255, 0.55); }
 @keyframes celStamp {
   0% { opacity: 0; transform: scale(1.6); }
   55% { opacity: 1; transform: scale(0.88); }
@@ -681,14 +799,18 @@ a:focus-visible {
 }
 
 .cel-connect-actions {
-  /* Bounded gap instead of pure `auto`: keeps the CTA low for thumb
-     reach, but stops all the slack from pooling into one big void
-     between the card and the button on a tall frame. */
-  margin-top: clamp(28px, 7vh, 60px);
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding-top: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 360px;
+  align-self: center;
 }
 .cel-connect-ready {
   display: flex;
@@ -701,7 +823,7 @@ a:focus-visible {
   text-align: center;
 }
 .cel-connect-ready svg { display: block; color: var(--ok-text); }
-.cel-connect-foot { margin-top: 2px; }
+.cel-connect-foot { margin-top: 4px; }
 
 /* ============================================================
    Responsive shells — farmer (phone) + funder (desktop/tablet)
@@ -1071,8 +1193,9 @@ button.cel-card-surface:hover {
 .cel-tour-copy {
   margin: 0;
   font: var(--text-meta);
+  font-size: 14.5px;
   color: var(--text-dim);
-  line-height: 1.45;
+  line-height: 1.5;
 }
 .cel-tour-chip {
   align-self: flex-start;
