@@ -126,7 +126,7 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
       : [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: "8px 28px 48px", maxWidth: 860, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "var(--font-sans)" }}>
+    <div className="cel-funder-pad cel-funder-pad--narrow" style={{ fontFamily: "var(--font-sans)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <Badge stub>demo signer — stands in for the PAGASA/JMA feed</Badge>
         <span style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>

@@ -70,9 +70,10 @@
   --space-7: 32px;
   --space-8: 48px;
   --space-card-padding: 24px;
-  --space-page-x: 28px;
+  /* Mobile-first page gutters; bumped on tablet+ below */
+  --space-page-x: 16px;
   --space-page-y: 8px;
-  --space-phone-x: 18px;
+  --space-phone-x: 16px;
   --space-stack: 20px;
 
   --shadow-card: 0 4px 20px rgba(42, 42, 40, 0.04);
@@ -83,6 +84,13 @@
 
   --transition-base: 180ms ease;
   --transition-fast: 120ms ease;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --space-page-x: 28px;
+    --space-phone-x: 18px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

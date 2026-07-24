@@ -42,29 +42,31 @@ export default function LoginScreen({ onLogin, onBackToFarmer }) {
           className="cel-press"
           style={{
             position: "absolute",
-            top: 20,
-            left: 20,
+            top: "max(12px, env(safe-area-inset-top))",
+            left: "max(12px, env(safe-area-inset-left))",
             border: "1px solid var(--border-subtle)",
             background: "var(--surface)",
             color: "var(--text-dim)",
             borderRadius: "var(--radius-control)",
-            padding: "8px 16px",
+            padding: "10px 16px",
+            minHeight: 44,
             font: "var(--text-fine)",
             fontWeight: 700,
             cursor: "pointer",
             fontFamily: "var(--font-sans)",
+            zIndex: 2,
           }}
         >
           ← Farmer app
         </button>
       )}
-      <div style={{ textAlign: "center", maxWidth: 720, width: "100%" }}>
+      <div style={{ textAlign: "center", maxWidth: 720, width: "100%", paddingTop: 48 }}>
         <img
           src="/logo-lockup.png"
           alt="Celerity"
-          style={{ height: 44, width: "auto", margin: "0 auto 18px", display: "block" }}
+          style={{ height: "auto", width: "min(200px, 55vw)", margin: "0 auto 18px", display: "block" }}
         />
-        <div style={{ color: "var(--primary)", font: "var(--text-h1)", fontSize: 30, letterSpacing: "var(--tracking-tight)" }}>
+        <div style={{ color: "var(--primary)", font: "var(--text-h1)", fontSize: "clamp(24px, 6vw, 30px)", letterSpacing: "var(--tracking-tight)" }}>
           Funder console
         </div>
         <p style={{ margin: "8px 0 6px", font: "var(--text-meta)", color: "var(--text-dim)", fontWeight: 600, maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>

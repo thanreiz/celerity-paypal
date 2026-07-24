@@ -1,13 +1,22 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import Button from "./Button";
 
+const CARD_H = 210;
+const GAP = 14;
+const PAD = 10;
+
 /**
  * Celerity-native coach tip — dove mark, green accent bar, step dots.
- * Interaction pattern is universal (anchor + next/back); chrome is ours.
+ * Spotlights the anchored control with a cutout so the tip never hides what
+ * it is explaining (especially on phone-width funder / farmer shells).
  */
 export default function CoachTour({ steps, rootRef, onComplete, onSkip }) {
   const [idx, setIdx] = useState(0);
-  const [pos, setPos] = useState({ top: 120, placement: "below" });
+  const [layout, setLayout] = useState({
+    hole: null,
+    cardTop: 120,
+    cardMaxWidth: 340,
+  });
   const step = steps[idx];
   const total = steps.length;
   const isLast = idx >= total - 1;
@@ -17,44 +26,109 @@ export default function CoachTour({ steps, rootRef, onComplete, onSkip }) {
 
   useLayoutEffect(() => {
     if (!step) return;
-    const root = rootRef?.current;
-    const el = root?.querySelector?.(`[data-tour="${step.anchor}"]`)
-      || document.querySelector(`[data-tour="${step.anchor}"]`);
 
-    // Clear previous highlights
-    document.querySelectorAll(".cel-tour-anchor").forEach((n) => n.classList.remove("cel-tour-anchor"));
+    const measure = () => {
+      const root = rootRef?.current;
+      const el =
+        root?.querySelector?.(`[data-tour="${step.anchor}"]`) ||
+        document.querySelector(`[data-tour="${step.anchor}"]`);
 
-    if (el) {
-      el.classList.add("cel-tour-anchor");
-      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      const rootBox = root?.getBoundingClientRect?.() || { top: 0, left: 0, height: window.innerHeight };
-      const box = el.getBoundingClientRect();
-      const spaceBelow = rootBox.height - (box.bottom - rootBox.top);
-      if (spaceBelow < 220) {
-        // Sit above the control with room for ~180px card
-        setPos({ top: Math.max(12, box.top - rootBox.top - 188), placement: "below" });
-      } else {
-        setPos({ top: box.bottom - rootBox.top + 12, placement: "below" });
+      document.querySelectorAll(".cel-tour-anchor").forEach((n) => {
+        n.classList.remove("cel-tour-anchor");
+      });
+
+      if (!el || !root) {
+        setLayout({ hole: null, cardTop: 120, cardMaxWidth: 340 });
+        return;
       }
-    } else {
-      setPos({ top: 120, placement: "center" });
-    }
 
+      el.classList.add("cel-tour-anchor");
+      el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+
+      const rootBox = root.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+
+      let top = box.top - rootBox.top - PAD;
+      let left = box.left - rootBox.left - PAD;
+      let width = box.width + PAD * 2;
+      let height = box.height + PAD * 2;
+
+      // Keep the hole inside the shell
+      top = Math.max(6, Math.min(top, rootBox.height - height - 6));
+      left = Math.max(6, Math.min(left, rootBox.width - width - 6));
+      width = Math.min(width, rootBox.width - left - 6);
+      height = Math.min(height, rootBox.height - top - 6);
+
+      const hole = { top, left, width, height };
+      const spaceBelow = rootBox.height - (top + height) - 16;
+      const spaceAbove = top - 16;
+
+      let cardTop;
+      if (spaceBelow >= CARD_H || spaceBelow >= spaceAbove) {
+        cardTop = top + height + GAP;
+      } else {
+        cardTop = top - CARD_H - GAP;
+      }
+      cardTop = Math.max(12, Math.min(cardTop, rootBox.height - CARD_H - 12));
+
+      setLayout({
+        hole,
+        cardTop,
+        cardMaxWidth: Math.min(340, rootBox.width - 32),
+      });
+    };
+
+    // Measure twice: once now, once after scrollIntoView settles
+    measure();
+    const t = window.setTimeout(measure, 280);
+    window.addEventListener("resize", measure);
     return () => {
-      document.querySelectorAll(".cel-tour-anchor").forEach((n) => n.classList.remove("cel-tour-anchor"));
+      window.clearTimeout(t);
+      window.removeEventListener("resize", measure);
+      document.querySelectorAll(".cel-tour-anchor").forEach((n) => {
+        n.classList.remove("cel-tour-anchor");
+      });
     };
   }, [step, rootRef, idx]);
 
-  useEffect(() => () => {
-    document.querySelectorAll(".cel-tour-anchor").forEach((n) => n.classList.remove("cel-tour-anchor"));
-  }, []);
+  useEffect(
+    () => () => {
+      document.querySelectorAll(".cel-tour-anchor").forEach((n) => {
+        n.classList.remove("cel-tour-anchor");
+      });
+    },
+    []
+  );
 
   if (!step) return null;
 
+  const { hole, cardTop, cardMaxWidth } = layout;
+
   return (
-    <div className="cel-tour-root" role="dialog" aria-label="Tutorial">
-      <div className="cel-tour-scrim" onClick={skip} />
-      <div className="cel-tour-card" style={{ top: pos.top }}>
+    <div className="cel-tour-root" role="dialog" aria-label="Tutorial" aria-describedby="cel-tour-copy">
+      {/* Transparent click-catcher — dimming comes from the spotlight shadow */}
+      <div className="cel-tour-blocker" onClick={skip} aria-hidden="true" />
+
+      {hole && (
+        <div
+          className="cel-tour-spotlight"
+          style={{
+            top: hole.top,
+            left: hole.left,
+            width: hole.width,
+            height: hole.height,
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      <div
+        className="cel-tour-card"
+        style={{
+          top: cardTop,
+          maxWidth: cardMaxWidth,
+        }}
+      >
         <div className="cel-tour-accent" />
         <div className="cel-tour-body">
           <div className="cel-tour-top">
@@ -66,7 +140,9 @@ export default function CoachTour({ steps, rootRef, onComplete, onSkip }) {
               ×
             </button>
           </div>
-          <p className="cel-tour-copy">{step.body}</p>
+          <p id="cel-tour-copy" className="cel-tour-copy">
+            {step.body}
+          </p>
           {step.chip && <span className="cel-tour-chip">{step.chip}</span>}
           <div className="cel-tour-foot">
             <span className="cel-tour-dots" aria-label={`Step ${idx + 1} of ${total}`}>

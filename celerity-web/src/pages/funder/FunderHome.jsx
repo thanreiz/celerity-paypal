@@ -59,7 +59,7 @@ const QUICK_ACTIONS = [
 
 function FeedRow({ row, pool }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", borderTop: "1px solid var(--surface-low)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderTop: "1px solid var(--surface-low)", flexWrap: "wrap" }}>
       <span
         style={{
           width: 38,
@@ -76,7 +76,7 @@ function FeedRow({ row, pool }) {
           <path d="M12 4v16m0 0 6-6m-6 6-6-6" />
         </svg>
       </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: "1 1 140px", minWidth: 0 }}>
         <div style={{ font: "var(--text-body-lg)", fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>
           {pool ? poolName(pool) : `Pool #${String(row.pool_id)}`} → {farmerLabel(row.farmer)}
         </div>
@@ -84,7 +84,7 @@ function FeedRow({ row, pool }) {
           {pool ? regionName(pool.region) : "—"} · pool #{String(row.pool_id)}
         </div>
       </div>
-      <div style={{ textAlign: "right", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+      <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>
         <div style={{ font: "var(--text-money)", fontSize: 15, color: "var(--ok-text)" }}>{phpValue(unitsOf(row.amount))}</div>
         <a
           href={`https://stellar.expert/explorer/testnet/contract/${CONTRACT_ID}`}
@@ -117,7 +117,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
     .slice(0, 2);
 
   return (
-    <div className="cel-page cel-stagger" style={{ padding: "8px 28px 48px", maxWidth: 900 }}>
+    <div className="cel-page cel-stagger">
       {/* hero — one number, one quiet line */}
       <div
         data-tour="escrow"
@@ -125,14 +125,14 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
           background: "linear-gradient(160deg, var(--primary) 0%, var(--primary-hover) 100%)",
           borderRadius: "var(--radius-card)",
           color: "#fff",
-          padding: "26px 26px 22px",
+          padding: "22px 20px 20px",
           boxShadow: "var(--shadow-raised)",
         }}
       >
         <span style={{ font: "var(--text-label)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)", color: "rgba(255,255,255,.75)" }}>
           Still escrowed
         </span>
-        <div className="cel-money-glow" style={{ font: "var(--text-hero)", fontSize: 44, letterSpacing: "-0.02em", margin: "6px 0 2px", fontVariantNumeric: "tabular-nums" }}>
+        <div className="cel-money-glow cel-hero-balance">
           <CountUp units={totalUnits} placeholder={loaded ? undefined : "₱ —"} />
         </div>
         <div style={{ font: "var(--text-fine)", color: "rgba(255,255,255,.78)", fontVariantNumeric: "tabular-nums" }}>
@@ -147,43 +147,46 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
       </div>
 
       {/* quick actions */}
-      <div
-        className="cel-card-surface"
-        style={{
-          padding: "20px 18px",
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 8,
-          flexWrap: "wrap",
-        }}
-      >
-        {QUICK_ACTIONS.map((a) => (
-          <button
-            key={a.page}
-            data-tour={a.page === "oracle" || a.page === "ledger" ? a.page : undefined}
-            onClick={() => onGoto(a.page)}
-            className="cel-press"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 8,
-              background: "none",
-              border: "none",
-              color: "var(--text-dim)",
-              font: "var(--text-fine)",
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-              minWidth: 92,
-            }}
-          >
-            <span className="cel-raise" style={{ width: 54, height: 54, borderRadius: 18, background: "var(--container)", color: "var(--primary)", display: "grid", placeItems: "center" }}>
-              {a.icon}
-            </span>
-            {a.label}
-          </button>
-        ))}
+      <div className="cel-card-surface cel-quick-actions">
+        {QUICK_ACTIONS.map((a) => {
+          const tourAnchor = a.page === "oracle" || a.page === "ledger" ? a.page : undefined;
+          return (
+            <div
+              key={a.page}
+              data-tour={tourAnchor}
+              className={tourAnchor ? "cel-tour-target" : undefined}
+              style={{ width: "100%", maxWidth: 110, display: "flex", justifyContent: "center" }}
+            >
+              <button
+                type="button"
+                onClick={() => onGoto(a.page)}
+                className="cel-press"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-dim)",
+                  font: "var(--text-fine)",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-sans)",
+                  minWidth: 0,
+                  width: "100%",
+                  textAlign: "center",
+                  padding: "4px 2px",
+                }}
+              >
+                <span className="cel-raise" style={{ width: 54, height: 54, borderRadius: 18, background: "var(--container)", color: "var(--primary)", display: "grid", placeItems: "center" }}>
+                  {a.icon}
+                </span>
+                {a.label}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {loaded && (

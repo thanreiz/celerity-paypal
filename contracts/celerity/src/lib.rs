@@ -398,6 +398,13 @@ impl Celerity {
     /// replaying the same oracle signature would mint a fresh event_id and
     /// defeat the Settled(event_id, farmer, pool_id) idempotency key.
     pub fn report_event(e: Env, region: u32, signal: u32, nonce: u64, sig: BytesN<64>) -> u64 {
+        // Reject used nonces before the (more expensive) signature check so a
+        // replay never burns verify budget — and only burn a nonce after the
+        // signature actually verifies.
+        if e.storage().persistent().has(&DataKey::UsedNonce(nonce)) {
+            panic_with_error!(&e, Error::NonceAlreadyUsed);
+        }
+
         // Reconstruct the exact bytes the oracle signed; verification traps
         // on any mismatch of content or key.
         let mut payload = Bytes::from_slice(&e, EVENT_PAYLOAD_PREFIX);
@@ -406,9 +413,6 @@ impl Celerity {
         payload.extend_from_array(&nonce.to_be_bytes());
         e.crypto().ed25519_verify(&get_oracle(&e), &payload, &sig);
 
-        if e.storage().persistent().has(&DataKey::UsedNonce(nonce)) {
-            panic_with_error!(&e, Error::NonceAlreadyUsed);
-        }
         e.storage()
             .persistent()
             .set(&DataKey::UsedNonce(nonce), &true);
@@ -442,6 +446,11 @@ impl Celerity {
     /// Idempotent on Settled(event_id, farmer, pool_id): re-running the same
     /// event never double-pays; already-settled (farmer, pool) pairs are
     /// skipped, so a re-run after a top_up pays only whoever was missed.
+    ///
+    /// Recurring pools keep one active installment schedule per farmer: if
+    /// Progress exists with `paid < installments`, a later event is deferred
+    /// (no pay, Settled unset) until that schedule finishes — so a second
+    /// typhoon cannot reset `paid` and inflate total payouts.
     ///
     /// Flag, never fail: a pool that cannot cover the next payout is marked
     /// Exhausted and settlement continues with the remaining pools — one
@@ -483,6 +492,25 @@ impl Celerity {
                 if e.storage().persistent().has(&settled_key) {
                     continue; // this event already paid this farmer from this pool
                 }
+
+                // One active installment schedule per (pool, farmer). A later
+                // typhoon must not overwrite Progress mid-schedule (that would
+                // reset `paid` and let the farmer pull more than `installments`
+                // payouts). Defer this event until the current schedule finishes;
+                // Settled stays unset so a re-settle after the last claim pays.
+                if pool.installments > 1 {
+                    let progress_key = DataKey::Progress(pool_id, farmer.clone());
+                    if let Some(p) = e
+                        .storage()
+                        .persistent()
+                        .get::<DataKey, InstallmentProgress>(&progress_key)
+                    {
+                        if p.paid < pool.installments {
+                            continue;
+                        }
+                    }
+                }
+
                 if pool.balance < pool.payout_per_farmer {
                     // Flag, never fail: mark and move on to the next pool.
                     pool.status = PoolStatus::Exhausted;
@@ -548,6 +576,15 @@ impl Celerity {
     /// since panicking reverts every write).
     pub fn claim(e: Env, farmer: Address, pool_id: u64) {
         farmer.require_auth();
+        // Registry is a human decision — removing a farmer must stop further
+        // pulls even if an installment schedule was already opened.
+        if !e
+            .storage()
+            .persistent()
+            .has(&DataKey::FarmerReg(farmer.clone()))
+        {
+            panic_with_error!(&e, Error::FarmerNotFound);
+        }
         let mut pool = get_pool(&e, pool_id);
         if pool.status == PoolStatus::Paused {
             panic_with_error!(&e, Error::PoolPaused);

@@ -25,7 +25,7 @@
   <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
   <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-Ed25519_signed-d99a2b?style=flat-square" />
   <img alt="SEP-31" src="https://img.shields.io/badge/Anchor-SEP--31_stub-b45309?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-46%2F46_passing-2e7d32?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-48%2F48_passing-2e7d32?style=flat-square" />
 </p>
 
 ---

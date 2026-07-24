@@ -79,6 +79,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
         zIndex: 50,
         fontFamily: "var(--font-sans)",
         padding: 16,
+        paddingBottom: "max(16px, env(safe-area-inset-bottom))",
       }}
       onClick={onClose}
     >
@@ -88,7 +89,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
         style={{
           background: "var(--surface)",
           width: "min(720px, 100%)",
-          maxHeight: "88vh",
+          maxHeight: "min(88vh, 88dvh)",
           borderRadius: "var(--radius-modal)",
           boxShadow: "var(--shadow-modal)",
           border: "1px solid var(--container-highest)",
@@ -97,7 +98,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
           overflow: "hidden",
         }}
       >
-        <div style={{ padding: "24px 28px", borderBottom: "1px solid var(--container-highest)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ padding: "20px var(--space-page-x)", borderBottom: "1px solid var(--container-highest)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
           <div>
             <h2 style={{ margin: 0, font: "var(--text-h2)", color: "var(--text)" }}>New Escrow Pool</h2>
             <p style={{ margin: "4px 0 0", font: "var(--text-meta)", color: "var(--text-faint)" }}>

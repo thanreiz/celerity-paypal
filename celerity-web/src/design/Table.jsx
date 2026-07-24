@@ -6,6 +6,7 @@ import React from "react";
  * is the ONE table style in Celerity — do not create a second. */
 export default function Table({ columns, rows, emptyText = "Nothing here yet.", rowKey = (r, i) => i, mineKey }) {
   return (
+    <div className="cel-table-scroll">
     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480, fontFamily: "var(--font-sans)" }}>
       <thead>
         <tr>
@@ -63,5 +64,6 @@ export default function Table({ columns, rows, emptyText = "Nothing here yet.", 
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

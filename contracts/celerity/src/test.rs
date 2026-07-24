@@ -1106,12 +1106,81 @@ fn claim_without_settlement_or_registration_fails() {
         Some(cerr(Error::NothingToClaim))
     );
 
-    // a stranger with no progress on the recurring pool also has nothing
+    // a stranger who was never registered is rejected at the registry gate
     let stranger = Address::generate(&s.env);
     assert_eq!(
         s.client.try_claim(&stranger, &recurring).err(),
-        Some(cerr(Error::NothingToClaim))
+        Some(cerr(Error::FarmerNotFound))
     );
+}
+
+#[test]
+fn removed_farmer_cannot_claim_remaining_installments() {
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+
+    s.client.remove_farmer(&farmer);
+    assert_eq!(
+        s.client.try_claim(&farmer, &pool_id).err(),
+        Some(cerr(Error::FarmerNotFound))
+    );
+    // first installment from settle still sits with them; no further pulls
+    assert_eq!(s.token.balance(&farmer), 100);
+}
+
+#[test]
+fn second_event_defers_while_recurring_schedule_active() {
+    // A later typhoon must not overwrite Progress and inflate payouts beyond
+    // `installments`. Settle of event 2 is a no-op until the schedule finishes,
+    // then a re-settle starts a fresh schedule.
+    let (s, signer) = setup_with_oracle();
+    let t0 = 2_000_000;
+    s.env.ledger().with_mut(|l| l.timestamp = t0);
+
+    let alice = funded_addr(&s, 2_000);
+    let farmer = Address::generate(&s.env);
+    s.client.register_farmer(&farmer, &REGION_V);
+    let pool_id = s
+        .client
+        .deposit(&alice, &1_000, &REGION_V, &3, &100, &3, &PERIOD);
+
+    let event_1 = seed_event(&s, &signer, REGION_V, 4, 910);
+    assert_eq!(s.client.settle_event(&event_1), 1);
+    assert_eq!(s.token.balance(&farmer), 100);
+
+    let event_2 = seed_event(&s, &signer, REGION_V, 4, 911);
+    assert_eq!(s.client.settle_event(&event_2), 0); // deferred — schedule active
+    assert_eq!(s.token.balance(&farmer), 100); // no extra payout
+
+    let progress: InstallmentProgress = s.env.as_contract(&s.client.address, || {
+        s.env
+            .storage()
+            .persistent()
+            .get(&DataKey::Progress(pool_id, farmer.clone()))
+            .unwrap()
+    });
+    assert_eq!(progress.paid, 1);
+    assert_eq!(progress.event_id, event_1); // not overwritten by event_2
+
+    // finish the schedule
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+    s.client.claim(&farmer, &pool_id);
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + 2 * PERIOD);
+    s.client.claim(&farmer, &pool_id);
+    assert_eq!(s.token.balance(&farmer), 300);
+
+    // now event_2 can open a fresh schedule
+    assert_eq!(s.client.settle_event(&event_2), 1);
+    assert_eq!(s.token.balance(&farmer), 400);
+    let progress2: InstallmentProgress = s.env.as_contract(&s.client.address, || {
+        s.env
+            .storage()
+            .persistent()
+            .get(&DataKey::Progress(pool_id, farmer.clone()))
+            .unwrap()
+    });
+    assert_eq!(progress2.paid, 1);
+    assert_eq!(progress2.event_id, event_2);
 }
 
 #[test]

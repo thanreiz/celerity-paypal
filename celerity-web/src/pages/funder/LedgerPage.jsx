@@ -14,7 +14,7 @@ export default function LedgerPage({ ledger, pools }) {
   const poolById = Object.fromEntries(pools.map((p) => [String(p.id), p]));
 
   return (
-    <div className="cel-stagger" style={{ display: "flex", flexDirection: "column", gap: 24, padding: "8px 28px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+    <div className="cel-stagger cel-funder-pad">
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
         <div style={{ textAlign: "right" }}>
           <p style={{ margin: 0, font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Total Disbursed</p>

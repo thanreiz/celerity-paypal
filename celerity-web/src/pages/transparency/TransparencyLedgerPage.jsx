@@ -51,8 +51,8 @@ export default function TransparencyLedgerPage({ onBack }) {
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--paper-page)", fontFamily: "var(--font-sans)" }}>
-      <header style={{ padding: "24px 40px", borderBottom: "1px solid var(--container-highest)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff", flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ margin: 0, font: "var(--text-h1)", fontSize: 24, color: "var(--primary)" }}>Celerity — Public Transparency Ledger</h1>
+      <header style={{ padding: "18px var(--space-page-x)", borderBottom: "1px solid var(--container-highest)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff", flexWrap: "wrap", gap: 12 }}>
+        <h1 style={{ margin: 0, font: "var(--text-h1)", fontSize: "clamp(18px, 5vw, 24px)", color: "var(--primary)" }}>Celerity — Public Transparency Ledger</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>No login required</span>
           {onBack && (
@@ -62,11 +62,11 @@ export default function TransparencyLedgerPage({ onBack }) {
           )}
         </div>
       </header>
-      <div className="cel-stagger" style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px 80px", display: "flex", flexDirection: "column", gap: 24, boxSizing: "border-box" }}>
-        <section className="cel-card-surface cel-raise" style={{ padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <div className="cel-stagger" style={{ maxWidth: 960, margin: "0 auto", padding: "24px var(--space-page-x) 80px", display: "flex", flexDirection: "column", gap: 24, boxSizing: "border-box" }}>
+        <section className="cel-card-surface cel-raise" style={{ padding: "20px var(--space-page-x)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <p style={{ margin: 0, font: "var(--text-label)", textTransform: "uppercase", color: "var(--text-faint)" }}>Total Disbursed Across All Relief Efforts</p>
-            <p className="cel-money-glow" style={{ margin: "8px 0 0", font: "var(--text-display)", fontSize: 40, color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>
+            <p className="cel-money-glow" style={{ margin: "8px 0 0", font: "var(--text-display)", fontSize: "clamp(28px, 8vw, 40px)", color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>
               <CountUp units={loading ? 0 : totalUnits} format="full" />
             </p>
             <p style={{ margin: "6px 0 0", font: "var(--text-fine)", fontSize: 11.5, color: "var(--text-faint)" }}>

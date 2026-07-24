@@ -34,7 +34,7 @@ function Icon({ name }) {
   );
 }
 
-/** Mobile bottom tab bar — farmer app. Active tab gets a mint pill. */
+/** Mobile bottom tab bar — farmer app. Stays pinned; never scrolls with content. */
 export default function BottomNav({ active, onNavigate }) {
   const items = [
     { key: "home", label: "Home" },
@@ -42,22 +42,7 @@ export default function BottomNav({ active, onNavigate }) {
     { key: "profile", label: "Profile" },
   ];
   return (
-    <nav
-      style={{
-        flexShrink: 0,
-        width: "100%",
-        background: "var(--surface)",
-        borderTop: "1px solid var(--container-highest)",
-        boxShadow: "0 -4px 20px rgba(42,42,40,0.04)",
-        display: "flex",
-        justifyContent: "space-around",
-        alignItems: "center",
-        padding: "10px 16px",
-        paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
-        fontFamily: "var(--font-sans)",
-        boxSizing: "border-box",
-      }}
-    >
+    <nav className="cel-bottom-nav" aria-label="Farmer navigation">
       {items.map((it) => {
         const isActive = it.key === active;
         return (
@@ -73,7 +58,9 @@ export default function BottomNav({ active, onNavigate }) {
               flexDirection: "column",
               alignItems: "center",
               gap: 3,
-              padding: "6px 24px",
+              padding: "8px 18px",
+              minWidth: 64,
+              minHeight: 44,
               borderRadius: 999,
               cursor: "pointer",
               border: "none",

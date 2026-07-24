@@ -348,7 +348,7 @@ export default function PoolsPage({ myPools, loaded, ledger, bulletin, who, me, 
     .filter((g) => g.pools.length > 0);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: "8px 28px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+    <div className="cel-funder-pad">
       {/* net row + acting-as switcher — live proof of funder isolation */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span style={{ font: "var(--text-fine)", color: "var(--text-faint)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>

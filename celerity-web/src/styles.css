@@ -5,6 +5,17 @@
 
 * { box-sizing: border-box; margin: 0; }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background: var(--paper-page);
   color: var(--text);
@@ -12,6 +23,29 @@ body {
   font-size: 17px;
   font-weight: 500;
   line-height: 1.55;
+}
+
+#root {
+  min-height: 100dvh;
+  min-height: 100svh;
+}
+
+/* Farmer full-screen: stop the document from scrolling (iOS Safari moves
+   fixed/flex chrome when the page itself scrolls). */
+html.cel-scroll-lock,
+html.cel-scroll-lock body {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+html.cel-scroll-lock body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+}
+html.cel-scroll-lock #root {
+  height: 100%;
 }
 
 button:focus-visible,
@@ -423,10 +457,17 @@ a:focus-visible {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  padding: 26px 22px 24px;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
   font-family: var(--font-sans);
   background: var(--paper-page);
   animation: celFadeUp 460ms cubic-bezier(.2, .7, .2, 1) both;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .cel-connect-top {
   display: flex;
@@ -434,7 +475,8 @@ a:focus-visible {
   align-items: center;
   text-align: center;
   gap: 10px;
-  margin-top: clamp(20px, 6vw, 40px);
+  margin-top: clamp(8px, 4vw, 40px);
+  flex-shrink: 0;
 }
 /* logo-wordmark.png is cropped tight to the ink (~3.25:1), so it can be
    sized by width without reserving dead vertical space. Sit the heading
@@ -442,7 +484,13 @@ a:focus-visible {
 .cel-connect-logo {
   width: min(50%, 176px);
   height: auto;
-  margin-bottom: clamp(18px, 6vw, 40px);
+  margin-bottom: clamp(10px, 4vw, 40px);
+}
+@media (max-height: 720px) {
+  .cel-connect-logo { width: min(42%, 140px); margin-bottom: 12px; }
+  .cel-connect-h { font-size: 20px; }
+  .cel-id-avatar--lg { width: 72px !important; height: 72px !important; font-size: 26px !important; }
+  .cel-connect-actions { margin-top: clamp(16px, 4vh, 36px); }
 }
 .cel-connect-h {
   font-size: 23px;
@@ -656,6 +704,192 @@ a:focus-visible {
 .cel-connect-foot { margin-top: 2px; }
 
 /* ============================================================
+   Responsive shells — farmer (phone) + funder (desktop/tablet)
+   ============================================================ */
+
+/* Farmer: full-bleed on real phones; staged device frame on desktop.
+   Fixed to the visual viewport so Home/Activity/Profile never scroll up
+   with content on iOS Safari. */
+.cel-farmer-stage {
+  position: fixed;
+  top: var(--app-top, 0px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--app-height, 100dvh);
+  max-height: var(--app-height, 100dvh);
+  overflow: hidden;
+  background: var(--paper-page);
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 0;
+  box-sizing: border-box;
+  z-index: 1;
+}
+.cel-farmer-shell {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  background: var(--paper-page);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  box-shadow: none;
+}
+.cel-farmer-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+.cel-farmer-scroll .cel-screen {
+  padding-bottom: 8px;
+}
+.cel-bottom-nav {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 30;
+  width: 100%;
+  background: var(--surface);
+  border-top: 1px solid var(--container-highest);
+  box-shadow: 0 -4px 20px rgba(42, 42, 40, 0.06);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 12px;
+  /* Home-indicator only — do not add Safari toolbar height or the bar
+     floats mid-screen above browser chrome. */
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  min-height: 56px;
+  font-family: var(--font-sans);
+  box-sizing: border-box;
+}
+.cel-farmer-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    6px
+    max(12px, env(safe-area-inset-left));
+  min-height: 48px;
+}
+.cel-farmer-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.cel-funder-chip-label { display: none; }
+.cel-farmer-stage .cel-toast {
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  width: min(92vw, 420px);
+  font-size: 15px;
+  padding: 12px 16px;
+}
+
+@media (min-width: 640px) {
+  .cel-farmer-stage {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    height: 100dvh;
+    max-height: none;
+    background: var(--paper-inset);
+    align-items: center;
+    padding: clamp(12px, 3vh, 32px) clamp(12px, 3vw, 32px);
+  }
+  .cel-farmer-shell {
+    max-width: 400px;
+    height: min(100%, 880px);
+    max-height: 880px;
+    border-radius: 32px;
+    box-shadow:
+      0 24px 60px -18px rgba(22, 69, 45, 0.28),
+      0 8px 20px -10px rgba(42, 42, 40, 0.16);
+  }
+  .cel-farmer-topbar {
+    padding: 12px 18px 6px;
+  }
+  .cel-funder-chip-label { display: inline; }
+  .cel-farmer-stage .cel-toast {
+    bottom: 24px;
+  }
+  .cel-bottom-nav {
+    padding-bottom: 10px;
+  }
+}
+
+/* Funder console padding + header */
+.cel-funder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px var(--space-page-x) 0;
+  flex-wrap: wrap;
+  max-width: 1120px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.cel-funder-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px var(--space-page-x) 48px;
+  max-width: 1120px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cel-funder-pad--narrow { max-width: 860px; }
+.cel-funder-pad--home { max-width: 900px; gap: var(--space-stack); }
+
+.cel-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 8px;
+  padding: 16px 12px;
+  justify-items: center;
+}
+@media (min-width: 640px) {
+  .cel-quick-actions {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: 20px 18px;
+    gap: 8px;
+  }
+}
+
+.cel-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.cel-hero-balance {
+  font: var(--text-hero);
+  font-size: clamp(32px, 9vw, 44px);
+  letter-spacing: -0.02em;
+  margin: 6px 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
    Layout utilities — token-backed page shells & surfaces
    ============================================================ */
 
@@ -716,17 +950,25 @@ button.cel-card-surface:hover {
   background-color: var(--bg-page);
 }
 
-/* Tour highlight on anchored control */
+/* Tour highlight — kept visible through the spotlight cutout */
 .cel-tour-anchor {
   position: relative;
-  z-index: 42;
-  box-shadow: 0 0 0 3px rgba(22, 69, 45, 0.22), var(--shadow-raised);
-  border-radius: inherit;
-  animation: celTourPulse 1.8s ease-in-out infinite;
+  z-index: 41 !important;
+  border-radius: 16px;
 }
 @keyframes celTourPulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(22, 69, 45, 0.22), var(--shadow-raised); }
-  50% { box-shadow: 0 0 0 6px rgba(22, 69, 45, 0.12), var(--shadow-raised); }
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px var(--primary),
+      0 0 0 7px rgba(22, 69, 45, 0.28),
+      0 0 0 9999px rgba(26, 28, 26, 0.58);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--primary),
+      0 0 0 12px rgba(22, 69, 45, 0.16),
+      0 0 0 9999px rgba(26, 28, 26, 0.58);
+  }
 }
 
 /* ============================================================
@@ -738,17 +980,31 @@ button.cel-card-surface:hover {
   inset: 0;
   z-index: 40;
   pointer-events: none;
+  overflow: hidden;
 }
-.cel-tour-scrim {
+.cel-tour-blocker {
   position: absolute;
   inset: 0;
-  background: rgba(249, 250, 245, 0.55);
   pointer-events: auto;
-  animation: celFadeIn 220ms ease both;
+  background: transparent;
+}
+/* Cutout window: transparent center + infinite dim ring */
+.cel-tour-spotlight {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 18px;
+  background: transparent;
+  box-shadow:
+    0 0 0 2px var(--primary),
+    0 0 0 7px rgba(22, 69, 45, 0.28),
+    0 0 0 9999px rgba(26, 28, 26, 0.58);
+  animation: celTourPulse 1.8s ease-in-out infinite;
 }
 .cel-tour-card {
   pointer-events: auto;
   position: absolute;
+  z-index: 2;
   left: 16px;
   right: 16px;
   max-width: 340px;
@@ -805,9 +1061,11 @@ button.cel-card-surface:hover {
   background: transparent;
   color: var(--text-faint);
   cursor: pointer;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
-  padding: 2px 4px;
+  padding: 4px 8px;
+  min-width: 36px;
+  min-height: 36px;
   font-family: var(--font-sans);
 }
 .cel-tour-copy {
@@ -834,6 +1092,7 @@ button.cel-card-surface:hover {
   justify-content: space-between;
   gap: 10px;
   margin-top: 4px;
+  flex-wrap: wrap;
 }
 .cel-tour-dots {
   display: inline-flex;
@@ -854,6 +1113,9 @@ button.cel-card-surface:hover {
 }
 .cel-tour-actions {
   display: inline-flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+}
+.cel-tour-target {
+  border-radius: 16px;
 }

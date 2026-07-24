@@ -155,30 +155,18 @@ export default function FarmerApp({
     setShowTour(true);
   };
 
-  const frameStyle = {
-    width: "100%",
-    maxWidth: 400,
-    height: "100%",
-    maxHeight: 880,
-    background: "var(--paper-page)",
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    overflow: "hidden",
-    borderRadius: "clamp(0px, 4vw, 32px)",
-    boxShadow: "0 24px 60px -18px rgba(22,69,45,0.28), 0 8px 20px -10px rgba(42,42,40,0.16)",
-  };
+  const frameClass = "cel-farmer-shell";
 
   if (stage === "splash") {
     return (
-      <div style={frameStyle}>
+      <div className={frameClass}>
         <SplashScreen onDone={() => setStage("connect")} />
       </div>
     );
   }
   if (stage === "connect") {
     return (
-      <div style={frameStyle}>
+      <div className={frameClass}>
         <ConnectScreen
           me={me}
           farmerName={farmerName}
@@ -195,22 +183,22 @@ export default function FarmerApp({
   const pageTitle = page === "home" ? null : page === "activity" ? "Activity" : "Profile";
 
   return (
-    <div ref={frameRef} style={frameStyle}>
-      <div style={topBarStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <img src="/logo-dove.png" alt="Celerity" style={{ height: 30, width: "auto", display: "block" }} />
+    <div ref={frameRef} className={frameClass}>
+      <div className="cel-farmer-topbar">
+        <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+          <img src="/logo-dove.png" alt="Celerity" style={{ height: 28, width: "auto", display: "block", flexShrink: 0 }} />
           {pageTitle && <span style={{ font: "var(--text-h2)", fontSize: 17, color: "var(--text)" }}>{pageTitle}</span>}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="cel-farmer-topbar-actions">
           <ViewAsSwitch activeRole={farmerRole} onSwitch={handleSwitch} />
           <button onClick={onOpenDev} className="cel-press" style={funderBtnStyle} aria-label="Open funder console">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 13.5h11M3.5 13.5v-6M12.5 13.5v-6M2 7.5 8 3l6 4.5M6.5 13.5v-3h3v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            Funder
+            <span className="cel-funder-chip-label">Funder</span>
           </button>
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
+      <div className="cel-farmer-scroll">
         <div key={page} className="cel-screen">
         {page === "home" && (
           <HomeScreen
@@ -293,7 +281,8 @@ function ViewAsSwitch({ activeRole, onSwitch }) {
             style={{
               border: "none",
               borderRadius: 999,
-              padding: "5px 10px",
+              padding: "7px 10px",
+              minHeight: 32,
               font: "var(--text-fine)",
               fontSize: 11.5,
               fontWeight: 700,
@@ -312,14 +301,6 @@ function ViewAsSwitch({ activeRole, onSwitch }) {
   );
 }
 
-const topBarStyle = {
-  flexShrink: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "12px 18px 6px",
-};
-
 const funderBtnStyle = {
   display: "inline-flex",
   alignItems: "center",
@@ -328,10 +309,12 @@ const funderBtnStyle = {
   background: "var(--surface)",
   color: "var(--text-dim)",
   borderRadius: 999,
-  padding: "6px 12px",
+  padding: "8px 12px",
+  minHeight: 36,
   font: "var(--text-fine)",
   fontWeight: 700,
   fontSize: 12.5,
   cursor: "pointer",
   fontFamily: "var(--font-sans)",
+  flexShrink: 0,
 };

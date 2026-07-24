@@ -169,19 +169,7 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
   return (
     <div ref={portalRef} style={{ minHeight: "100dvh", background: "var(--bg-page)", fontFamily: "var(--font-sans)", position: "relative" }}>
       {/* corner header — replaces the old top strip and sidebar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 14,
-          padding: "18px 28px 0",
-          flexWrap: "wrap",
-          maxWidth: 1120,
-          margin: "0 auto",
-          boxSizing: "border-box",
-        }}
-      >
+      <div className="cel-funder-header">
         {page === "home" ? (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span

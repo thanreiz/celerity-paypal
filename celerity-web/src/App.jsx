@@ -7,6 +7,7 @@ import GateModal from "./design/GateModal";
 import { farmerReceipts, addr, loadAddresses } from "./lib/celerity";
 import { registerGatePrompt } from "./lib/gate";
 import { friendlyError } from "./lib/errors";
+import { bindAppHeight, lockBodyScroll } from "./lib/viewport";
 
 const FARMER_ROLE_KEY = "celerity.farmer.activeRole";
 
@@ -51,6 +52,25 @@ export default function App() {
     );
     return () => registerGatePrompt(null);
   }, []);
+
+  // Pin farmer shell to the visible viewport so iOS Safari chrome can't
+  // scroll the tab bar up with the page. Desktop keeps normal document flow.
+  useEffect(() => {
+    if (devOpen) {
+      lockBodyScroll(false);
+      return undefined;
+    }
+    const mq = window.matchMedia("(max-width: 639px)");
+    const syncLock = () => lockBodyScroll(mq.matches);
+    syncLock();
+    const unbind = bindAppHeight();
+    mq.addEventListener("change", syncLock);
+    return () => {
+      mq.removeEventListener("change", syncLock);
+      unbind();
+      lockBodyScroll(false);
+    };
+  }, [devOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,18 +226,7 @@ export default function App() {
   }
 
   return (
-    <div
-      style={{
-        height: "100dvh",
-        overflow: "hidden",
-        background: "var(--paper-inset)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "clamp(0px, 4vh, 32px) clamp(0px, 4vw, 32px)",
-        boxSizing: "border-box",
-      }}
-    >
+    <div className="cel-farmer-stage">
       <FarmerApp
         farmerRole={farmerRole}
         onSwitchFarmer={switchFarmer}

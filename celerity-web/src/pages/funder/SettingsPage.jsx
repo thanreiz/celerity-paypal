@@ -12,8 +12,8 @@ export default function SettingsPage({ who, me, funders }) {
   const labelFor = (address) => FUNDERS.find((f) => addr(f.role) === address)?.label;
 
   return (
-    <div className="cel-stagger" style={{ display: "flex", gap: 24, padding: "8px 32px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
-      <div style={{ width: 320, flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="cel-stagger cel-funder-pad" style={{ flexDirection: "row", flexWrap: "wrap" }}>
+      <div style={{ width: "100%", maxWidth: 420, flex: "1 1 280px", display: "flex", flexDirection: "column", gap: 24 }}>
         <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
           <p style={{ margin: "0 0 4px", font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Acting Identity</p>
           <p style={{ margin: "0 0 12px", font: "var(--text-body-lg)" }}>
@@ -35,9 +35,9 @@ export default function SettingsPage({ who, me, funders }) {
           </div>
         </div>
       </div>
-      <div style={{ flex: "2 1 420px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ flex: "2 1 280px", minWidth: 0, display: "flex", flexDirection: "column", gap: 24 }}>
         <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
             <h3 style={{ margin: 0, font: "var(--text-body-lg)" }}>Ledger Notifications</h3>
             <Badge stub>local preference only — no backend to send these yet</Badge>
           </div>
@@ -46,8 +46,8 @@ export default function SettingsPage({ who, me, funders }) {
             ["threshold", "Pool Replenishment Threshold", "Warn when a pool balance falls below 20%."],
             ["audits", "Compliance Audits", "Monthly summary of ledger integrity."],
           ].map(([key, label, sub], i) => (
-            <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", borderTop: i ? "1px solid var(--container-highest)" : "none" }}>
-              <div>
+            <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", gap: 12, flexWrap: "wrap", borderTop: i ? "1px solid var(--container-highest)" : "none" }}>
+              <div style={{ flex: "1 1 180px", minWidth: 0 }}>
                 <div style={{ font: "var(--text-table)", fontWeight: 700 }}>{label}</div>
                 <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", marginTop: 2 }}>{sub}</div>
               </div>

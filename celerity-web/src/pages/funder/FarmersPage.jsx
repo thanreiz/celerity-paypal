@@ -64,7 +64,7 @@ export default function FarmersPage({ groups, busy, run }) {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: "8px 32px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+    <div className="cel-funder-pad">
       <div
         style={{
           background: "#fff",
@@ -78,7 +78,7 @@ export default function FarmersPage({ groups, busy, run }) {
           flexWrap: "wrap",
         }}
       >
-        <div style={{ flex: "1 1 380px" }}>
+        <div style={{ flex: "1 1 240px" }}>
           <p style={{ margin: 0, font: "var(--text-body-lg)", fontWeight: 700, color: "var(--text)" }}>
             This list belongs to the government, not to funders.
           </p>
