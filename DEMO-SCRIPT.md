@@ -6,6 +6,9 @@
 
 ---
 
+**Official demo URL:** https://stellar-celerity.me/  
+(Fallback alias: https://celerity-chi.vercel.app — same deployment)
+
 ## Pre-flight (T−30 min)
 
 - [ ] Fresh slate: region-5 farmers = Mang Ramon + Aling Nena **only**; ADB + PCIC Bicol pools solvent for **2× payout**; ledger empty if possible
