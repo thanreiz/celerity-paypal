@@ -32,7 +32,7 @@ export default function StatusPill({ status }) {
         whiteSpace: "nowrap",
       }}
     >
-      <span style={{ width: 7, height: 7, borderRadius: "50%", background: "currentColor", flexShrink: 0 }} />
+      <span className={status === "Active" || status === "Armed" ? "cel-pulse" : undefined} style={{ width: 7, height: 7, borderRadius: "50%", background: "currentColor", flexShrink: 0 }} />
       {status}
     </span>
   );

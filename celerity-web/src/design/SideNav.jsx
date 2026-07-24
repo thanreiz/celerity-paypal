@@ -95,6 +95,7 @@ export default function SideNav({ active, onNavigate, userName, onCreatePool }) 
             <button
               key={it.key}
               onClick={() => onNavigate && onNavigate(it.key)}
+              className={`cel-press cel-nav-side${isActive ? " is-active" : ""}`}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -144,6 +145,7 @@ export default function SideNav({ active, onNavigate, userName, onCreatePool }) 
       </div>
       <button
         onClick={onCreatePool}
+        className="cel-press"
         style={{
           width: "100%",
           background: "var(--primary)",
@@ -156,6 +158,7 @@ export default function SideNav({ active, onNavigate, userName, onCreatePool }) 
           cursor: "pointer",
           marginTop: 12,
           fontFamily: "var(--font-sans)",
+          boxShadow: "var(--shadow-raised)",
         }}
       >
         + New Escrow Pool

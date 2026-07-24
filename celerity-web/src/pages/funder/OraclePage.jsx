@@ -232,7 +232,8 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
               </span>
               <button
                 onClick={() => { setState({ kind: "empty" }); setProgress({}); }}
-                style={{ marginLeft: "auto", border: "none", background: "none", color: "var(--text-faint)", fontWeight: 700, font: "var(--text-fine)", textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                disabled={busy}
+                style={{ marginLeft: "auto", border: "none", background: "none", color: "var(--text-faint)", fontWeight: 700, font: "var(--text-fine)", textDecoration: "underline", textUnderlineOffset: 3, cursor: busy ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: busy ? 0.45 : 1 }}
               >
                 Load a different bulletin
               </button>
@@ -276,11 +277,27 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
                               : "no pools — will skip"}
                       </span>
                       {p && (
-                        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 7, font: "var(--text-fine)", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: p.state === "done" ? "var(--ok-text)" : p.state === "error" ? "var(--bad-text)" : "var(--text-faint)" }}>
-                          {p.state === "pending" && <><span className="cel-spin" />queued…</>}
-                          {p.state === "running" && <><span className="cel-spin" />signing + settling…</>}
-                          {p.state === "done" && <span className="cel-pop">{`✓ event #${String(p.eventId)} · ${p.released} release${p.released === 1 ? "" : "s"}`}</span>}
-                          {p.state === "error" && "✗ flagged — continuing with the rest"}
+                        <span
+                          className={p.state === "done" ? "cel-pop" : undefined}
+                          style={{
+                            marginLeft: "auto",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 7,
+                            font: "var(--text-fine)",
+                            fontWeight: 700,
+                            fontVariantNumeric: "tabular-nums",
+                            color: p.state === "done" ? "var(--ok-text)" : p.state === "error" ? "var(--bad-text)" : "var(--text-faint)",
+                            background: p.state === "done" ? "var(--ok-bg)" : p.state === "error" ? "var(--bad-bg)" : "var(--surface-low)",
+                            border: `1px solid ${p.state === "done" ? "var(--ok-line)" : p.state === "error" ? "var(--bad-line)" : "var(--border-subtle)"}`,
+                            borderRadius: "var(--radius-chip)",
+                            padding: "4px 10px",
+                          }}
+                        >
+                          {p.state === "pending" && <><span className="cel-spin" />queued</>}
+                          {p.state === "running" && <><span className="cel-spin" />signing…</>}
+                          {p.state === "done" && `✓ event #${String(p.eventId)} · ${p.released} release${p.released === 1 ? "" : "s"}`}
+                          {p.state === "error" && "✗ flagged — continuing"}
                         </span>
                       )}
                     </div>
@@ -299,8 +316,16 @@ export default function OraclePage({ pools, myPools, who, busy, run, refresh, on
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-            <Button variant="primary" disabled={busy || state.settle.length === 0 || state.kind === "done"} onClick={settleAll}>
-              {state.kind === "done" ? "Settled ✓" : `Sign & settle ${state.settle.length} region${state.settle.length === 1 ? "" : "s"} →`}
+            <Button
+              variant="primary"
+              disabled={busy || state.settle.length === 0 || state.kind === "done"}
+              onClick={settleAll}
+            >
+              {state.kind === "done"
+                ? "Settled ✓"
+                : busy
+                  ? "Signing & settling…"
+                  : `Sign & settle ${state.settle.length} region${state.settle.length === 1 ? "" : "s"} →`}
             </Button>
             <span style={{ font: "var(--text-fine)", color: "var(--text-faint)", fontWeight: 600 }}>
               Read {state.rows.length} regions · {state.settle.length} will settle · one signed event per region, unique nonces, a failed region is flagged and skipped — never the whole typhoon.

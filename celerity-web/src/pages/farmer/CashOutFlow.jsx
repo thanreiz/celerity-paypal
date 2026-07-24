@@ -133,6 +133,7 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
       {step !== STEP.LOADING && step !== STEP.SUCCESS && <TopBar onBack={back} />}
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 22px 24px", display: "flex", flexDirection: "column" }}>
+        <div key={step} className="cel-step" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100%" }}>
         {/* 1 — pick where the money goes */}
         {step === STEP.DEST && (
           <Step title="Where do you want your money?" hint="Choose one.">
@@ -268,6 +269,7 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
             <BigButton onClick={onClose}>Done</BigButton>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
@@ -295,7 +297,7 @@ function Step({ title, hint, children }) {
 
 function BigChoice({ emoji, avatar, title, subtitle, onClick, muted }) {
   return (
-    <button onClick={onClick} className="cel-row" style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", background: "#fff", border: `1.5px solid ${muted ? "var(--outline)" : "var(--container-highest)"}`, borderStyle: muted ? "dashed" : "solid", borderRadius: "var(--radius-card)", padding: "16px 16px", cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: muted ? "none" : "var(--shadow-card)" }}>
+    <button onClick={onClick} className="cel-row cel-raise" style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", background: "#fff", border: `1.5px solid ${muted ? "var(--outline)" : "var(--container-highest)"}`, borderStyle: muted ? "dashed" : "solid", borderRadius: "var(--radius-card)", padding: "16px 16px", cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: muted ? "none" : "var(--shadow-card)" }}>
       <div style={{ width: 46, height: 46, borderRadius: 14, flexShrink: 0, display: "grid", placeItems: "center", background: avatar ? "rgba(22,69,45,0.12)" : "var(--container)", color: "var(--primary)", fontSize: avatar ? 18 : 22, fontWeight: 700 }}>
         {avatar || emoji}
       </div>

@@ -7,6 +7,7 @@ export default function Card({ variant = "default", title, children, style }) {
   const isOracle = variant === "oracle";
   return (
     <section
+      className="cel-raise"
       style={{
         background: isOracle
           ? "linear-gradient(0deg, rgba(255,248,225,0.35), rgba(255,248,225,0.35)), var(--surface)"

@@ -86,7 +86,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
         onClick={(e) => e.stopPropagation()}
         className="cel-overlay"
         style={{
-          background: "#fff",
+          background: "var(--surface)",
           width: "min(720px, 100%)",
           maxHeight: "88vh",
           borderRadius: "var(--radius-modal)",
@@ -110,8 +110,8 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
         </div>
 
         <div style={{ padding: 24, overflowY: "auto", flex: 1, background: "var(--paper-inset)", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            <h3 style={{ margin: 0, font: "var(--text-body-lg)", color: "var(--primary)", paddingBottom: 8, borderBottom: "1px solid var(--container-highest)" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+            <h3 style={{ margin: 0, font: "var(--text-body-lg)", color: "var(--primary)", paddingBottom: 8, borderBottom: "1px solid var(--border-subtle)" }}>
               Purpose & Trigger
             </h3>
             <Input
@@ -129,8 +129,8 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
             </p>
           </div>
 
-          <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            <h3 style={{ margin: 0, font: "var(--text-body-lg)", color: "var(--primary)", paddingBottom: 8, borderBottom: "1px solid var(--container-highest)" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+            <h3 style={{ margin: 0, font: "var(--text-body-lg)", color: "var(--primary)", paddingBottom: 8, borderBottom: "1px solid var(--border-subtle)" }}>
               Financial Execution
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
@@ -166,11 +166,38 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
           </div>
 
           {(onramping || sepStatus) && (
-            <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: 12, padding: 16 }}>
-              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>{SEP24_LABEL}</p>
-              <p style={{ margin: "8px 0 0", font: "var(--text-body)", fontWeight: 700, color: "var(--primary)" }}>
-                On-ramp status: {sep24Chip(sepStatus)}
-              </p>
+            <div
+              className="cel-pop"
+              style={{
+                background: "var(--surface)",
+                border: "1.5px solid var(--primary)",
+                borderRadius: 12,
+                padding: "14px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <p style={{ margin: 0, font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)" }}>
+                  SEP-24 on-ramp
+                </p>
+                <p style={{ margin: "4px 0 0", font: "var(--text-fine)", color: "var(--text-faint)" }}>{SEP24_LABEL}</p>
+              </div>
+              <span
+                style={{
+                  font: "var(--text-fine)",
+                  fontWeight: 800,
+                  color: "var(--on-primary)",
+                  background: "var(--primary)",
+                  borderRadius: "var(--radius-chip)",
+                  padding: "6px 12px",
+                }}
+              >
+                {sep24Chip(sepStatus)}
+              </span>
             </div>
           )}
         </div>

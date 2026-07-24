@@ -34,6 +34,18 @@ export const EXTRA_FARMERS = {
 
 export const demoFarmerByRole = (role) => DEMO_FARMERS.find((f) => f.role === role);
 
+/** Avatar initials from a display name — "Aling Nena" → AN, not AL. */
+export function farmerInitials(name) {
+  if (!name) return "?";
+  const parts = String(name).split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return parts
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 /** Human label for a farmer address — known demo faces first, else short addr. */
 export function farmerLabel(farmerAddr) {
   if (!farmerAddr) return "—";

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import LoginScreen from "./LoginScreen";
 import FunderHome from "./FunderHome";
 import PoolsPage from "./PoolsPage";
@@ -7,9 +7,11 @@ import LedgerPage from "./LedgerPage";
 import SettingsPage from "./SettingsPage";
 import OraclePage from "./OraclePage";
 import CreatePoolModal from "./CreatePoolModal";
+import CoachTour from "../../design/CoachTour";
 import { addr, farmersByRegion, view } from "../../lib/celerity";
 import { FUNDERS, funderByRole } from "../../lib/funders";
 import { short, CONTRACT_ID } from "../../lib/config";
+import { FUNDER_TOUR, isTourDone, completeTour, resetTour } from "../../lib/tours";
 
 const TITLES = {
   pools: "Escrow Pools",
@@ -88,12 +90,23 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
   // Active typhoon context, set by the oracle page after a bulletin loads —
   // the pools dashboard renders it as a temporary overlay.
   const [bulletin, setBulletin] = useState(null);
+  const portalRef = useRef(null);
+  const [showTour, setShowTour] = useState(false);
 
   const me = who ? addr(who) : null;
   const identity = who ? funderByRole(who) : null;
   // Strict isolation: every funder-scoped surface renders from this list only.
   const myPools = who ? pools.filter((p) => p.funder === me) : [];
   const farmerCount = farmerGroups.reduce((n, g) => n + g.list.length, 0);
+
+  useEffect(() => {
+    if (!who) return;
+    // First login to an institution — show coach tips once per browser.
+    if (!isTourDone("funder")) {
+      setPage("home");
+      setShowTour(true);
+    }
+  }, [who]);
 
   useEffect(() => {
     if (!me) return;
@@ -103,6 +116,17 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
   useEffect(() => {
     farmersByRegion(pools).then(setFarmerGroups).catch(() => setFarmerGroups([]));
   }, [pools]);
+
+  const endTour = () => {
+    completeTour("funder");
+    setShowTour(false);
+  };
+
+  const replayTour = () => {
+    resetTour("funder");
+    setPage("home");
+    setShowTour(true);
+  };
 
   if (!who) {
     return (
@@ -143,7 +167,7 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
   );
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--paper-page)", fontFamily: "var(--font-sans)" }}>
+    <div ref={portalRef} style={{ minHeight: "100dvh", background: "var(--bg-page)", fontFamily: "var(--font-sans)", position: "relative" }}>
       {/* corner header — replaces the old top strip and sidebar */}
       <div
         style={{
@@ -234,6 +258,7 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
             farmerCount={farmerCount}
             onGoto={setPage}
             onCreatePool={() => setShowCreate(true)}
+            onReplayTour={replayTour}
           />
         )}
         {page === "pools" && (
@@ -258,6 +283,10 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
         )}
         {page === "settings" && <SettingsPage who={who} me={me} funders={[...new Set(pools.map((p) => p.funder))]} />}
       </div>
+
+      {showTour && page === "home" && !showCreate && (
+        <CoachTour steps={FUNDER_TOUR} rootRef={portalRef} onComplete={endTour} onSkip={endTour} />
+      )}
 
       {showCreate && <CreatePoolModal onClose={() => setShowCreate(false)} who={who} me={me} busy={busy} run={run} />}
     </div>

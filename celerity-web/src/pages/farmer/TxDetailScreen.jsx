@@ -25,9 +25,9 @@ export default function TxDetailScreen({ tx, me, pools, onBack }) {
         <div style={{ font: "var(--text-h2)", fontSize: 18 }}>Transaction</div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="cel-stagger" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
         {/* amount hero */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0 4px", textAlign: "center" }}>
+        <div className="cel-pop" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0 4px", textAlign: "center" }}>
           <div style={{ width: 56, height: 56, borderRadius: 999, display: "grid", placeItems: "center", background: isReceived ? "var(--ok-bg)" : "var(--container)", color: isReceived ? "var(--ok-text)" : "var(--primary)" }}>
             {isReceived ? (
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 4v12M6.5 11 12 16.5 17.5 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>

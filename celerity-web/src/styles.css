@@ -65,20 +65,125 @@ a:focus-visible {
 .cel-stagger > *:nth-child(n+10) { animation-delay: 490ms; }
 
 /* press feedback for buttons and tappable tiles */
-.cel-press { transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast), filter var(--transition-fast); }
-.cel-press:active { transform: scale(0.96); }
-.cel-press:disabled { transform: none; }
+.cel-press {
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast),
+    filter var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+.cel-press:hover:not(:disabled) { filter: brightness(1.03); }
+.cel-press:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.98); }
+.cel-press:disabled { transform: none; filter: none; }
 
 /* card hover lift — for tappable cards/tiles that aren't list rows.
    Rests flat; on hover it rises a hair and deepens its shadow. */
-.cel-raise { transition: transform var(--transition-base), box-shadow var(--transition-base); }
+.cel-raise {
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
 .cel-raise:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
 .cel-raise:active { transform: translateY(0); }
 
 /* tappable list rows: subtle lift on hover, press-in on active */
-.cel-row { transition: background-color var(--transition-fast), transform var(--transition-fast); }
-.cel-row:hover { background: var(--surface-low); }
+.cel-row {
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
+}
+.cel-row:hover { background: var(--surface-low); box-shadow: var(--shadow-card); }
 .cel-row:active { transform: scale(0.99); }
+
+/* icon / quick-action tiles — soft scale on hover */
+.cel-icon-tile {
+  transition: transform var(--transition-base), background-color var(--transition-base), color var(--transition-base);
+}
+.cel-icon-tile:hover { transform: translateY(-2px) scale(1.04); }
+.cel-icon-tile:active { transform: scale(0.96); }
+
+/* farmer tab content + cash-out wizard steps */
+.cel-screen { animation: celSwapIn 280ms cubic-bezier(.2, .7, .2, 1) both; }
+.cel-step { animation: celStepIn 300ms cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes celStepIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* bottom nav tab — pill morphs smoothly */
+.cel-nav-tab {
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+.cel-nav-tab svg {
+  transition: transform var(--transition-base);
+}
+.cel-nav-tab[aria-current="page"] svg,
+.cel-nav-tab.is-active svg {
+  transform: translateY(-1px) scale(1.06);
+}
+
+/* funder side nav items */
+.cel-nav-side {
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base),
+    transform var(--transition-fast);
+}
+.cel-nav-side:hover:not(.is-active) {
+  background: var(--surface-low);
+  transform: translateX(2px);
+}
+
+/* soft glow pulse on hero balances / live money */
+.cel-money-glow {
+  animation: celMoneyGlow 3.2s ease-in-out infinite;
+}
+@keyframes celMoneyGlow {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 4px 12px rgba(22, 69, 45, 0.18)); }
+}
+
+/* chip / segment control morph */
+.cel-chip {
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+.cel-chip:hover:not(:disabled) { transform: translateY(-1px); }
+.cel-chip:active:not(:disabled) { transform: scale(0.97); }
+
+/* status / success badge settle */
+.cel-badge-in { animation: celPop 320ms cubic-bezier(.2, .8, .2, 1) both; }
+
+/* shimmer skeleton (rare loading states) */
+.cel-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--container) 0%,
+    var(--surface) 45%,
+    var(--container) 90%
+  );
+  background-size: 200% 100%;
+  animation: celShimmer 1.4s ease-in-out infinite;
+}
+@keyframes celShimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
 
 /* full-screen overlays slide up as they open */
 .cel-overlay { animation: celSlideUp 260ms cubic-bezier(.2, .7, .2, 1) both; }
@@ -255,6 +360,7 @@ a:focus-visible {
   border-radius: 999px;
   background: var(--container-highest);
   display: block;
+  transition: width var(--transition-base), background-color var(--transition-base);
 }
 .cel-splash-dots i.on {
   background: var(--primary);
@@ -320,7 +426,7 @@ a:focus-visible {
   padding: 26px 22px 24px;
   font-family: var(--font-sans);
   background: var(--paper-page);
-  animation: celSplashIn 320ms ease both;
+  animation: celFadeUp 460ms cubic-bezier(.2, .7, .2, 1) both;
 }
 .cel-connect-top {
   display: flex;
@@ -367,6 +473,8 @@ a:focus-visible {
   align-items: center;
   gap: 3px;
   text-align: center;
+  animation: celPop 420ms cubic-bezier(.2, .8, .2, 1) both;
+  animation-delay: 80ms;
 }
 .cel-id-badge {
   position: absolute;
@@ -546,3 +654,206 @@ a:focus-visible {
 }
 .cel-connect-ready svg { display: block; color: var(--ok-text); }
 .cel-connect-foot { margin-top: 2px; }
+
+/* ============================================================
+   Layout utilities — token-backed page shells & surfaces
+   ============================================================ */
+
+.cel-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-stack);
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-page-y) var(--space-page-x) var(--space-8);
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  animation: celFadeUp 420ms cubic-bezier(.2, .7, .2, 1) both;
+}
+.cel-page--narrow { max-width: 860px; }
+.cel-page--wide { max-width: 1120px; }
+
+.cel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-stack);
+}
+
+.cel-section-label {
+  margin: 0;
+  font: var(--text-label);
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.cel-card-surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+.cel-card-surface.cel-raise:hover,
+a.cel-card-surface:hover,
+button.cel-card-surface:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.cel-card-surface--pad {
+  padding: var(--space-card-padding);
+}
+
+.cel-phone-pad {
+  padding-left: var(--space-phone-x);
+  padding-right: var(--space-phone-x);
+}
+
+.cel-halo {
+  background-image: var(--halo-soft);
+  background-color: var(--bg-page);
+}
+
+/* Tour highlight on anchored control */
+.cel-tour-anchor {
+  position: relative;
+  z-index: 42;
+  box-shadow: 0 0 0 3px rgba(22, 69, 45, 0.22), var(--shadow-raised);
+  border-radius: inherit;
+  animation: celTourPulse 1.8s ease-in-out infinite;
+}
+@keyframes celTourPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(22, 69, 45, 0.22), var(--shadow-raised); }
+  50% { box-shadow: 0 0 0 6px rgba(22, 69, 45, 0.12), var(--shadow-raised); }
+}
+
+/* ============================================================
+   CoachTour — Celerity-native tip (not a clone of third-party UI)
+   ============================================================ */
+
+.cel-tour-root {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.cel-tour-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(249, 250, 245, 0.55);
+  pointer-events: auto;
+  animation: celFadeIn 220ms ease both;
+}
+.cel-tour-card {
+  pointer-events: auto;
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  max-width: 340px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-tour);
+  box-shadow: var(--shadow-tour);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  animation: celPop 360ms cubic-bezier(.2, .8, .2, 1) both;
+}
+.cel-tour-accent {
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-chip) 55%, var(--accent) 100%);
+}
+.cel-tour-body {
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cel-tour-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cel-tour-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: var(--container);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.cel-tour-mark img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.cel-tour-title {
+  margin: 0;
+  flex: 1;
+  font: var(--text-body-lg);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: var(--tracking-tight);
+}
+.cel-tour-x {
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+  font-family: var(--font-sans);
+}
+.cel-tour-copy {
+  margin: 0;
+  font: var(--text-meta);
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+.cel-tour-chip {
+  align-self: flex-start;
+  font: var(--text-label);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--warn-text);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--radius-chip);
+  padding: 3px 9px;
+}
+.cel-tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+.cel-tour-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.cel-tour-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--container-highest);
+  display: block;
+  transition: width var(--transition-base), background-color var(--transition-base);
+}
+.cel-tour-dots i.on {
+  width: 16px;
+  background: var(--primary);
+}
+.cel-tour-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}

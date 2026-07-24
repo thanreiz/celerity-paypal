@@ -24,7 +24,7 @@ export default function DetailScreen({ kind, pools, registration, onBack }) {
         <div style={{ font: "var(--text-h2)", fontSize: 18 }}>{TITLES[kind]}</div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="cel-stagger" style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
         {kind === "programs" && (
           <>
             {pools.map((p) => (

@@ -21,18 +21,16 @@ const ICONS = {
   ),
 };
 
-/** Pick-your-institution gate — the funder console is identity-first, like a
- * banking app. Both cards render from the same FUNDERS list, so the two
- * demo funders are interchangeable by construction. */
+/** Pick-your-institution gate — branded, identity-first. */
 export default function LoginScreen({ onLogin, onBackToFarmer }) {
   return (
     <div
+      className="cel-halo"
       style={{
         minHeight: "100dvh",
-        background: "var(--paper-page)",
         display: "grid",
         placeItems: "center",
-        padding: "48px 24px",
+        padding: "var(--space-8) var(--space-6)",
         fontFamily: "var(--font-sans)",
         position: "relative",
         boxSizing: "border-box",
@@ -46,10 +44,10 @@ export default function LoginScreen({ onLogin, onBackToFarmer }) {
             position: "absolute",
             top: 20,
             left: 20,
-            border: "1px solid var(--container-highest)",
+            border: "1px solid var(--border-subtle)",
             background: "var(--surface)",
             color: "var(--text-dim)",
-            borderRadius: 999,
+            borderRadius: "var(--radius-control)",
             padding: "8px 16px",
             font: "var(--text-fine)",
             fontWeight: 700,
@@ -61,23 +59,27 @@ export default function LoginScreen({ onLogin, onBackToFarmer }) {
         </button>
       )}
       <div style={{ textAlign: "center", maxWidth: 720, width: "100%" }}>
+        <img
+          src="/logo-lockup.png"
+          alt="Celerity"
+          style={{ height: 44, width: "auto", margin: "0 auto 18px", display: "block" }}
+        />
         <div style={{ color: "var(--primary)", font: "var(--text-h1)", fontSize: 30, letterSpacing: "var(--tracking-tight)" }}>
-          Celerity Funder
+          Funder console
         </div>
-        <p style={{ margin: "6px 0 30px", font: "var(--text-meta)", color: "var(--text-faint)", fontWeight: 600 }}>
-          Choose your institution — every action signs with that funder's key.
+        <p style={{ margin: "8px 0 6px", font: "var(--text-meta)", color: "var(--text-dim)", fontWeight: 600, maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>
+          Independent sub-pools. One signed event. Per-funder ledger.
+        </p>
+        <p style={{ margin: "0 0 28px", font: "var(--text-fine)", color: "var(--text-faint)", fontWeight: 600 }}>
+          Choose your institution — every action signs with that funder&apos;s key.
         </p>
 
         <div className="cel-stagger" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 18, textAlign: "left" }}>
           {FUNDERS.map((f) => (
             <div
               key={f.role}
-              className="cel-raise"
+              className="cel-raise cel-card-surface"
               style={{
-                background: "var(--surface)",
-                border: "1px solid var(--container-highest)",
-                borderRadius: "var(--radius-card)",
-                boxShadow: "var(--shadow-card)",
                 padding: "26px 24px",
                 display: "flex",
                 flexDirection: "column",

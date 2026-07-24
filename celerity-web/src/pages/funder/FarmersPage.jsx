@@ -8,21 +8,12 @@ import Select from "../../design/Select";
 import Switch from "../../design/Switch";
 import { registerFarmer, removeFarmer } from "../../lib/celerity";
 import { short } from "../../lib/config";
-import { farmerLabel } from "../../lib/farmers";
+import { farmerLabel, farmerInitials } from "../../lib/farmers";
 import { regionName, REGION_OPTIONS } from "../../lib/regions";
 
 function initialsFor(addr) {
   const label = farmerLabel(addr);
-  if (label && !label.includes("…")) {
-    return label
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(-2)
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
+  if (label && !label.includes("…")) return farmerInitials(label);
   return addr.slice(0, 2).toUpperCase();
 }
 

@@ -63,9 +63,11 @@ export default function BottomNav({ active, onNavigate }) {
         return (
           <button
             key={it.key}
+            data-tour={it.key === "activity" ? "activity" : undefined}
             onClick={() => onNavigate && onNavigate(it.key)}
             aria-label={it.label}
-            className="cel-press"
+            className={`cel-press cel-nav-tab${isActive ? " is-active" : ""}`}
+            aria-current={isActive ? "page" : undefined}
             style={{
               display: "flex",
               flexDirection: "column",

@@ -13,7 +13,9 @@
 - [ ] Backup contract ID written down; second browser profile logged in as PCIC
 - [ ] Backup screen recording of money-shot ready (no live debug >15s)
 - [ ] Sample bulletin or “Load sample” path rehearsed
-- [ ] Farmer app open on phone / second window as Mang Ramon
+- [ ] **Never cold-open a farmer wallet at ₱0 on the money-shot.** Pre-open Ramon on a second window *after* a rehearsal settle, or keep farmer app on Connect until settle lands — then open Home with balance visible
+- [ ] Rehearse View-as Ramon ↔ Nena **only after both have receipts** (empty Nena home looks broken on camera)
+- [ ] Coach tours: Skip (×) on stage if rehearsed; leave funder **Tutorial** panel open for judges exploring after; Profile → Replay tutorial tips if needed
 
 **Live contract (as of last prep):** `CAX4JXJRLGWAGG2PNC36CNJXM5KVM4L5WNK6ID6WNRQHCEIZLQVCJ2YD`  
 Dry-run confirmed: one region-5 settle paid Ramon + Nena from ADB pool #1 and PCIC pool #3; re-settle returned **0**.
@@ -26,7 +28,7 @@ Dry-run confirmed: one region-5 settle paid Ramon + Nena from ADB pool #1 and PC
 
 > “When Signal #3 hits Bicol, Mang Ramon shouldn’t wait for paperwork. He needs pesos in hand — from every funder that earmarked his region.”
 
-Point at farmer app (empty or waiting). Promise: we will settle **two funders → two farmers** live.
+Show Connect (“Is this you?”) or a brief Home — **do not linger on ₱0 / empty activity.** Promise: we settle **two funders → two farmers** live, then the wallets fill.
 
 ### 2. Flowchart — on-ramp → oracle → settle → off-ramp (90s)
 
@@ -47,8 +49,7 @@ Say once: *Testnet XLM stands in for USDC. XLM is not the product currency.*
 3. **Sign & settle** — watch signature + releases  
 4. Ledger / home feed: **Mang Ramon** and **Aling Nena** from **both** funders (4 lines)  
 5. Re-settle same event → **0 new releases** (idempotent)  
-6. Farmer app: balance up · “already yours if offline” · SMS receipt mock  
-7. Withdraw → SEP-31 status chips → mock completed (honest label)
+6. Farmer app: Home with **balance up** → View-as **Nena** (also funded) → **Cash out** → SEP-31 status chips → mock completed (honest label)
 
 **Say:** “Two funders. Two farmers. One signed event. Money already theirs.”
 
@@ -94,6 +95,7 @@ Say once: *Testnet XLM stands in for USDC. XLM is not the product currency.*
 | RPC hang | Switch to backup recording within 15s |
 | Wrong identity | Second browser profile already on PCIC / farmer |
 | Empty ledger after settle | Refresh; if still empty, backup GIF + explain idempotency from prior dry-run |
+| Farmer home still ₱0 after settle | Wait one refresh poll (~3–15s) or pull-to-refresh path; do **not** View-as Nena until Ramon shows balance |
 | Bulletin parse error | “Load sample bulletin” — never improvise JSON on stage |
 
 ---

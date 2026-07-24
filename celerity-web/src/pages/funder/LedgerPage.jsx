@@ -27,7 +27,7 @@ export default function LedgerPage({ ledger, pools }) {
         </div>
       </div>
 
-      <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+      <div className="cel-card-surface cel-raise" style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
         <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--container-highest)", background: "var(--surface-low)" }}>
           <h3 style={{ margin: 0, font: "var(--text-h2)", fontSize: 18 }}>Release History</h3>
         </div>

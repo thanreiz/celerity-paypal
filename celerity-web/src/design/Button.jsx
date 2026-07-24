@@ -32,7 +32,7 @@ export default function Button({
     justifyContent: "center",
     gap: 8,
     transition:
-      "background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base), box-shadow var(--transition-base)",
+      "background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-fast), filter var(--transition-fast)",
     opacity: disabled ? 0.45 : 1,
   };
 

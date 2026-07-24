@@ -103,7 +103,7 @@ function FeedRow({ row, pool }) {
  * state-driven demo guide, then recent releases grouped by event. Everything
  * on screen is scoped to the logged-in funder — the other funder's money
  * never appears here. */
-export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGoto, onCreatePool }) {
+export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGoto, onCreatePool, onReplayTour }) {
   const totalUnits = myPools.reduce((s, p) => s + unitsOf(p.balance), 0);
   const pausedCount = myPools.filter((p) => p.status === "Paused").length;
   const releasedUnits = ledger.reduce((s, r) => s + unitsOf(r.amount), 0);
@@ -117,12 +117,13 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
     .slice(0, 2);
 
   return (
-    <div className="cel-stagger" style={{ display: "flex", flexDirection: "column", gap: 20, padding: "8px 28px 48px", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+    <div className="cel-page cel-stagger" style={{ padding: "8px 28px 48px", maxWidth: 900 }}>
       {/* hero — one number, one quiet line */}
       <div
+        data-tour="escrow"
         style={{
           background: "linear-gradient(160deg, var(--primary) 0%, var(--primary-hover) 100%)",
-          borderRadius: 16,
+          borderRadius: "var(--radius-card)",
           color: "#fff",
           padding: "26px 26px 22px",
           boxShadow: "var(--shadow-raised)",
@@ -131,7 +132,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
         <span style={{ font: "var(--text-label)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)", color: "rgba(255,255,255,.75)" }}>
           Still escrowed
         </span>
-        <div style={{ font: "var(--text-hero)", fontSize: 44, letterSpacing: "-0.02em", margin: "6px 0 2px", fontVariantNumeric: "tabular-nums" }}>
+        <div className="cel-money-glow" style={{ font: "var(--text-hero)", fontSize: 44, letterSpacing: "-0.02em", margin: "6px 0 2px", fontVariantNumeric: "tabular-nums" }}>
           <CountUp units={totalUnits} placeholder={loaded ? undefined : "₱ —"} />
         </div>
         <div style={{ font: "var(--text-fine)", color: "rgba(255,255,255,.78)", fontVariantNumeric: "tabular-nums" }}>
@@ -147,11 +148,8 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
 
       {/* quick actions */}
       <div
+        className="cel-card-surface"
         style={{
-          background: "var(--surface)",
-          border: "1px solid var(--container-highest)",
-          borderRadius: "var(--radius-card)",
-          boxShadow: "var(--shadow-card)",
           padding: "20px 18px",
           display: "flex",
           justifyContent: "space-between",
@@ -162,6 +160,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
         {QUICK_ACTIONS.map((a) => (
           <button
             key={a.page}
+            data-tour={a.page === "oracle" || a.page === "ledger" ? a.page : undefined}
             onClick={() => onGoto(a.page)}
             className="cel-press"
             style={{
@@ -188,13 +187,20 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
       </div>
 
       {loaded && (
-        <DemoGuide pools={myPools} farmerCount={farmerCount} releases={ledger.length} onGoto={onGoto} onCreatePool={onCreatePool} />
+        <DemoGuide
+          pools={myPools}
+          farmerCount={farmerCount}
+          releases={ledger.length}
+          onGoto={onGoto}
+          onCreatePool={onCreatePool}
+          onReplayTour={onReplayTour}
+        />
       )}
 
       {/* recent releases, grouped by the event that caused them */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, margin: "0 4px 10px", flexWrap: "wrap" }}>
-          <p style={{ margin: 0, font: "var(--text-label)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)", color: "var(--text-faint)" }}>
+          <p className="cel-section-label">
             Recent releases — your money reaching farmers
           </p>
           {loaded && ledger.length > 0 && (
@@ -203,7 +209,7 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
             </span>
           )}
         </div>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+        <div className="cel-card-surface" style={{ overflow: "hidden" }}>
           {!loaded && (
             <p style={{ margin: 0, padding: "22px 20px", font: "var(--text-fine)", color: "var(--text-faint)" }}>
               Reading on-chain state…

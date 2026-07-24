@@ -8,6 +8,7 @@ import ProfileScreen from "./ProfileScreen";
 import CashOutFlow from "./CashOutFlow";
 import DetailScreen from "./DetailScreen";
 import TxDetailScreen from "./TxDetailScreen";
+import CoachTour from "../../design/CoachTour";
 import { addr, invoke, view } from "../../lib/celerity";
 import { friendlyError } from "../../lib/errors";
 import { UNIT } from "../../lib/config";
@@ -15,6 +16,7 @@ import { toPHPNumber } from "../../lib/anchor";
 import { pendingClaims } from "../../lib/activityRows";
 import { demoFarmerByRole, DEMO_FARMERS } from "../../lib/farmers";
 import { loadCashOuts, saveCashOuts, loadRecipients, saveRecipients, resetDemoState } from "../../lib/farmerDemoState";
+import { FARMER_TOUR, isTourDone, completeTour, resetTour } from "../../lib/tours";
 
 function seedRecipientsFor(name) {
   return [
@@ -50,6 +52,8 @@ export default function FarmerApp({
   const [recipients, setRecipients] = useState(() => loadRecipients(seedRecipients, farmerRole));
   const [txDetail, setTxDetail] = useState(null);
   const cashOutSeq = useRef(0);
+  const frameRef = useRef(null);
+  const [showTour, setShowTour] = useState(() => !isTourDone("farmer"));
 
   // Reload local demo ledgers when View-as switches identity.
   useEffect(() => {
@@ -135,8 +139,20 @@ export default function FarmerApp({
   const handleSwitch = (role) => {
     if (role === farmerRole || !onSwitchFarmer) return;
     onSwitchFarmer(role);
+    // Stay on connect so the identity card updates; the top View-as switch
+    // already shows who — no toast covering the tab bar on camera.
     setStage("connect");
-    notify(`Viewing as ${demoFarmerByRole(role)?.name || role}`);
+  };
+
+  const endTour = () => {
+    completeTour("farmer");
+    setShowTour(false);
+  };
+
+  const replayTour = () => {
+    resetTour("farmer");
+    setPage("home");
+    setShowTour(true);
   };
 
   const frameStyle = {
@@ -179,7 +195,7 @@ export default function FarmerApp({
   const pageTitle = page === "home" ? null : page === "activity" ? "Activity" : "Profile";
 
   return (
-    <div style={frameStyle}>
+    <div ref={frameRef} style={frameStyle}>
       <div style={topBarStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <img src="/logo-dove.png" alt="Celerity" style={{ height: 30, width: "auto", display: "block" }} />
@@ -195,6 +211,7 @@ export default function FarmerApp({
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
+        <div key={page} className="cel-screen">
         {page === "home" && (
           <HomeScreen
             farmerShortName={identity.shortName}
@@ -216,10 +233,23 @@ export default function FarmerApp({
           <ActivityScreen receipts={receipts} pools={pools} cashOuts={cashOuts} claims={claims} onOpenTx={setTxDetail} />
         )}
         {page === "profile" && (
-          <ProfileScreen me={me} registration={registration} farmerName={farmerName} receipts={receipts} pools={pools} onResetDemo={resetDemo} />
+          <ProfileScreen
+            me={me}
+            registration={registration}
+            farmerName={farmerName}
+            receipts={receipts}
+            pools={pools}
+            onResetDemo={resetDemo}
+            onReplayTour={replayTour}
+          />
         )}
+        </div>
       </div>
       <BottomNav active={page} onNavigate={setPage} />
+
+      {showTour && page === "home" && !overlay && !txDetail && (
+        <CoachTour steps={FARMER_TOUR} rootRef={frameRef} onComplete={endTour} onSkip={endTour} />
+      )}
 
       {overlay === "cashout" && (
         <CashOutFlow
@@ -259,7 +289,7 @@ function ViewAsSwitch({ activeRole, onSwitch }) {
             key={f.role}
             type="button"
             onClick={() => onSwitch(f.role)}
-            className="cel-press"
+            className="cel-press cel-chip"
             style={{
               border: "none",
               borderRadius: 999,
@@ -271,6 +301,7 @@ function ViewAsSwitch({ activeRole, onSwitch }) {
               fontFamily: "var(--font-sans)",
               background: on ? "var(--primary)" : "transparent",
               color: on ? "var(--on-primary)" : "var(--text-dim)",
+              transition: "background-color var(--transition-base), color var(--transition-base), transform var(--transition-fast)",
             }}
           >
             {f.shortName}

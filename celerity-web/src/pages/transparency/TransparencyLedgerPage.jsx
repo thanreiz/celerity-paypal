@@ -62,11 +62,11 @@ export default function TransparencyLedgerPage({ onBack }) {
           )}
         </div>
       </header>
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px 80px", display: "flex", flexDirection: "column", gap: 24, boxSizing: "border-box" }}>
-        <section style={{ background: "#fff", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", border: "1px solid var(--container-highest)", padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <div className="cel-stagger" style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px 80px", display: "flex", flexDirection: "column", gap: 24, boxSizing: "border-box" }}>
+        <section className="cel-card-surface cel-raise" style={{ padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <p style={{ margin: 0, font: "var(--text-label)", textTransform: "uppercase", color: "var(--text-faint)" }}>Total Disbursed Across All Relief Efforts</p>
-            <p style={{ margin: "8px 0 0", font: "var(--text-display)", fontSize: 40, color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>
+            <p className="cel-money-glow" style={{ margin: "8px 0 0", font: "var(--text-display)", fontSize: 40, color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>
               <CountUp units={loading ? 0 : totalUnits} format="full" />
             </p>
             <p style={{ margin: "6px 0 0", font: "var(--text-fine)", fontSize: 11.5, color: "var(--text-faint)" }}>

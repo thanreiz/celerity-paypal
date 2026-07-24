@@ -12,9 +12,9 @@ export default function SettingsPage({ who, me, funders }) {
   const labelFor = (address) => FUNDERS.find((f) => addr(f.role) === address)?.label;
 
   return (
-    <div style={{ display: "flex", gap: 24, padding: "8px 32px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
+    <div className="cel-stagger" style={{ display: "flex", gap: 24, padding: "8px 32px 48px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
       <div style={{ width: 320, flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", padding: 24 }}>
+        <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
           <p style={{ margin: "0 0 4px", font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Acting Identity</p>
           <p style={{ margin: "0 0 12px", font: "var(--text-body-lg)" }}>
             {identity?.label ?? who}{" "}
@@ -23,7 +23,7 @@ export default function SettingsPage({ who, me, funders }) {
           <p style={{ margin: 0, font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Address</p>
           <p style={{ margin: 0, font: "var(--text-table)", fontVariantNumeric: "tabular-nums" }}>{short(me)}</p>
         </div>
-        <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", padding: 24 }}>
+        <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
           <h3 style={{ margin: "0 0 12px", font: "var(--text-body-lg)" }}>Network Connectivity</h3>
           <div style={{ background: "var(--surface-low)", border: "1px solid var(--container-highest)", borderRadius: 8, padding: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -36,7 +36,7 @@ export default function SettingsPage({ who, me, funders }) {
         </div>
       </div>
       <div style={{ flex: "2 1 420px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", padding: 24 }}>
+        <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
             <h3 style={{ margin: 0, font: "var(--text-body-lg)" }}>Ledger Notifications</h3>
             <Badge stub>local preference only — no backend to send these yet</Badge>
@@ -55,7 +55,7 @@ export default function SettingsPage({ who, me, funders }) {
             </div>
           ))}
         </div>
-        <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", padding: 24 }}>
+        <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
           <h3 style={{ margin: "0 0 12px", font: "var(--text-body-lg)" }}>Funders seen on this contract</h3>
           <p style={{ margin: "0 0 12px", font: "var(--text-fine)", color: "var(--text-faint)" }}>
             Every distinct funder address with at least one pool.

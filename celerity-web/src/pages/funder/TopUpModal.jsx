@@ -78,7 +78,7 @@ export default function TopUpModal({ pool, who, busy, run, onClose }) {
         onClick={(e) => e.stopPropagation()}
         className="cel-overlay"
         style={{
-          background: "#fff",
+          background: "var(--surface)",
           width: "min(440px, 100%)",
           borderRadius: "var(--radius-modal)",
           boxShadow: "var(--shadow-modal)",
@@ -157,11 +157,33 @@ export default function TopUpModal({ pool, who, busy, run, onClose }) {
           </div>
 
           {(onramping || sepStatus) && (
-            <div style={{ background: "#fff", border: "1px solid var(--container-highest)", borderRadius: 12, padding: 14 }}>
+            <div
+              className="cel-pop"
+              style={{
+                background: "var(--surface)",
+                border: "1.5px solid var(--primary)",
+                borderRadius: 12,
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
               <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>{SEP24_LABEL}</p>
-              <p style={{ margin: "6px 0 0", font: "var(--text-body)", fontWeight: 700, color: "var(--primary)" }}>
-                On-ramp: {sep24Chip(sepStatus)}
-              </p>
+              <span
+                style={{
+                  font: "var(--text-fine)",
+                  fontWeight: 800,
+                  color: "var(--on-primary)",
+                  background: "var(--primary)",
+                  borderRadius: "var(--radius-chip)",
+                  padding: "5px 11px",
+                }}
+              >
+                {sep24Chip(sepStatus)}
+              </span>
             </div>
           )}
         </div>

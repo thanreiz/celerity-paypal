@@ -31,7 +31,8 @@ export default function Switch({ checked = false, onChange }) {
             borderRadius: "50%",
             background: "#fff",
             boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-            transition: "left var(--transition-base)",
+            transition: "left var(--transition-base), transform var(--transition-fast)",
+            transform: checked ? "scale(1)" : "scale(0.96)",
           }}
         />
       </span>

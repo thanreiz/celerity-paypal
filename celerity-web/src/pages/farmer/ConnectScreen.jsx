@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Button from "../../design/Button";
 import { short } from "../../lib/config";
+import { farmerInitials } from "../../lib/farmers";
 
 /**
  * "Is this you?" — the one-tap wallet confirm screen, built for farmers.
@@ -24,13 +25,7 @@ export default function ConnectScreen({
   onNotMe,
 }) {
   const [showId, setShowId] = useState(false);
-
-  const initials = farmerName
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const initials = farmerInitials(farmerName);
 
   return (
     <div className="cel-connect">
@@ -48,7 +43,7 @@ export default function ConnectScreen({
                 key={f.role}
                 type="button"
                 onClick={() => onSwitchFarmer(f.role)}
-                className="cel-press"
+                className="cel-press cel-chip"
                 style={{
                   border: on ? "1.5px solid var(--primary)" : "1px solid var(--container-highest)",
                   background: on ? "var(--ok-bg)" : "#fff",

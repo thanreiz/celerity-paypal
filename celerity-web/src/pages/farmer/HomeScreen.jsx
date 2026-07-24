@@ -64,16 +64,17 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
   const recentRows = buildActivityRows({ receipts, claims, cashOuts, pools, now }).slice(0, 4);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 15, padding: "6px 18px 22px" }}>
+    <div className="cel-phone-pad" style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingTop: 6, paddingBottom: 22 }}>
       {/* greeting */}
       <div className="cel-fade" style={{ padding: "2px 2px 0" }}>
         <span style={{ font: "var(--text-body)", fontSize: 15, fontWeight: 600, color: "var(--text-dim)" }}>
-          Kumusta, <b style={{ color: "var(--text)", fontWeight: 700 }}>{farmerShortName}</b> 🌾
+          Kumusta, <b style={{ color: "var(--text)", fontWeight: 700 }}>{farmerShortName}</b>
         </span>
       </div>
 
       {/* hero balance */}
       <div
+        data-tour="balance"
         className="cel-fade cel-fade-1"
         style={{
           background: "linear-gradient(158deg, var(--primary) 0%, var(--primary-hover) 100%)",
@@ -112,24 +113,33 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
             )}
           </button>
         </div>
-        <div style={{ font: "var(--text-hero)", fontSize: 40, margin: "8px 0 2px", color: "var(--on-primary)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+        <div className="cel-money-glow" style={{ font: "var(--text-hero)", fontSize: 40, margin: "8px 0 2px", color: "var(--on-primary)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
           {hidden ? "₱ ••••••" : toPHP(shownUnits)}
         </div>
 
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-          <Button variant="on" className="cel-press" style={{ flex: 1, justifyContent: "center", background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }} onClick={onCashOut}>
-            ↓ Withdraw to pesos
+          <Button
+            data-tour="cashout"
+            variant="on"
+            className="cel-press"
+            style={{ flex: 1, justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}
+            onClick={onCashOut}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            Cash out
           </Button>
-          <Button variant="on" className="cel-press" style={{ flex: 1, justifyContent: "center", background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }} onClick={onHistory}>
-            🧾 History
+          <Button variant="on" className="cel-press" style={{ flex: 1, justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }} onClick={onHistory}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 3.5h8v9H4z" stroke="currentColor" strokeWidth="1.4" /><path d="M6 6h4M6 8.5h4M6 11h2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+            History
           </Button>
         </div>
       </div>
 
       {/* claim cards — real recurring pools, data-driven claim state */}
-      {claimable.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <p style={sectionLabel}>Relief to claim</p>
+      <div data-tour="claim" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {claimable.length > 0 ? (
+        <>
+          <p className="cel-section-label">Relief to claim</p>
           {claimable.map((p, i) => {
             const done = receivedCount(p);
             const total = p.installments;
@@ -179,21 +189,26 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
               </div>
             );
           })}
-        </div>
+        </>
+      ) : (
+        <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)", padding: "0 2px" }}>
+          Claim cards appear here after a signed typhoon settles a recurring pool.
+        </p>
       )}
+      </div>
 
       {/* quick actions */}
-      <div className="cel-fade cel-fade-3" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, background: "#fff", borderRadius: "var(--radius-card)", padding: "18px 12px", boxShadow: "var(--shadow-card)" }}>
-        <QuickAction label="Relief Programs" onClick={() => onDetail("programs")} emoji="🌾" />
-        <QuickAction label="Installments" onClick={() => onDetail("installments")} emoji="📅" />
-        <QuickAction label="My Region" onClick={() => onDetail("region")} emoji="📍" />
-        <QuickAction label="Help" onClick={() => onDetail("help")} emoji="☎️" />
+      <div className="cel-fade cel-fade-3 cel-card-surface" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, padding: "18px 12px" }}>
+        <QuickAction label="Relief Programs" onClick={() => onDetail("programs")} icon="programs" />
+        <QuickAction label="Installments" onClick={() => onDetail("installments")} icon="installments" />
+        <QuickAction label="My Region" onClick={() => onDetail("region")} icon="region" />
+        <QuickAction label="Help" onClick={() => onDetail("help")} icon="help" />
       </div>
 
       {/* recent activity — merged cash-outs (−) + relief receipts (+) */}
       <div className="cel-fade cel-fade-4">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 4px 0" }}>
-          <p style={sectionLabel}>Recent activity</p>
+          <p className="cel-section-label">Recent activity</p>
           {recentRows.length > 0 && (
             <button onClick={onHistory} className="cel-press" style={{ background: "none", border: "none", cursor: "pointer", font: "var(--text-fine)", fontSize: 12.5, fontWeight: 700, color: "var(--primary)", fontFamily: "var(--font-sans)" }}>
               See all
@@ -205,7 +220,7 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
             Nothing yet — money appears seconds after a signed typhoon signal.
           </p>
         ) : (
-          <div style={{ marginTop: 10, background: "#fff", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", border: "1px solid var(--container-highest)", overflow: "hidden" }}>
+          <div className="cel-card-surface" style={{ marginTop: 10, overflow: "hidden" }}>
             {recentRows.map((row, i) => {
               const isReceived = row.kind === "received";
               return (
@@ -272,30 +287,50 @@ function ProgressDots({ done, total }) {
   );
 }
 
-function QuickAction({ emoji, label, onClick }) {
+const QA_ICONS = {
+  programs: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3c-2 3.2-3.5 5.4-3.5 8.2a3.5 3.5 0 0 0 7 0C15.5 8.4 14 6.2 12 3Z" />
+      <path d="M12 21v-4" />
+    </svg>
+  ),
+  installments: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3v4M16 3v4M4 10h16" />
+    </svg>
+  ),
+  region: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" />
+      <circle cx="12" cy="11" r="2.2" />
+    </svg>
+  ),
+  help: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 10a4 4 0 1 1 5.2 3.8c-.8.3-1.2.9-1.2 1.7V16" />
+      <path d="M12 19h.01" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  ),
+};
+
+function QuickAction({ icon, label, onClick }) {
   return (
     <button onClick={onClick} className="cel-press" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
-      <div style={{ width: 44, height: 44, borderRadius: 14, background: "var(--container)", color: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>
-        {emoji}
+      <div className="cel-icon-tile" style={{ width: 44, height: 44, borderRadius: "var(--radius-icon)", background: "var(--container)", color: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {QA_ICONS[icon]}
       </div>
       <span style={{ font: "var(--text-fine)", fontSize: 11, color: "var(--text-dim)", textAlign: "center" }}>{label}</span>
     </button>
   );
 }
 
-const sectionLabel = {
-  margin: "0 0 0 2px",
-  font: "var(--text-label)",
-  color: "var(--text-faint)",
-  textTransform: "uppercase",
-  letterSpacing: "var(--tracking-label)",
-};
-
 const claimCardStyle = (isClaimable) => ({
-  background: "#fff",
+  background: "var(--surface)",
   borderRadius: "var(--radius-card)",
   boxShadow: "var(--shadow-card)",
-  border: `1px solid ${isClaimable ? "var(--ok-line)" : "var(--container-highest)"}`,
+  border: `1px solid ${isClaimable ? "var(--ok-line)" : "var(--border-subtle)"}`,
   padding: 16,
 });
 

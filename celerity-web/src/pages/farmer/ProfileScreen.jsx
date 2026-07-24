@@ -1,6 +1,7 @@
 import React from "react";
 import { short, UNIT } from "../../lib/config";
 import { toPHP } from "../../lib/anchor";
+import { farmerInitials } from "../../lib/farmers";
 
 export default function ProfileScreen({
   me,
@@ -9,6 +10,7 @@ export default function ProfileScreen({
   receipts = [],
   pools = [],
   onResetDemo,
+  onReplayTour,
 }) {
   const totalUnits = receipts.reduce((sum, r) => sum + Number(BigInt(r.amount)) / Number(UNIT), 0);
   const payouts = receipts.length;
@@ -18,7 +20,7 @@ export default function ProfileScreen({
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 18px 22px" }}>
       {/* identity */}
       <div className="cel-fade" style={cardCenter}>
-        <div style={avatarStyle}>{farmerName.slice(0, 2).toUpperCase()}</div>
+        <div style={avatarStyle}>{farmerInitials(farmerName)}</div>
         <div style={{ fontWeight: 700, fontSize: 18 }}>{farmerName}</div>
         <div style={{ fontSize: 12.5, color: "var(--text-faint)" }}>
           {registration ? `Region ${registration.region}` : "Not yet registered"}
@@ -79,6 +81,16 @@ export default function ProfileScreen({
       </div>
 
       {/* demo controls — clears local cash-out history for a clean live run */}
+      {onReplayTour && (
+        <div className="cel-fade cel-fade-4">
+          <button onClick={onReplayTour} style={resetButtonStyle} className="cel-press">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" /><path d="M12 8v4l2.5 1.5" />
+            </svg>
+            Replay tutorial tips
+          </button>
+        </div>
+      )}
       {onResetDemo && (
         <div className="cel-fade cel-fade-4" style={{ marginTop: 2 }}>
           <button onClick={onResetDemo} style={resetButtonStyle} className="cel-press">

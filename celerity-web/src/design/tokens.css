@@ -1,7 +1,4 @@
-/* Celerity design tokens — ported from the Celerity Design System handoff
-   bundle, cross-checked against design.md v2 and the shipped app.
-   Load-bearing class names in styles.css are untouched; these tokens
-   back the new pages/design/*.jsx components only. */
+/* Celerity design tokens — pages + design primitives share this sheet. */
 @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
 
 :root {
@@ -13,6 +10,13 @@
   --container-high: #e7e9e4;
   --container-highest: #e2e3df;
   --outline: #c1c9c0;
+
+  /* Semantic aliases — same palette, clearer intent in components */
+  --bg-page: var(--paper-page);
+  --bg-phone: var(--paper-inset);
+  --bg-card: var(--surface);
+  --border-subtle: var(--container-highest);
+  --halo-soft: radial-gradient(ellipse 70% 55% at 50% 28%, rgba(22, 69, 45, 0.07), transparent 70%);
 
   --text: #1a1c1a;
   --text-dim: #414943;
@@ -29,8 +33,7 @@
   --bad-bg: #ffdad6;  --bad-text: #93000a;  --bad-line: #ffb4ab;
   --neutral-bg: #f5f5f5; --neutral-text: #616161; --neutral-line: #e0e0e0;
 
-  /* accent — sparing use only: icon-badge rings, small highlights on the
-     farmer app's fintech-vault hero. Never a second brand color. */
+  /* accent — sparing: icon rings, small farmer-hero highlights */
   --accent: #d99a2b;
   --accent-soft: rgba(217, 154, 43, 0.14);
 
@@ -55,13 +58,28 @@
   --radius-input: 12px;
   --radius-control: 999px;
   --radius-chip: 999px;
+  --radius-icon: 14px;
+  --radius-tour: 18px;
 
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
   --space-card-padding: 24px;
+  --space-page-x: 28px;
+  --space-page-y: 8px;
+  --space-phone-x: 18px;
+  --space-stack: 20px;
 
   --shadow-card: 0 4px 20px rgba(42, 42, 40, 0.04);
   --shadow-card-hover: 0 8px 24px rgba(42, 42, 40, 0.08);
   --shadow-raised: 0 4px 12px rgba(22, 69, 45, 0.18);
   --shadow-modal: 0 8px 24px rgba(42, 42, 40, 0.08);
+  --shadow-tour: 0 12px 32px rgba(22, 69, 45, 0.14);
 
   --transition-base: 180ms ease;
   --transition-fast: 120ms ease;
