@@ -129,7 +129,7 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
   const nameValid = isValidName(to.name);
 
   return (
-    <div className="cel-overlay cel-cashout" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 20 }}>
+    <div className="cel-overlay cel-cashout" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 40 }}>
       {step !== STEP.LOADING && step !== STEP.SUCCESS && <TopBar onBack={back} />}
 
       <div className="cel-cashout-body">

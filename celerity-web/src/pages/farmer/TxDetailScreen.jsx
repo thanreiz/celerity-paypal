@@ -19,7 +19,7 @@ export default function TxDetailScreen({ tx, me, pools, onBack }) {
   const amountStr = `${isReceived ? "+" : "−"}₱${Math.round(tx.amountPhp).toLocaleString()}`;
 
   return (
-    <div className="cel-overlay" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 25 }}>
+    <div className="cel-overlay" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 40 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 20px 8px" }}>
         <button onClick={onBack} aria-label="Back" className="cel-press" style={backBtnStyle}>←</button>
         <div style={{ font: "var(--text-h2)", fontSize: 18 }}>Transaction</div>
