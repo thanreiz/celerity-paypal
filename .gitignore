@@ -29,6 +29,11 @@ dist
 .claude-dev-helper/
 .dist/
 .context/
+.agents/
+.cursor/
+docs/
+reference/
+skills-lock.json
 
 # VS Code MCP config carries the Stitch API key — never commit
 .vscode/
