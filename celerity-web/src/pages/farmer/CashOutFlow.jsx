@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Button from "../../design/Button";
 import { toPHPNumber, DEMO_USDPHP } from "../../lib/anchor";
-import { createSep31Transaction, pollSep31Status, sep31Chip, SEP31_LABEL } from "../../lib/sep31";
+import { createSep31Transaction, pollSep31Status, sep31Chip } from "../../lib/sep31";
 
 const DESTINATIONS = [
   { key: "gcash", icon: "📱", title: "GCash", subtitle: "Send to a GCash number" },
@@ -129,10 +129,10 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
   const nameValid = isValidName(to.name);
 
   return (
-    <div className="cel-overlay" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 20 }}>
+    <div className="cel-overlay cel-cashout" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 20 }}>
       {step !== STEP.LOADING && step !== STEP.SUCCESS && <TopBar onBack={back} />}
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 22px 24px", display: "flex", flexDirection: "column" }}>
+      <div className="cel-cashout-body">
         <div key={step} className="cel-step" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100%" }}>
         {/* 1 — pick where the money goes */}
         {step === STEP.DEST && (
@@ -142,7 +142,6 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
                 <BigChoice key={d.key} emoji={d.icon} title={d.title} subtitle={d.subtitle} onClick={() => chooseDest(d.key)} />
               ))}
             </div>
-            <Honesty text={`${SEP31_LABEL}. Demo only — production uses a licensed VASP (PDAX) converting settlement asset → real pesos.`} />
           </Step>
         )}
 
@@ -220,7 +219,7 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
           <Step title="Does this look right?" hint="Check before you send.">
             <div style={confirmCard}>
               <div style={{ font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)", textAlign: "center" }}>You're sending</div>
-              <div style={{ font: "var(--text-hero)", fontSize: 44, color: "var(--primary)", textAlign: "center", fontVariantNumeric: "tabular-nums", margin: "4px 0 10px" }}>₱{amount}</div>
+              <div className="cel-cashout-money" style={{ color: "var(--primary)", textAlign: "center", margin: "4px 0 10px" }}>₱{amount}</div>
               <div style={{ height: 1, background: "var(--container-highest)", margin: "4px 0 14px" }} />
               <ConfirmRow k="To" v={to.name || destTitle} />
               <ConfirmRow k={dest === "bank" ? "Account" : dest === "nearby" ? "Pick-up code" : "Number"} v={dest === "nearby" ? to.detail : dest === "bank" ? to.detail : fmtNumber(to.detail)} />
@@ -231,11 +230,11 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
           </Step>
         )}
 
-        {/* loading — SEP-31 status machine */}
+        {/* loading — stub cash-out status machine */}
         {step === STEP.LOADING && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center", padding: "0 8px" }}>
             <Spinner />
-            <div style={{ font: "var(--text-h2)", fontSize: 19 }}>Cash-out to {to.name || destTitle}…</div>
+            <div className="cel-cashout-h2">Sending to {to.name || destTitle}…</div>
             <div
               style={{
                 marginTop: 4,
@@ -248,23 +247,24 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              SEP-31 · {sep31Chip(sepStatus)}
+              {sep31Chip(sepStatus)}
             </div>
-            <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", maxWidth: 280 }}>{SEP31_LABEL}</div>
+            <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", maxWidth: "32ch" }}>
+              Demo only — no real pesos move yet.
+            </div>
           </div>
         )}
 
-        {/* success — honest mock completion, not live InstaPay */}
+        {/* success — honest stub completion, not live InstaPay */}
         {step === STEP.SUCCESS && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: "32px 8px" }}>
-              <div className="cel-pop" style={{ width: 84, height: 84, borderRadius: "50%", background: "var(--ok-bg)", color: "var(--ok-text)", fontSize: 40, display: "grid", placeItems: "center", marginBottom: 8 }}>✓</div>
-              <div style={{ font: "var(--text-h2)", fontSize: 20 }}>SEP-31 mock completed</div>
-              <div style={{ font: "var(--text-hero)", fontSize: 34, color: "var(--ok-text)", margin: "8px 0", fontVariantNumeric: "tabular-nums" }}>₱{amount}</div>
-              <div style={{ font: "var(--text-body)", fontSize: 14, color: "var(--text-dim)", maxWidth: 280 }}>
-                Demo cash-out to {to.name || destTitle} ({destTitle}). In production PDAX would pay real pesos here.
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: "clamp(16px, 4vh, 32px) 8px" }}>
+              <div className="cel-pop" style={{ width: "clamp(64px, 18vw, 84px)", height: "clamp(64px, 18vw, 84px)", borderRadius: "50%", background: "var(--ok-bg)", color: "var(--ok-text)", fontSize: "clamp(28px, 8vw, 40px)", display: "grid", placeItems: "center", marginBottom: 8 }}>✓</div>
+              <div className="cel-cashout-h2">Money sent (demo)</div>
+              <div className="cel-cashout-money" style={{ color: "var(--ok-text)", margin: "8px 0" }}>₱{amount}</div>
+              <div style={{ font: "var(--text-body)", fontSize: "clamp(13px, 3.6vw, 14.5px)", color: "var(--text-dim)", maxWidth: "34ch" }}>
+                Demo cash-out to {to.name || destTitle} via {destTitle}. Real pesos come later through a licensed partner.
               </div>
-              <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", marginTop: 4 }}>{SEP31_LABEL}</div>
             </div>
             <BigButton onClick={onClose}>Done</BigButton>
           </div>
@@ -279,7 +279,7 @@ export default function CashOutFlow({ availableUnits, recipients = [], onCashedO
 
 function TopBar({ onBack }) {
   return (
-    <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "16px 20px 4px" }}>
+    <div className="cel-cashout-topbar">
       <button onClick={onBack} aria-label="Back" className="cel-press" style={backBtnStyle}>←</button>
     </div>
   );
@@ -288,8 +288,8 @@ function TopBar({ onBack }) {
 function Step({ title, hint, children }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      <h1 style={{ font: "var(--text-h1)", fontSize: 24, color: "var(--text)", margin: "8px 0 4px", letterSpacing: "var(--tracking-tight)", textWrap: "balance" }}>{title}</h1>
-      {hint && <p style={{ font: "var(--text-body)", fontSize: 14.5, color: "var(--text-dim)", margin: "0 0 20px", lineHeight: 1.45 }}>{hint}</p>}
+      <h1 className="cel-cashout-title">{title}</h1>
+      {hint && <p className="cel-cashout-hint">{hint}</p>}
       {children}
     </div>
   );
@@ -351,7 +351,7 @@ function AmountEntry({ amount, setAmount, maxPhp, overBalance }) {
             value={amount}
             autoFocus
             onChange={(e) => setAmount(e.target.value)}
-            style={{ border: "none", outline: "none", background: "transparent", font: "var(--text-hero)", fontSize: 48, color: overBalance ? "var(--bad-text)" : "var(--text)", width: 200, textAlign: "center", fontVariantNumeric: "tabular-nums" }}
+            style={{ border: "none", outline: "none", background: "transparent", font: "var(--text-hero)", fontSize: "clamp(34px, 11vw, 48px)", color: overBalance ? "var(--bad-text)" : "var(--text)", width: "min(200px, 58vw)", textAlign: "center", fontVariantNumeric: "tabular-nums" }}
           />
         </div>
         {overBalance && (
@@ -400,10 +400,6 @@ function QrCard({ code }) {
       <div style={{ font: "var(--text-fine)", color: "var(--text-faint)", letterSpacing: "0.03em" }}>CODE {code}</div>
     </div>
   );
-}
-
-function Honesty({ text }) {
-  return <p style={{ font: "var(--text-fine)", color: "var(--text-faint)", textAlign: "center", padding: "16px 4px 0", marginTop: "auto" }}>{text}</p>;
 }
 
 function Spinner() {

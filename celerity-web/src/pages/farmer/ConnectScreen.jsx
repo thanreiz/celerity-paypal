@@ -82,10 +82,6 @@ export default function ConnectScreen({
 
           <p className="cel-connect-enrolled">On your town&apos;s farmer list</p>
 
-          <p className="cel-id-reassure">
-            Your relief money stays here safely. Only you can open it.
-          </p>
-
           <button
             type="button"
             className={"cel-id-wallet" + (showId ? " is-open" : "")}

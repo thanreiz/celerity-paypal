@@ -113,7 +113,7 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
             )}
           </button>
         </div>
-        <div className="cel-money-glow" style={{ font: "var(--text-hero)", fontSize: 40, margin: "8px 0 2px", color: "var(--on-primary)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+        <div className="cel-money-glow cel-hero-balance" style={{ margin: "8px 0 2px", color: "var(--on-primary)" }}>
           {hidden ? "₱ ••••••" : toPHP(shownUnits)}
         </div>
 

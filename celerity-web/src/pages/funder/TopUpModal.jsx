@@ -4,7 +4,7 @@ import Button from "../../design/Button";
 import { invoke } from "../../lib/celerity";
 import { toStroops, fmtUnits } from "../../lib/config";
 import { phpValue, usdValue, unitsFromUsd, unitsFromPhp, DEMO_USDPHP } from "../../lib/anchor";
-import { mockInteractiveDeposit, sep24Chip, SEP24_LABEL } from "../../lib/sep24";
+import { mockInteractiveDeposit, sep24Chip } from "../../lib/sep24";
 import { funderByRole } from "../../lib/funders";
 import { poolName } from "../../lib/poolNames";
 import { regionName } from "../../lib/regions";
@@ -171,7 +171,9 @@ export default function TopUpModal({ pool, who, busy, run, onClose }) {
                 flexWrap: "wrap",
               }}
             >
-              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>{SEP24_LABEL}</p>
+              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>
+                Demo deposit only — not a live bank transfer.
+              </p>
               <span
                 style={{
                   font: "var(--text-fine)",

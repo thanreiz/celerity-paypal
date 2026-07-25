@@ -19,7 +19,7 @@ export default function ActivityScreen({ receipts, pools, cashOuts = [], claims 
   const groups = groupByBucket(rows, now);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "0 18px 18px" }} className="cel-stagger">
+    <div className="cel-phone-pad cel-stagger" style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 18 }}>
       {rows.length === 0 && (
         <p style={{ font: "var(--text-body)", color: "var(--text-faint)", padding: "8px 4px" }}>
           Nothing yet — payments appear seconds after a signed typhoon signal.
