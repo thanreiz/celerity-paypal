@@ -191,77 +191,88 @@ export default function FarmerApp({
   }
 
   const pageTitle = page === "home" ? null : page === "activity" ? "Activity" : "Profile";
+  // Full-screen overlays (Quick help details, cash-out, tx detail) own the
+  // whole shell — the tab bar must not show under them. The coach tour needs
+  // the bar (it spotlights the Activity/Profile tabs) but only runs when no
+  // overlay is open, so this guard never hides it mid-tour.
+  const overlayUp = Boolean(overlay) || Boolean(txDetail);
 
   return (
     <div ref={frameRef} className={frameClass}>
-      <div className="cel-farmer-topbar">
-        <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-          <img src="/logo-dove.png" alt="Celerity" style={{ height: 28, width: "auto", display: "block", flexShrink: 0 }} />
-          {pageTitle && <span style={{ font: "var(--text-h2)", fontSize: 17, color: "var(--text)" }}>{pageTitle}</span>}
+      {overlayUp ? (
+        <div className="cel-farmer-overlay-host">
+          {overlay === "cashout" && (
+            <CashOutFlow
+              availableUnits={availableUnits}
+              recipients={recipients}
+              onCashedOut={recordCashOut}
+              onClose={() => setOverlay(null)}
+            />
+          )}
+          {["programs", "installments", "region", "help"].includes(overlay) && (
+            <DetailScreen kind={overlay} pools={pools} registration={registration} onBack={() => setOverlay(null)} />
+          )}
+          {txDetail && (
+            <TxDetailScreen tx={txDetail} me={me} pools={pools} onBack={() => setTxDetail(null)} />
+          )}
         </div>
-        <div className="cel-farmer-topbar-actions">
-          <ViewAsSwitch activeRole={farmerRole} onSwitch={handleSwitch} />
-          <button onClick={onOpenDev} className="cel-press" style={funderBtnStyle} aria-label="Open funder console">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 13.5h11M3.5 13.5v-6M12.5 13.5v-6M2 7.5 8 3l6 4.5M6.5 13.5v-3h3v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <span className="cel-funder-chip-label">Funder</span>
-          </button>
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className="cel-farmer-topbar">
+            <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+              <img src="/logo-dove.png" alt="Celerity" style={{ height: 28, width: "auto", display: "block", flexShrink: 0 }} />
+              {pageTitle && <span style={{ font: "var(--text-h2)", fontSize: 17, color: "var(--text)" }}>{pageTitle}</span>}
+            </div>
+            <div className="cel-farmer-topbar-actions">
+              <ViewAsSwitch activeRole={farmerRole} onSwitch={handleSwitch} />
+              <button onClick={onOpenDev} className="cel-press" style={funderBtnStyle} aria-label="Open funder console">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 13.5h11M3.5 13.5v-6M12.5 13.5v-6M2 7.5 8 3l6 4.5M6.5 13.5v-3h3v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span className="cel-funder-chip-label">Funder</span>
+              </button>
+            </div>
+          </div>
 
-      <div className="cel-farmer-scroll">
-        <div key={page} className="cel-screen">
-        {page === "home" && (
-          <HomeScreen
-            farmerShortName={identity.shortName}
-            pools={pools}
-            receipts={receipts}
-            cashOuts={cashOuts}
-            claims={claims}
-            nextClaimAtByPool={nextClaimAtByPool}
-            availableUnits={availableUnits}
-            busy={busy}
-            claim={claim}
-            onCashOut={() => setOverlay("cashout")}
-            onHistory={() => setPage("activity")}
-            onDetail={(kind) => setOverlay(kind)}
-            onOpenTx={setTxDetail}
-          />
-        )}
-        {page === "activity" && (
-          <ActivityScreen receipts={receipts} pools={pools} cashOuts={cashOuts} claims={claims} onOpenTx={setTxDetail} />
-        )}
-        {page === "profile" && (
-          <ProfileScreen
-            me={me}
-            registration={registration}
-            farmerName={farmerName}
-            receipts={receipts}
-            pools={pools}
-            onResetDemo={resetDemo}
-            onReplayTour={replayTour}
-          />
-        )}
-        </div>
-      </div>
-      <BottomNav active={page} onNavigate={setPage} />
+          <div className="cel-farmer-scroll">
+            <div key={page} className="cel-screen">
+              {page === "home" && (
+                <HomeScreen
+                  farmerShortName={identity.shortName}
+                  pools={pools}
+                  receipts={receipts}
+                  cashOuts={cashOuts}
+                  claims={claims}
+                  nextClaimAtByPool={nextClaimAtByPool}
+                  availableUnits={availableUnits}
+                  busy={busy}
+                  claim={claim}
+                  onCashOut={() => setOverlay("cashout")}
+                  onHistory={() => setPage("activity")}
+                  onDetail={(kind) => setOverlay(kind)}
+                  onOpenTx={setTxDetail}
+                />
+              )}
+              {page === "activity" && (
+                <ActivityScreen receipts={receipts} pools={pools} cashOuts={cashOuts} claims={claims} onOpenTx={setTxDetail} />
+              )}
+              {page === "profile" && (
+                <ProfileScreen
+                  me={me}
+                  registration={registration}
+                  farmerName={farmerName}
+                  receipts={receipts}
+                  pools={pools}
+                  onResetDemo={resetDemo}
+                  onReplayTour={replayTour}
+                />
+              )}
+            </div>
+          </div>
+          <BottomNav active={page} onNavigate={setPage} />
 
-      {showTour && page === "home" && !overlay && !txDetail && (
-        <CoachTour steps={FARMER_TOUR} rootRef={frameRef} onComplete={endTour} onSkip={endTour} />
-      )}
-
-      {overlay === "cashout" && (
-        <CashOutFlow
-          availableUnits={availableUnits}
-          recipients={recipients}
-          onCashedOut={recordCashOut}
-          onClose={() => setOverlay(null)}
-        />
-      )}
-      {["programs", "installments", "region", "help"].includes(overlay) && (
-        <DetailScreen kind={overlay} pools={pools} registration={registration} onBack={() => setOverlay(null)} />
-      )}
-      {txDetail && (
-        <TxDetailScreen tx={txDetail} me={me} pools={pools} onBack={() => setTxDetail(null)} />
+          {showTour && page === "home" && (
+            <CoachTour steps={FARMER_TOUR} rootRef={frameRef} onComplete={endTour} onSkip={endTour} />
+          )}
+        </>
       )}
     </div>
   );

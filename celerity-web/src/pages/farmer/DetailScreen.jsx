@@ -18,7 +18,7 @@ export default function DetailScreen({ kind, pools, registration, onBack }) {
     : null;
 
   return (
-    <div className="cel-overlay" style={{ position: "absolute", inset: 0, background: "var(--paper-page)", display: "flex", flexDirection: "column", zIndex: 40 }}>
+    <div className="cel-overlay cel-farmer-panel">
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 20px 8px" }}>
         <button onClick={onBack} aria-label="Back" className="cel-press" style={backBtnStyle}>←</button>
         <div style={{ font: "var(--text-h2)", fontSize: 18 }}>{TITLES[kind]}</div>

@@ -23,6 +23,7 @@ node_modules
 dist
 .DS_Store
 .gstack/
+.worktrees/
 
 # Local agent / tooling scratch (never commit)
 .claude/
