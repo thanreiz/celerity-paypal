@@ -100,7 +100,16 @@ export default function FarmerApp({
   const receivedUnits = receipts.reduce((sum, r) => sum + Number(BigInt(r.amount)) / Number(UNIT), 0);
   const pendingUnits = pendingClaims(claims, receipts).reduce((sum, c) => sum + c.units, 0);
   const cashedOutUnits = cashOuts.reduce((sum, c) => sum + c.units, 0);
-  const availableUnits = Math.max(0, receivedUnits + pendingUnits - cashedOutUnits);
+  // Optional ?shotBalance=N boosts available units for screenshot tooling only.
+  const shotBalance = (() => {
+    try {
+      const n = Number(new URLSearchParams(window.location.search).get("shotBalance") || 0);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    } catch {
+      return 0;
+    }
+  })();
+  const availableUnits = Math.max(0, receivedUnits + pendingUnits - cashedOutUnits) + shotBalance;
 
   const nextClaimAtByPool = {};
   for (const c of claims) {
