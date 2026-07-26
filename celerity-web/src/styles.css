@@ -667,12 +667,6 @@ a:focus-visible {
   margin-top: 2px;
   color: var(--primary-chip);
 }
-.cel-id-dot { color: var(--text-faint); font-weight: 700; }
-.cel-connect-enrolled {
-  margin: 0;
-  font-weight: 600;
-  color: var(--primary-chip);
-}
 .cel-id-wallet {
   margin-top: 16px;
   width: auto;
