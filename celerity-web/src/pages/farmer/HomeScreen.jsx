@@ -164,7 +164,11 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
                       Relief has arrived
                     </div>
                     <div style={{ font: "var(--text-body)", fontSize: 15, fontWeight: 600, color: "var(--text)", lineHeight: 1.35, marginTop: 3 }}>
-                      You have <b style={{ fontWeight: 700 }}>{amount}</b> ready to claim.
+                      {cooling ? (
+                        <>Next <b style={{ fontWeight: 700 }}>{amount}</b> installment is on a short wait.</>
+                      ) : (
+                        <>You have <b style={{ fontWeight: 700 }}>{amount}</b> ready to claim.</>
+                      )}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                       <ProgressDots done={done} total={total} />

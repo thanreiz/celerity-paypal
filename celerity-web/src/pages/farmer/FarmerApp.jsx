@@ -16,6 +16,13 @@ import { toPHPNumber } from "../../lib/anchor";
 import { pendingClaims } from "../../lib/activityRows";
 import { demoFarmerByRole, DEMO_FARMERS } from "../../lib/farmers";
 import { loadCashOuts, saveCashOuts, loadRecipients, saveRecipients, resetDemoState } from "../../lib/farmerDemoState";
+import {
+  loadClaimCooldowns,
+  saveClaimCooldowns,
+  clearClaimCooldowns,
+  unlockAfterPeriod,
+  isClaimNotDueYet,
+} from "../../lib/claimCooldown";
 import { FARMER_TOUR, isTourDone, completeTour, resetTour } from "../../lib/tours";
 
 function seedRecipientsFor(name) {
@@ -54,6 +61,11 @@ export default function FarmerApp({
   const cashOutSeq = useRef(0);
   const frameRef = useRef(null);
   const [showTour, setShowTour] = useState(() => !isTourDone("farmer"));
+  const [claimCooldowns, setClaimCooldowns] = useState(() => loadClaimCooldowns(farmerRole));
+  // Baseline receipt counts so the first load doesn't fake a brand-new settle.
+  // Only *increases* after that seed the unlock timer (settle / later claims).
+  const receiptCountsReady = useRef(false);
+  const receiptCountsRef = useRef({});
 
   // Reload local demo ledgers when View-as switches identity.
   useEffect(() => {
@@ -61,12 +73,46 @@ export default function FarmerApp({
     setCashOuts(loadCashOuts(farmerRole));
     setRecipients(loadRecipients(seeds, farmerRole));
     setClaims([]);
+    setClaimCooldowns(loadClaimCooldowns(farmerRole));
     setTxDetail(null);
     setOverlay(null);
     setPage("home");
     claimSeq.current = 0;
     cashOutSeq.current = 0;
+    receiptCountsReady.current = false;
+    receiptCountsRef.current = {};
   }, [farmerRole, identity.name]);
+
+  useEffect(() => saveClaimCooldowns(claimCooldowns, farmerRole), [claimCooldowns, farmerRole]);
+
+  // When settle (or a claim refresh) adds receipts for a recurring pool, start
+  // the same countdown Home already renders — don't wait for a failed Claim tap.
+  useEffect(() => {
+    const counts = {};
+    for (const r of receipts) {
+      const k = String(r.pool_id);
+      counts[k] = (counts[k] || 0) + 1;
+    }
+    if (!receiptCountsReady.current) {
+      receiptCountsRef.current = counts;
+      receiptCountsReady.current = true;
+      return;
+    }
+    setClaimCooldowns((prev) => {
+      let next = prev;
+      let changed = false;
+      for (const [poolId, count] of Object.entries(counts)) {
+        const before = receiptCountsRef.current[poolId] || 0;
+        if (count <= before) continue;
+        const pool = pools.find((p) => String(p.id) === poolId);
+        if (!pool || Number(pool.installments) <= 1) continue;
+        next = unlockAfterPeriod(next, poolId, pool.claim_period_secs);
+        changed = true;
+      }
+      receiptCountsRef.current = counts;
+      return changed ? next : prev;
+    });
+  }, [receipts, pools]);
 
   useEffect(() => {
     view("farmer", { addr: me }).then(setRegistration).catch(() => setRegistration(null));
@@ -82,15 +128,27 @@ export default function FarmerApp({
       const pool = pools.find((p) => String(p.id) === String(poolId));
       const units = pool ? Number(BigInt(pool.payout_per_farmer)) / Number(UNIT) : 0;
       const receiptCountAtClaim = receipts.filter((r) => String(r.pool_id) === String(poolId)).length;
+      const paidAt = Date.now();
       claimSeq.current += 1;
       setClaims((prev) => [
         ...prev,
-        { id: `cl-${claimSeq.current}`, poolId: String(poolId), units, php: toPHPNumber(units), when: Date.now(), receiptCountAtClaim },
+        { id: `cl-${claimSeq.current}`, poolId: String(poolId), units, php: toPHPNumber(units), when: paidAt, receiptCountAtClaim },
       ]);
+      if (pool) {
+        setClaimCooldowns((prev) => unlockAfterPeriod(prev, poolId, pool.claim_period_secs, paidAt));
+      }
       notify("Installment claimed ✓");
       await new Promise((r) => setTimeout(r, 1500));
       await refresh();
     } catch (e) {
+      // Contract still gating — show the countdown instead of a red error toast.
+      if (isClaimNotDueYet(e)) {
+        const pool = pools.find((p) => String(p.id) === String(poolId));
+        if (pool) {
+          setClaimCooldowns((prev) => unlockAfterPeriod(prev, poolId, pool.claim_period_secs));
+        }
+        return;
+      }
       notify(`Claim: ${friendlyError(e)}`, true);
     } finally {
       setBusy(false);
@@ -112,12 +170,16 @@ export default function FarmerApp({
   const availableUnits = Math.max(0, receivedUnits + pendingUnits - cashedOutUnits) + shotBalance;
 
   const nextClaimAtByPool = {};
+  for (const [poolId, cool] of Object.entries(claimCooldowns)) {
+    if (!cool?.unlockAt) continue;
+    nextClaimAtByPool[poolId] = { unlockAt: cool.unlockAt, claimedAt: cool.paidAt || 0 };
+  }
   for (const c of claims) {
     const pool = pools.find((p) => String(p.id) === String(c.poolId));
     if (!pool) continue;
     const unlockAt = c.when + Number(pool.claim_period_secs) * 1000;
     const key = String(c.poolId);
-    if (!(key in nextClaimAtByPool) || c.when > nextClaimAtByPool[key].claimedAt) {
+    if (!(key in nextClaimAtByPool) || unlockAt > nextClaimAtByPool[key].unlockAt) {
       nextClaimAtByPool[key] = { unlockAt, claimedAt: c.when };
     }
   }
@@ -140,6 +202,8 @@ export default function FarmerApp({
 
   const resetDemo = () => {
     resetDemoState(farmerRole);
+    clearClaimCooldowns(farmerRole);
+    setClaimCooldowns({});
     setCashOuts([]);
     setRecipients(seedRecipientsFor(farmerName));
     notify("Demo wallet reset — cash-out history cleared");
