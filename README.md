@@ -333,10 +333,10 @@ cp .env.example .env   # fill in: contract ID from deployments.json, demo secret
 npm run dev
 ```
 
-The UI never embeds signing secrets. Money-moving calls go through gated `/api/*`
-server routes (Vercel serverless + Vite dev middleware). Presenters unlock with
-`DEMO_GATE` (session PIN). Requires `@stellar/stellar-sdk` ≥ 16 (older majors can't parse
-current-protocol transaction metadata).
+The UI never embeds signing secrets. Money-moving calls go through `/api/*`
+server routes (Vercel serverless + Vite dev middleware). Requires
+`@stellar/stellar-sdk` ≥ 16 (older majors can't parse current-protocol
+transaction metadata).
 
 ### Prerequisites (contract build / deploy)
 
@@ -405,7 +405,6 @@ cd celerity-web && node ../tools/seed-demo.mjs
 | `FARMER_SECRET` | yes | Server-only — Mang Ramon |
 | `FARMER2_SECRET` | yes | Server-only — Aling Nena |
 | `ORACLE_SECRET` | yes | Server-only — same key as `oracle/.env` |
-| `DEMO_GATE` | yes | Stage PIN for `X-Celerity-Gate` on `/api/invoke` and `/api/oracle-sign` |
 
 Do **not** set `VITE_*_SECRET` in Vercel Production — Vite would bake them into the public JS bundle.
 

@@ -1,29 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
-import { demoGate } from "./env.js";
-
-function equal(a, b) {
-  const aa = Buffer.from(String(a || ""), "utf8");
-  const bb = Buffer.from(String(b || ""), "utf8");
-  if (aa.length !== bb.length) return false;
-  return timingSafeEqual(aa, bb);
-}
-
-export function requireGate(req) {
-  const expected = demoGate();
-  if (!expected) {
-    const err = new Error("DEMO_GATE is not configured on the server");
-    err.status = 503;
-    throw err;
-  }
-  const header = req.headers["x-celerity-gate"] || req.headers["authorization"] || "";
-  const provided = String(header).replace(/^Bearer\s+/i, "").trim();
-  if (!equal(provided, expected)) {
-    const err = new Error("Invalid or missing demo gate PIN");
-    err.status = 401;
-    throw err;
-  }
-}
-
 /** Soft per-IP rate limit (in-memory; resets on cold start). */
 const hits = new Map();
 const WINDOW_MS = 60_000;

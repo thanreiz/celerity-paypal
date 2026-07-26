@@ -3,9 +3,7 @@ import FunderPortal from "./pages/funder/FunderPortal";
 import FarmerApp from "./pages/farmer/FarmerApp";
 import TransparencyLedgerPage from "./pages/transparency/TransparencyLedgerPage";
 import Toast from "./design/Toast";
-import GateModal from "./design/GateModal";
 import { farmerReceipts, addr, loadAddresses } from "./lib/celerity";
-import { registerGatePrompt } from "./lib/gate";
 import { friendlyError } from "./lib/errors";
 import { bindAppHeight, lockBodyScroll } from "./lib/viewport";
 
@@ -30,8 +28,6 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [bootReady, setBootReady] = useState(false);
-  const [gateOpen, setGateOpen] = useState(false);
-  const gateResolver = useRef(null);
   const [farmerRole, setFarmerRole] = useState(loadFarmerRole);
   const farmerRoleRef = useRef(farmerRole);
   farmerRoleRef.current = farmerRole;
@@ -40,17 +36,6 @@ export default function App() {
   const notify = useCallback((msg, isError = false) => {
     setToast({ msg, isError });
     setTimeout(() => setToast(null), isError ? 12000 : 5000);
-  }, []);
-
-  useEffect(() => {
-    registerGatePrompt(
-      () =>
-        new Promise((resolve, reject) => {
-          gateResolver.current = { resolve, reject };
-          setGateOpen(true);
-        })
-    );
-    return () => registerGatePrompt(null);
   }, []);
 
   // Pin farmer shell to the visible viewport so iOS Safari chrome can't
@@ -162,22 +147,6 @@ export default function App() {
     [refresh, notify]
   );
 
-  const gateModal = (
-    <GateModal
-      open={gateOpen}
-      onSubmit={async (pin) => {
-        gateResolver.current?.resolve(pin);
-        gateResolver.current = null;
-        setGateOpen(false);
-      }}
-      onCancel={() => {
-        gateResolver.current?.reject(new Error("Demo PIN cancelled"));
-        gateResolver.current = null;
-        setGateOpen(false);
-      }}
-    />
-  );
-
   // FarmerApp / FunderPortal call addr() during render — must not mount until
   // loadAddresses() finishes, or the throw aborts commit and boot never runs.
   if (!bootReady) {
@@ -220,7 +189,6 @@ export default function App() {
         {devSurface === "public" && <TransparencyLedgerPage onBack={() => setDevSurface("funder")} />}
 
         {toast && <Toast message={toast.msg} error={toast.isError} />}
-        {gateModal}
       </div>
     );
   }
@@ -239,7 +207,6 @@ export default function App() {
         onOpenDev={() => setDevOpen(true)}
       />
       {toast && <Toast message={toast.msg} error={toast.isError} />}
-      {gateModal}
     </div>
   );
 }

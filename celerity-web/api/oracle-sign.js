@@ -1,4 +1,4 @@
-import { requireGate, rateLimit } from "./_lib/gate.js";
+import { rateLimit } from "./_lib/gate.js";
 import { encodeValue } from "./_lib/serialize.js";
 import { signOracleEvent } from "./_lib/stellar.js";
 
@@ -33,7 +33,6 @@ export default async function handler(req, res) {
   }
   try {
     rateLimit(req);
-    requireGate(req);
     const body = await readBody(req);
     const region = Number(body.region);
     const signal = Number(body.signal);

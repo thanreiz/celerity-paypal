@@ -1,6 +1,6 @@
 // Thin wrapper around the Soroban contract.
 // Reads: browser simulation (no secrets).
-// Writes + oracle sign: POST /api/* with DEMO_GATE (secrets stay server-side).
+// Writes + oracle sign: POST /api/* (secrets stay server-side).
 import { contract, rpc } from "@stellar/stellar-sdk";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL, short } from "./config";
 import { FUNDERS } from "./funders";
@@ -52,7 +52,7 @@ function viewClient() {
   return viewClientPromise;
 }
 
-/** Submit a state-changing call as `role` via the gated signing API. */
+/** Submit a state-changing call as `role` via the server signing API. */
 export async function invoke(role, method, args) {
   return apiInvoke(role, method, args);
 }

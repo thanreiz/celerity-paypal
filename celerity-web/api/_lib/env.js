@@ -14,7 +14,3 @@ export function publicConfig() {
   }
   return { CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL };
 }
-
-export function demoGate() {
-  return process.env.DEMO_GATE || "";
-}

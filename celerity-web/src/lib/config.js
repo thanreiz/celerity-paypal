@@ -1,5 +1,5 @@
-// Public runtime config only. Signing secrets live on the server (/api/*)
-// behind DEMO_GATE — never VITE_*_SECRET (Vite would bake them into the bundle).
+// Public runtime config only. Signing secrets live on the server (/api/*) —
+// never VITE_*_SECRET (Vite would bake them into the bundle).
 //
 // IMPORTANT: access import.meta.env.VITE_* with STATIC property names only.
 // Dynamic import.meta.env[key] makes Vite embed every VITE_* var from .env.
