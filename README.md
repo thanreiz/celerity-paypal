@@ -5,7 +5,7 @@
 <h1 align="center">Celerity</h1>
 
 <p align="center">
-  <strong>Disaster money that moves itself.</strong>
+  <strong>Relief that moves.</strong>
 </p>
 
 <p align="center">
@@ -47,6 +47,7 @@ cross-border settlement layer *underneath* them.
 > - **Live demo:** [stellar-celerity.me](https://stellar-celerity.me/)
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
+> - **Demo video script:** [`DEMO-VIDEO-TWITTER.md`](DEMO-VIDEO-TWITTER.md)
 > - **Contract address (Stellar Testnet):** `CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7`
 >   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7)
 > - **Design rules & win condition:** [`PROJECT.md`](PROJECT.md)
@@ -166,8 +167,14 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
 
 ### Farmer App + Transparency
 
-- **Farmer view** — wallet total, receipts, recurring-installment claims, and a labeled SEP-31
-  anchor cash-out to PHP.
+- **Connect** — brand-first “Is this you?” screen: dove lockup + **Relief that moves**, farmer
+  name, full region label (e.g. Region V — Bicol), optional account reveal, and a quiet
+  multi-farmer switch for the demo slate.
+- **Farmer shell** — wallet total, receipts, recurring-installment claims, Quick Help / Cash Out /
+  tx detail as isolated overlays (Home nav never bleeds through), and a labeled SEP-31 anchor
+  cash-out to PHP.
+- **Brand chrome** — dove favicon in the browser tab; splash and Connect share the same mark and
+  tagline as the live site.
 - **Public transparency ledger** — every release across all funders, no login required.
 
 ### Honest Stubs (clearly labeled)
@@ -197,7 +204,7 @@ flowchart TD
 | Layer | Technology |
 | --- | --- |
 | Smart contract | Soroban (Rust), deployed to Stellar Testnet |
-| Frontend | React + Vite, `@stellar/stellar-sdk` (≥ 16), plain inline-style design system |
+| Frontend | React + Vite, `@stellar/stellar-sdk` (≥ 16), design tokens + shared CSS |
 | Oracle signer | Node.js Ed25519 (simulates a PAGASA/JMA-role authorized key) |
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
@@ -211,14 +218,17 @@ contracts/celerity/       Soroban smart contract (Rust)
   src/lib.rs              Data model + full function surface
   src/test.rs            Unit / adversarial tests (idempotency, isolation, dry-pool)
 celerity-web/            React frontend
+  public/                Brand assets (dove favicon, logo lockup)
   src/pages/funder/      Login, home, pools, oracle (bulletin drop), ledger, registry, settings
-  src/pages/farmer/      Farmer app: home, activity, cash-out, profile
+  src/pages/farmer/      Farmer app: splash, connect, home, activity, cash-out, profile
   src/pages/transparency/ Public transparency ledger
   src/design/            Design-system components + tokens.css
   src/lib/               celerity.js (contract client), regions.js, funders.js, anchor.js
 oracle/                  Node.js Ed25519 oracle signer (demo stub for the weather feed)
 tools/seed-demo.mjs      Repeatable demo-slate seed (pools + farmers, no event fired)
-screenshots/             Every screen in the live app, farmer + funder + transparency
+screenshots/             Product screenshots (refresh with `node tools/capture-screenshots.mjs`)
+DEMO-VIDEO-TWITTER.md    Short demo video roadmap + teleprompter script
+tools/capture-screenshots.mjs  Playwright capture of live farmer + funder screens
 deployments.json         Public Testnet deployment metadata + contract-id history
 ```
 
@@ -234,16 +244,22 @@ originals are in [`screenshots/`](screenshots/).
 
 <table>
 <tr>
+<td align="center"><img src="screenshots/01-farmer-splash.png" width="200" alt="Splash" /><br /><sub>Splash</sub></td>
+<td align="center"><img src="screenshots/02-farmer-connect.png" width="200" alt="Connect" /><br /><sub>Connect</sub></td>
 <td align="center"><img src="screenshots/03-farmer-home.png" width="200" alt="Farmer home" /><br /><sub>Home</sub></td>
 <td align="center"><img src="screenshots/04-farmer-activity.png" width="200" alt="Farmer activity" /><br /><sub>Activity</sub></td>
-<td align="center"><img src="screenshots/07-farmer-installments.png" width="200" alt="Installments" /><br /><sub>Installments</sub></td>
-<td align="center"><img src="screenshots/05-farmer-profile.png" width="200" alt="Farmer profile" /><br /><sub>Profile</sub></td>
 </tr>
 <tr>
+<td align="center"><img src="screenshots/07-farmer-installments.png" width="200" alt="Installments" /><br /><sub>Installments</sub></td>
+<td align="center"><img src="screenshots/05-farmer-profile.png" width="200" alt="Farmer profile" /><br /><sub>Profile</sub></td>
 <td align="center"><img src="screenshots/06-farmer-relief-programs.png" width="200" alt="Relief programs" /><br /><sub>Relief programs</sub></td>
 <td align="center"><img src="screenshots/08-farmer-my-region.png" width="200" alt="My region" /><br /><sub>My region</sub></td>
+</tr>
+<tr>
 <td align="center"><img src="screenshots/10-farmer-tx-detail.png" width="200" alt="Transaction detail" /><br /><sub>Tx detail</sub></td>
 <td align="center"><img src="screenshots/09-farmer-help.png" width="200" alt="Help" /><br /><sub>Help</sub></td>
+<td></td>
+<td></td>
 </tr>
 </table>
 
@@ -258,8 +274,8 @@ originals are in [`screenshots/`](screenshots/).
 </tr>
 <tr>
 <td align="center"><img src="screenshots/15-farmer-cashout-success.png" width="200" alt="Cash-out success" /><br /><sub>Success</sub></td>
-<td align="center"><img src="screenshots/01-farmer-splash.png" width="200" alt="Splash" /><br /><sub>Splash</sub></td>
-<td align="center"><img src="screenshots/02-farmer-connect.png" width="200" alt="Connect" /><br /><sub>Connect</sub></td>
+<td></td>
+<td></td>
 <td></td>
 </tr>
 </table>
@@ -369,9 +385,11 @@ cd celerity-web && node ../tools/seed-demo.mjs
 3. In **Farmers (LGU)**, show the registry belongs to the government, not the funders.
 4. Open **Trigger Typhoon**, drop the PAGASA bulletin, and watch it settle every matching region
    at once — one signed bulletin, many releases.
-5. Jump to the **Ledger** and the **farmer app**: the money has already arrived, and every release
-   is one click from stellar.expert.
-6. Run the farmer's balance through the labeled **SEP-31 anchor stub** to spendable pesos.
+5. Jump to the **farmer app**: confirm identity on **Connect** (name + region), then show the
+   wallet — the money has already arrived. Every release is one click from stellar.expert; the
+   funder **Ledger** matches what the farmer sees.
+6. Run the farmer's balance through the labeled **SEP-31 anchor stub** to spendable pesos
+   (overlays stay above the tab bar the whole way).
 
 ## Environment
 
@@ -391,10 +409,10 @@ cd celerity-web && node ../tools/seed-demo.mjs
 
 Do **not** set `VITE_*_SECRET` in Vercel Production — Vite would bake them into the public JS bundle.
 
-## Team
+## Credits
 
-**Ethan Dreiz Baltazar**
-Builder, designer, and developer of Celerity.
+**Ethan Dreiz Baltazar** — solo developer.
+Built, designed, and shipped Celerity end to end (contract, oracle stub, farmer app, funder console, and demo).
 
 - GitHub: [thanreiz](https://github.com/thanreiz)
 
@@ -410,7 +428,8 @@ Builder, designer, and developer of Celerity.
 
 ---
 
-> **Status:** Phase 5 — the end-to-end story is clickable. A signed typhoon bulletin releases
-> multiple independently-funded sub-pools to registered farmers, live on Stellar Testnet,
-> idempotently, with a per-funder ledger and a labeled anchor cash-out. Funder console redesigned
-> login-first with a multi-region bulletin trigger; running on a fresh, seeded demo contract.
+> **Status:** Demo-ready on [stellar-celerity.me](https://stellar-celerity.me/). A signed typhoon
+> bulletin releases multiple independently-funded sub-pools to registered farmers, live on Stellar
+> Testnet, with a per-funder ledger and a labeled SEP-31 cash-out. Farmer Connect is brand-first
+> (**Relief that moves** + full region label); overlays no longer bleed under the tab bar; the dove
+> mark is the site favicon.
