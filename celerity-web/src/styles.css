@@ -651,28 +651,23 @@ a:focus-visible {
 .cel-id-meta {
   margin: 12px 0 0;
   display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 6px 10px;
+  gap: 6px;
   font: var(--text-fine);
   font-size: clamp(15px, 4vw, 16.5px);
-  color: var(--text-dim);
-  max-width: 40ch;
-}
-.cel-id-dot { color: var(--text-faint); }
-.cel-id-region {
-  font-size: inherit;
   font-weight: 600;
   color: var(--text-dim);
-  margin: 0;
+  max-width: 34ch;
+  text-align: left;
+  line-height: 1.35;
 }
-.cel-id-region--icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.cel-id-meta > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--primary-chip);
 }
-.cel-id-region--icon svg { display: block; width: 15px; height: 15px; color: var(--primary-chip); }
+.cel-id-dot { color: var(--text-faint); font-weight: 700; }
 .cel-connect-enrolled {
   margin: 0;
   font-weight: 600;

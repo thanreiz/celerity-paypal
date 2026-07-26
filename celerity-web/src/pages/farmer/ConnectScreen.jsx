@@ -52,15 +52,17 @@ export default function ConnectScreen({
 
           <p className="cel-id-name cel-id-name--lg">{farmerName}</p>
           <p className="cel-id-meta">
-            <span className="cel-id-region cel-id-region--icon">
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path d="M7 1.5c2.5 0 4.5 2 4.5 4.4C11.5 9 7 12.5 7 12.5S2.5 9 2.5 5.9C2.5 3.5 4.5 1.5 7 1.5Z" stroke="currentColor" strokeWidth="1.3" />
-                <circle cx="7" cy="5.9" r="1.5" stroke="currentColor" strokeWidth="1.3" />
-              </svg>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M7 1.5c2.5 0 4.5 2 4.5 4.4C11.5 9 7 12.5 7 12.5S2.5 9 2.5 5.9C2.5 3.5 4.5 1.5 7 1.5Z" stroke="currentColor" strokeWidth="1.3" />
+              <circle cx="7" cy="5.9" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+            </svg>
+            <span>
               {place}
+              <span className="cel-id-dot" aria-hidden="true">
+                {" · "}
+              </span>
+              <span className="cel-connect-enrolled">On your town&apos;s farmer list</span>
             </span>
-            <span className="cel-id-dot" aria-hidden="true">·</span>
-            <span className="cel-connect-enrolled">On your town&apos;s farmer list</span>
           </p>
 
           <button
