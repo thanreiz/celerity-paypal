@@ -23,9 +23,9 @@
 <p align="center">
   <img alt="Soroban" src="https://img.shields.io/badge/Soroban-Smart_Contract-16452d?style=flat-square" />
   <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
-  <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-Ed25519_signed-d99a2b?style=flat-square" />
+  <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-2--of--3_Ed25519-d99a2b?style=flat-square" />
   <img alt="SEP-31" src="https://img.shields.io/badge/Anchor-SEP--31_stub-b45309?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-56%2F56_passing-2e7d32?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-57%2F57_passing-2e7d32?style=flat-square" />
 </p>
 
 ---
@@ -34,7 +34,7 @@
 
 Celerity is a programmable disaster-disbursement rail on Stellar. Funders deposit into a
 shared on-chain escrow, each with an earmarked sub-pool and its own release rule. When an
-objective, signed weather event (a typhoon signal from an authorized oracle key) fires,
+objective, signed weather event (a typhoon signal meeting a **2-of-3 oracle threshold**) fires,
 the smart contract releases payouts automatically to pre-registered farmers, cashes out to
 PHP through a Stellar anchor, and logs every movement so each funder can see exactly where
 its money went. No agency hand-off, no physical check, no waiting.
@@ -48,8 +48,8 @@ cross-border settlement layer *underneath* them.
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
 > - **Demo video script:** [`docs/hackathon/DEMO-VIDEO-TWITTER.md`](docs/hackathon/DEMO-VIDEO-TWITTER.md)
-> - **Contract address (Stellar Testnet):** `CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU)
+> - **Contract address (Stellar Testnet):** `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3)
 > - **Docs index:** [`docs/`](docs/README.md)
 > - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
 > - **Design system:** [`docs/product/design.md`](docs/product/design.md)
@@ -76,12 +76,12 @@ layers of intermediaries. Celerity collapses that into one flow — **fund, trig
 ## Solution
 
 Funders deposit into a shared Soroban escrow, each deposit earmarked as a sub-pool with its
-own payout rule and recipient scope. An authorized oracle submits a **signed** weather
-event (region, typhoon signal). The contract verifies the signature and compares numbers —
-it never reads or interprets a document. For every sub-pool whose condition the event meets,
-it releases the payout to the registered farmers in that region, on the funder's schedule,
-and logs a per-funder ledger entry. Payouts convert to spendable pesos through a Stellar
-anchor at the edge.
+own payout rule and recipient scope. Authorized oracles submit a **threshold-signed** weather
+event (region, typhoon signal). The contract verifies enough Ed25519 signatures and compares
+numbers — it never reads or interprets a document. For every sub-pool whose condition the
+event meets, it releases the payout only to farmers whose **registry region matches that
+pool's region**, on the funder's schedule, and logs a per-funder ledger entry. Payouts
+convert to spendable pesos through a Stellar anchor at the edge.
 
 **Core claim:** a national insurer, a regional fund, and a foreign foundation can co-fund the
 same typhoon trigger and pay a farmer instant, spendable pesos — with no agency hand-off and
@@ -99,10 +99,11 @@ every peso auditable.
    provenance — RSBSA / COOP / NGO). The contract pays only registered addresses in the
    triggered region — it doesn't decide who's a farmer, it pays a verified list.
 
-3. **A signed weather bulletin enters the contract.**
-   The oracle signs `region · signal · nonce` with an Ed25519 key; `report_event` verifies it
-   against the stored oracle public key. A real typhoon hits many regions at once, so the app
-   ingests a bulletin and signs **one event per region**.
+3. **A multi-sig weather bulletin enters the contract.**
+   Authorized oracles each sign `region · signal · nonce` with Ed25519; `report_event`
+   verifies a **threshold** of signatures against constructor-pinned keys (live demo: 2-of-3).
+   A real typhoon hits many regions at once, so the app ingests a bulletin and reports
+   **one event per region**.
 
 4. **Settlement releases every matching sub-pool at once.**
    `settle_event` iterates matching sub-pools and pays each registered farmer — idempotent on
@@ -127,7 +128,7 @@ whole design leans on. What's actually in use, all live on Testnet:
 | --- | --- | --- |
 | 1 | **Soroban smart contract** | The full escrow, trigger, and settlement logic runs as a Rust contract on Stellar, not a backend server — funds and rules live on-chain. |
 | 2 | **Stellar Asset Contract (SAC) transfers** | Payouts move with `token::TokenClient::new(&e, &get_token(&e)).transfer(...)` — native Stellar asset transfers, not an internal ledger entry. |
-| 3 | **On-chain signature verification (Ed25519)** | `e.crypto().ed25519_verify(...)` in `report_event` checks the oracle's signature natively inside the contract — the typhoon trigger is verified by Stellar's own crypto primitive, not a server we control. |
+| 3 | **On-chain multi-sig verification (Ed25519)** | `report_event` verifies a threshold of `ed25519_verify` checks against constructor-pinned oracle keys — no single agency key can fire payouts alone. |
 | 4 | **Per-address authorization** | Every state-changing call (`deposit`, `register_farmer`, `claim`, …) requires `.require_auth()` from the correct Stellar account — funder isolation is enforced by the protocol, not just app logic. |
 | 5 | **On-chain persistent storage** | Sub-pools, farmer registry, and settled-event keys live in `e.storage().persistent()` / `.instance()` — the state judges can audit is the same state the contract runs on. |
 | 6 | **On-chain event log** | Every release publishes via `e.events().publish(...)`, giving each funder a verifiable, independent release trail — not an app database log. |
@@ -135,7 +136,7 @@ whole design leans on. What's actually in use, all live on Testnet:
 | 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
 
 Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
-per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU).
+per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3).
 
 ## Features
 
@@ -143,8 +144,9 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
 
 - **Shared escrow, isolated sub-pools** — many funders, one contract; `deposit`, `top_up`,
   `withdraw_unspent`, `pause_pool` / `resume_pool`, all funder-auth scoped.
-- **Signed oracle trigger** — `report_event` verifies an Ed25519 signature and a nonce; the
-  contract compares numbers, never reads a document. Replays are rejected.
+- **Multi-sig oracle trigger (2-of-3)** — `report_event` takes indexed Ed25519 signatures,
+  enforces the constructor threshold, and rejects replays via nonce. The contract compares
+  numbers, never reads a bulletin document. Inspect keys anytime with `oracle_config()`.
 - **Idempotent multi-funder release** — `settle_event` pays every matching pool once, keyed on
   `(event_id, farmer, pool_id)`; a re-run after a top-up pays only whoever was missed.
   Demo-scale: one transaction scans `1..NextPoolId` × farmers in the region; paginate before
@@ -162,7 +164,7 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
   `reg_farm`, `rm_farm`, `event`, `release`, `exhausted`, `claim`) emits a Soroban contract event.
   Combined with `funder_ledger`, the full disbursement history is verifiable directly on-chain —
   not in any private database Celerity controls. Judges can inspect all events on
-  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU).
+  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3).
 
 ### Funder Console (React)
 
@@ -217,11 +219,11 @@ flowchart TD
 | --- | --- |
 | Smart contract | Soroban (Rust), deployed to Stellar Testnet |
 | Frontend | React + Vite, `@stellar/stellar-sdk` (≥ 16), design tokens + shared CSS |
-| Oracle signer | Node.js Ed25519 (simulates a PAGASA/JMA-role authorized key) |
+| Oracle signer | Node.js Ed25519 multi-sig (2-of-3 demo keys standing in for PAGASA/JMA/NDRRMC) |
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU` |
+| Contract address | `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3` |
 
 ## Repo Layout
 
@@ -363,17 +365,18 @@ transaction metadata).
 # Build the contract to Wasm
 cd contracts/celerity && stellar contract build
 
-# Run the test suite (56 tests, adversarial cases included)
+# Run the test suite (57 tests, adversarial cases included)
 cargo test
 
-# Deploy to Testnet. The constructor runs atomically at deploy — admin, oracle
-# Ed25519 pubkey (hex), and settlement token (SAC address) are set with no
-# separate init call to front-run.
+# Deploy to Testnet. The constructor runs atomically at deploy — admin,
+# oracle key set + threshold, and settlement token (SAC address) are set with
+# no separate init call to front-run.
 stellar contract deploy \
   --wasm target/wasm32v1-none/release/celerity.wasm \
   --source-account alice --network testnet -- \
   --admin "$(stellar keys address alice)" \
-  --oracle <64-hex-char Ed25519 pubkey> \
+  --oracle_keys '["<64-hex pubkey 0>", "<64-hex pubkey 1>", "<64-hex pubkey 2>"]' \
+  --threshold 2 \
   --token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
@@ -417,7 +420,9 @@ cd celerity-web && node ../tools/seed-demo.mjs
 | `FUNDER2_SECRET` | yes | Server-only — second funder (PCIC / mallory) |
 | `FARMER_SECRET` | yes | Server-only — Mang Ramon |
 | `FARMER2_SECRET` | yes | Server-only — Aling Nena |
-| `ORACLE_SECRET` | yes | Server-only — same key as `oracle/.env` |
+| `ORACLE_SECRET` | yes | Server-only — oracle key index 0 (same as `oracle/.env`) |
+| `ORACLE_SECRET_2` | yes | Server-only — oracle key index 1 (required for 2-of-3) |
+| `ORACLE_SECRET_3` | no | Server-only — oracle key index 2 (optional third signer) |
 
 Do **not** set `VITE_*_SECRET` in Vercel Production — Vite would bake them into the public JS bundle.
 
@@ -430,15 +435,15 @@ Built, designed, and shipped Celerity end to end (contract, oracle stub, farmer 
 
 ## Notes
 
-- Never print, log, or commit a secret key. The oracle signer's key is generated and injected,
+- Never print, log, or commit a secret key. Oracle signer keys are generated and injected,
   never hardcoded; `.env` and `oracle/.env` are gitignored.
 - The oracle feed and the anchor cash-out are deliberate, clearly-labeled stubs — everything
   else (escrow, trigger verification, multi-funder release, registry, ledger, claim) is real and
   live on Testnet.
 - `settle_event` is demo-scale: one transaction iterates `1..NextPoolId` × farmers in the
   triggered region. Pagination is roadmap before any real-money pilot.
-- Admin, oracle Ed25519 public key, and settlement token are constructor-pinned for the
-  hackathon — there is no on-chain rotation path yet.
+- Admin is rotatable via `set_admin`; oracle keys + threshold and the settlement token are
+  constructor-pinned for the hackathon (inspect with `oracle_config()`).
 - Contract IDs are public and safe to commit; they live in `deployments.json`, with every prior
   redeploy preserved under `previous_contract_ids`.
 

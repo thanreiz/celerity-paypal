@@ -35,10 +35,11 @@ function fmtCountdown(ms) {
  * "Fully paid out" chip instead of a Claim button, so nothing errors. Copy stays
  * plain and pesos-only.
  */
-export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts, cashOuts = [], claims = [], nextClaimAtByPool = {}, availableUnits, busy, claim, onCashOut, onHistory, onDetail, onOpenTx }) {
+export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts, cashOuts = [], claims = [], nextClaimAtByPool = {}, availableUnits, busy, claim, onCashOut, onHistory, onDetail, onOpenTx, registration = null }) {
   const [hidden, setHidden] = useState(false);
   const shownUnits = useCountUp(availableUnits);
 
+  const myRegion = registration != null ? Number(registration.region) : null;
   const regionOf = (poolId) => pools.find((p) => String(p.id) === String(poolId))?.region;
   const receivedCount = (pool) =>
     receipts.filter((r) => String(r.pool_id) === String(pool.id)).length;
@@ -48,8 +49,14 @@ export default function HomeScreen({ farmerShortName = "Ramon", pools, receipts,
   // show "Relief has arrived · Claim" before any typhoon settled — and tapping
   // Claim would revert on-chain (NothingToClaim). Gating on receipts keeps Home
   // honest with the contract: nothing to claim until money has moved.
+  // Strict region scope: never surface another region's pool, even if a receipt
+  // somehow referenced it.
   const claimable = pools.filter(
-    (p) => p.installments > 1 && receivedCount(p) > 0 && receivedCount(p) < p.installments
+    (p) =>
+      (myRegion == null || Number(p.region) === myRegion) &&
+      p.installments > 1 &&
+      receivedCount(p) > 0 &&
+      receivedCount(p) < p.installments
   );
 
   // Tick every second only while a claim is actually on cooldown, so the

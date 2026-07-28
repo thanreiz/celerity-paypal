@@ -1237,6 +1237,41 @@ fn reregister_in_new_region_cannot_claim_old_pool() {
 }
 
 #[test]
+fn settle_ignores_farmer_ghosted_into_wrong_region_list() {
+    // If RegionFarmers(event.region) is corrupted to include an address whose
+    // FarmerReg.region is elsewhere, settle must not pay them from this event's pools.
+    let (s, signer, signer2) = setup_with_oracle();
+    const REGION_VII: u32 = 7;
+    let alice = funded_addr(&s, 1_000);
+    let local = Address::generate(&s.env);
+    let outsider = Address::generate(&s.env);
+
+    s.client.register_farmer(&local, &REGION_V, &src(&s));
+    s.client.register_farmer(&outsider, &REGION_VII, &src(&s));
+    let pool_id = s
+        .client
+        .deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
+
+    // Corrupt the region-V index to also contain the region-VII farmer.
+    s.env.as_contract(&s.client.address, || {
+        let mut list = soroban_sdk::Vec::new(&s.env);
+        list.push_back(local.clone());
+        list.push_back(outsider.clone());
+        s.env
+            .storage()
+            .persistent()
+            .set(&DataKey::RegionFarmers(REGION_V), &list);
+    });
+
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 8801);
+    let released = s.client.settle_event(&event_id);
+    assert_eq!(released, 1);
+    assert_eq!(s.token.balance(&local), 100);
+    assert_eq!(s.token.balance(&outsider), 0);
+    assert_eq!(s.client.pool(&pool_id).balance, 500);
+}
+
+#[test]
 fn second_event_defers_while_recurring_schedule_active() {
     // A later typhoon must not overwrite Progress and inflate payouts beyond
     // `installments`. Settle of event 2 is a no-op until the schedule finishes,

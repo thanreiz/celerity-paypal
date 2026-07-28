@@ -313,6 +313,7 @@ export default function FarmerApp({
                   onHistory={() => setPage("activity")}
                   onDetail={(kind) => setOverlay(kind)}
                   onOpenTx={setTxDetail}
+                  registration={registration}
                 />
               )}
               {page === "activity" && (

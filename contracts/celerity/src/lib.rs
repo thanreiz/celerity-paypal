@@ -526,6 +526,20 @@ impl Celerity {
 
             let mut dirty = false;
             for farmer in farmers.iter() {
+                // RegionFarmers list is the index; FarmerReg.region is the authority.
+                // Skip ghost entries if the two ever diverge.
+                let registered: Farmer = match e
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::FarmerReg(farmer.clone()))
+                {
+                    Some(f) => f,
+                    None => continue,
+                };
+                if registered.region != event.region {
+                    continue;
+                }
+
                 let settled_key = DataKey::Settled(event_id, farmer.clone(), pool_id);
                 if e.storage().persistent().has(&settled_key) {
                     continue;

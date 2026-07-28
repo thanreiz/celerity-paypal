@@ -9,7 +9,6 @@ const unitsOf = (stroops) => Number(BigInt(stroops)) / Number(UNIT);
 /** The 4 Home quick-action tiles each open one of these — real pool/receipt
  * data reshaped into a friendlier, non-technical view. */
 export default function DetailScreen({ kind, pools, registration, onBack }) {
-  const recurring = pools.filter((p) => p.installments > 1);
   const myRegion = registration ? Number(registration.region) : null;
   const regionPools = myRegion != null ? pools.filter((p) => Number(p.region) === myRegion) : [];
   const armedPools = regionPools.filter((p) => p.status === "Active");
@@ -27,7 +26,7 @@ export default function DetailScreen({ kind, pools, registration, onBack }) {
       <div className="cel-stagger" style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
         {kind === "programs" && (
           <>
-            {pools.map((p) => (
+            {regionPools.map((p) => (
               <ListItem
                 key={String(p.id)}
                 icon="🌾"
@@ -35,17 +34,18 @@ export default function DetailScreen({ kind, pools, registration, onBack }) {
                 subtitle={`${phpValue(unitsOf(p.payout_per_farmer))}${p.installments > 1 ? ` × ${p.installments} installments` : " one-time relief"} · ${regionName(p.region)}`}
               />
             ))}
-            {pools.length === 0 && <Empty text="No relief programs active yet." />}
-            <Honesty text="You're automatically enrolled in every relief program active in your registered region." />
+            {myRegion == null && <Empty text="Register with your LGU to see relief programs for your area." />}
+            {myRegion != null && regionPools.length === 0 && <Empty text="No relief programs active in your region yet." />}
+            <Honesty text="You're automatically enrolled in every relief program active in your registered region — other regions never appear here." />
           </>
         )}
 
         {kind === "installments" && (
           <>
-            {recurring.map((p) => (
+            {regionPools.filter((p) => p.installments > 1).map((p) => (
               <ListItem key={String(p.id)} icon="📅" title={funderLabel(p.funder)} subtitle={`${phpValue(unitsOf(p.payout_per_farmer))} per installment · every ${String(p.claim_period_secs)}s`} />
             ))}
-            {recurring.length === 0 && <Empty text="No recurring installments yet." />}
+            {regionPools.filter((p) => p.installments > 1).length === 0 && <Empty text="No recurring installments in your region yet." />}
             <Honesty text="Installments unlock automatically on schedule — nothing to request, nothing to wait on a case worker for." />
           </>
         )}
