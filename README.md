@@ -46,14 +46,9 @@ cross-border settlement layer *underneath* them.
 >
 > - **Live demo:** [stellar-celerity.me](https://stellar-celerity.me/)
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
-> - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
-> - **Demo video script:** [`docs/hackathon/DEMO-VIDEO-TWITTER.md`](docs/hackathon/DEMO-VIDEO-TWITTER.md)
+> - **Demo video:** [Teaser and Demo Video ](https://x.com/stellarcelerity/status/2081772476070318463?s=20)
 > - **Contract address (Stellar Testnet):** `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3`
 >   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3)
-> - **Docs index:** [`docs/`](docs/README.md)
-> - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
-> - **Design system:** [`docs/product/design.md`](docs/product/design.md)
-> - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
 
 ---
 
