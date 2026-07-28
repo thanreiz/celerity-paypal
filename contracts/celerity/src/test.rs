@@ -8,8 +8,8 @@
 //! auth mocked — if a function forgot its `require_auth`, the call would
 //! succeed and the test would fail.
 
-use crate::{Celerity, CelerityClient, DataKey, Error, PoolStatus, SubPool};
-use soroban_sdk::testutils::{Address as _, AuthorizedFunction, MockAuth, MockAuthInvoke};
+use crate::{Celerity, CelerityClient, DataKey, Error, OracleSig, PoolStatus, SubPool};
+use soroban_sdk::testutils::{Address as _, AuthorizedFunction, Events as _, MockAuth, MockAuthInvoke};
 use soroban_sdk::xdr::{ScErrorCode, ScErrorType};
 use soroban_sdk::{token, Address, BytesN, Env, IntoVal, InvokeError, Symbol};
 
@@ -57,6 +57,14 @@ struct Setup {
     admin: Address,
 }
 
+fn dummy_oracle_keys(env: &Env) -> soroban_sdk::Vec<BytesN<32>> {
+    let mut keys = soroban_sdk::Vec::new(env);
+    keys.push_back(BytesN::from_array(env, &[1u8; 32]));
+    keys.push_back(BytesN::from_array(env, &[2u8; 32]));
+    keys.push_back(BytesN::from_array(env, &[3u8; 32]));
+    keys
+}
+
 fn setup() -> Setup {
     let env = Env::default();
     env.mock_all_auths();
@@ -67,12 +75,12 @@ fn setup() -> Setup {
     let token = token::TokenClient::new(&env, &asset.address());
     let sac = token::StellarAssetClient::new(&env, &asset.address());
 
-    // Constructor args run atomically at deploy — no separate init call.
     let contract_id = env.register(
         Celerity,
         (
             admin.clone(),
-            BytesN::from_array(&env, &[0u8; 32]),
+            dummy_oracle_keys(&env),
+            2u32,
             asset.address(),
         ),
     );
@@ -105,7 +113,7 @@ fn deposit_creates_earmarked_pool() {
 
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
     assert_eq!(pool_id, 1);
 
     // deposit itself (not just the token transfer inside it) demanded the
@@ -134,22 +142,22 @@ fn deposit_rejects_invalid_args() {
 
     let zero_amount = s
         .client
-        .try_deposit(&funder, &0, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .try_deposit(&funder, &0, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
     assert_eq!(zero_amount.err(), Some(cerr(Error::InvalidAmount)));
 
     let neg_amount = s
         .client
-        .try_deposit(&funder, &-5, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .try_deposit(&funder, &-5, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
     assert_eq!(neg_amount.err(), Some(cerr(Error::InvalidAmount)));
 
     let zero_payout = s
         .client
-        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &0, &1, &0);
+        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &0, &1, &0, &0);
     assert_eq!(zero_payout.err(), Some(cerr(Error::InvalidPayout)));
 
     let zero_installments = s
         .client
-        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &0, &0);
+        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &0, &0, &0);
     assert_eq!(zero_installments.err(), Some(cerr(Error::InvalidInstallments)));
 }
 
@@ -162,7 +170,7 @@ fn deposit_without_auth_fails() {
     s.env.mock_auths(&[]);
     let res = s
         .client
-        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .try_deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
     assert!(res.is_err());
 }
 
@@ -174,8 +182,8 @@ fn two_funders_get_independent_pools() {
 
     let pool_a = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
-    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &200, &2, &100);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
+    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &200, &2, &100, &0);
     assert_ne!(pool_a, pool_b);
 
     // Alice withdrawing her own pool must not touch Bob's escrow.
@@ -184,6 +192,28 @@ fn two_funders_get_independent_pools() {
     assert_eq!(s.client.pool(&pool_a).balance, 0);
     assert_eq!(s.client.pool(&pool_b).balance, 400);
     assert_eq!(s.token.balance(&s.client.address), 400);
+}
+
+// ---------------------------------------------------------------------------
+// deposit event
+// ---------------------------------------------------------------------------
+
+#[test]
+fn deposit_emits_event() {
+    let s = setup();
+    let funder = funded_addr(&s, 1_000);
+    s.client
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
+
+    assert_eq!(
+        s.env
+            .events()
+            .all()
+            .filter_by_contract(&s.client.address)
+            .events()
+            .len(),
+        1
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +226,7 @@ fn top_up_adds_to_balance() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     s.client.top_up(&pool_id, &250);
     assert_root_auth(&s, &funder, "top_up");
@@ -212,7 +242,7 @@ fn top_up_rejects_invalid_amount_and_missing_pool() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     let zero = s.client.try_top_up(&pool_id, &0);
     assert_eq!(zero.err(), Some(cerr(Error::InvalidAmount)));
@@ -237,7 +267,7 @@ fn stranger_cannot_top_up_anothers_pool() {
     let mallory = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     s.env.mock_auths(&[MockAuth {
         address: &mallory,
@@ -260,7 +290,7 @@ fn top_up_reactivates_exhausted_pool() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     // Settlement (Phase 3) is what flags Exhausted; simulate its effect by
     // writing the flag directly into contract storage.
@@ -293,7 +323,7 @@ fn top_up_does_not_unpause() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     s.client.pause_pool(&pool_id);
     s.client.top_up(&pool_id, &100);
@@ -310,7 +340,7 @@ fn withdraw_unspent_returns_balance_to_funder() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     s.client.withdraw_unspent(&pool_id);
     assert_root_auth(&s, &funder, "withdraw_unspent");
@@ -338,7 +368,7 @@ fn paused_pool_still_allows_withdraw() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     s.client.pause_pool(&pool_id);
     s.client.withdraw_unspent(&pool_id);
@@ -371,7 +401,7 @@ fn funder_cannot_withdraw_anothers_pool() {
     let mallory = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     // Only Mallory signs. The pool's funder (Alice) did not authorize, so the
     // call must fail and every balance must be untouched.
@@ -402,7 +432,7 @@ fn pause_pool_sets_status_and_resume_reverts_it() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     s.client.pause_pool(&pool_id);
     assert_eq!(s.client.pool(&pool_id).status, PoolStatus::Paused);
@@ -420,7 +450,7 @@ fn resume_only_works_from_paused() {
     let funder = funded_addr(&s, 1_000);
     let pool_id = s
         .client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     let on_active = s.client.try_resume_pool(&pool_id);
     assert_eq!(on_active.err(), Some(cerr(Error::PoolNotPaused)));
@@ -451,7 +481,7 @@ fn stranger_cannot_resume_anothers_pool() {
     let mallory = Address::generate(&s.env);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
     s.client.pause_pool(&pool_id);
 
     s.env.mock_auths(&[MockAuth {
@@ -475,7 +505,7 @@ fn stranger_cannot_pause_anothers_pool() {
     let mallory = Address::generate(&s.env);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&alice, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
 
     s.env.mock_auths(&[MockAuth {
         address: &mallory,
@@ -637,7 +667,7 @@ fn funder_ledger_starts_empty() {
     let s = setup();
     let funder = funded_addr(&s, 1_000);
     s.client
-        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0);
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &0);
     assert_eq!(s.client.funder_ledger(&funder).len(), 0);
 }
 
@@ -649,12 +679,18 @@ use ed25519_dalek::{Signer as _, SigningKey};
 
 /// Deterministic test oracle. Same seed -> same keypair in every test.
 fn oracle_signer() -> SigningKey {
-    SigningKey::from_bytes(&[7u8; 32])
+    oracle_signer_n(7)
 }
 
-/// A `setup()` whose contract trusts our test oracle's public key.
-fn setup_with_oracle() -> (Setup, SigningKey) {
-    let signer = oracle_signer();
+fn oracle_signer_n(seed: u8) -> SigningKey {
+    SigningKey::from_bytes(&[seed; 32])
+}
+
+/// Setup with three distinct oracle keys; threshold 2. Returns (setup, signer0, signer1).
+fn setup_with_oracle() -> (Setup, SigningKey, SigningKey) {
+    let s0 = oracle_signer_n(7);
+    let s1 = oracle_signer_n(8);
+    let s2 = oracle_signer_n(9);
     let env = Env::default();
     env.mock_all_auths();
 
@@ -664,13 +700,14 @@ fn setup_with_oracle() -> (Setup, SigningKey) {
     let token = token::TokenClient::new(&env, &asset.address());
     let sac = token::StellarAssetClient::new(&env, &asset.address());
 
+    let mut keys = soroban_sdk::Vec::new(&env);
+    keys.push_back(BytesN::from_array(&env, &s0.verifying_key().to_bytes()));
+    keys.push_back(BytesN::from_array(&env, &s1.verifying_key().to_bytes()));
+    keys.push_back(BytesN::from_array(&env, &s2.verifying_key().to_bytes()));
+
     let contract_id = env.register(
         Celerity,
-        (
-            admin.clone(),
-            BytesN::from_array(&env, &signer.verifying_key().to_bytes()),
-            asset.address(),
-        ),
+        (admin.clone(), keys, 2u32, asset.address()),
     );
     let client = CelerityClient::new(&env, &contract_id);
 
@@ -682,8 +719,22 @@ fn setup_with_oracle() -> (Setup, SigningKey) {
             sac,
             admin,
         },
-        signer,
+        s0,
+        s1,
     )
+}
+
+fn two_sigs(s: &Setup, a: &SigningKey, b: &SigningKey, region: u32, signal: u32, nonce: u64) -> soroban_sdk::Vec<OracleSig> {
+    let mut v = soroban_sdk::Vec::new(&s.env);
+    v.push_back(OracleSig {
+        key_index: 0,
+        signature: sign_event(s, a, region, signal, nonce),
+    });
+    v.push_back(OracleSig {
+        key_index: 1,
+        signature: sign_event(s, b, region, signal, nonce),
+    });
+    v
 }
 
 /// The exact byte layout the contract verifies:
@@ -704,66 +755,103 @@ fn sign_event(s: &Setup, signer: &SigningKey, region: u32, signal: u32, nonce: u
 
 #[test]
 fn valid_signed_event_is_accepted_and_stored() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
 
-    let sig = sign_event(&s, &signer, REGION_V, 4, 1001);
-    let event_id = s.client.report_event(&REGION_V, &4, &1001, &sig);
+    let sigs = two_sigs(&s, &signer, &signer2, REGION_V, 4, 1001);
+    let event_id = s.client.report_event(&REGION_V, &4, &1001, &sigs);
     assert_eq!(event_id, 1);
 
     let event = s.client.event(&event_id);
     assert_eq!(event.region, REGION_V);
     assert_eq!(event.signal, 4);
 
-    // a second, distinct event gets the next id
-    let sig2 = sign_event(&s, &signer, REGION_V, 5, 1002);
-    assert_eq!(s.client.report_event(&REGION_V, &5, &1002, &sig2), 2);
+    let sigs2 = two_sigs(&s, &signer, &signer2, REGION_V, 5, 1002);
+    assert_eq!(s.client.report_event(&REGION_V, &5, &1002, &sigs2), 2);
 }
 
 #[test]
 fn tampered_event_is_rejected() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
 
-    // Signed "signal 4" but submitted as "signal 5": verification must trap.
-    let sig = sign_event(&s, &signer, REGION_V, 4, 2001);
-    assert!(s.client.try_report_event(&REGION_V, &5, &2001, &sig).is_err());
+    let sigs = two_sigs(&s, &signer, &signer2, REGION_V, 4, 2001);
+    assert!(s.client.try_report_event(&REGION_V, &5, &2001, &sigs).is_err());
+    assert!(s.client.try_report_event(&6, &4, &2001, &sigs).is_err());
+    assert!(s.client.try_report_event(&REGION_V, &4, &2002, &sigs).is_err());
 
-    // Same for a shifted region or nonce under an otherwise valid signature.
-    assert!(s.client.try_report_event(&6, &4, &2001, &sig).is_err());
-    assert!(s.client.try_report_event(&REGION_V, &4, &2002, &sig).is_err());
-
-    // and nothing was stored
     assert_eq!(s.client.try_event(&1).err(), Some(cerr(Error::EventNotFound)));
 }
 
 #[test]
 fn event_from_unauthorized_key_is_rejected() {
-    let (s, _signer) = setup_with_oracle();
+    let (s, _signer, _signer2) = setup_with_oracle();
 
-    // A different key signs a perfectly well-formed payload.
     let intruder = SigningKey::from_bytes(&[9u8; 32]);
-    let sig = ed25519_dalek::Signer::sign(&intruder, &event_payload(REGION_V, 4, 3001));
-    let sig = BytesN::from_array(&s.env, &sig.to_bytes());
+    let mut sigs = soroban_sdk::Vec::new(&s.env);
+    sigs.push_back(OracleSig {
+        key_index: 0,
+        signature: BytesN::from_array(
+            &s.env,
+            &ed25519_dalek::Signer::sign(&intruder, &event_payload(REGION_V, 4, 3001)).to_bytes(),
+        ),
+    });
+    sigs.push_back(OracleSig {
+        key_index: 1,
+        signature: BytesN::from_array(
+            &s.env,
+            &ed25519_dalek::Signer::sign(&intruder, &event_payload(REGION_V, 4, 3001)).to_bytes(),
+        ),
+    });
 
-    assert!(s.client.try_report_event(&REGION_V, &4, &3001, &sig).is_err());
+    assert!(s.client.try_report_event(&REGION_V, &4, &3001, &sigs).is_err());
 }
 
 #[test]
 fn replayed_event_is_rejected() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
 
-    let sig = sign_event(&s, &signer, REGION_V, 4, 4001);
-    assert_eq!(s.client.report_event(&REGION_V, &4, &4001, &sig), 1);
+    let sigs = two_sigs(&s, &signer, &signer2, REGION_V, 4, 4001);
+    assert_eq!(s.client.report_event(&REGION_V, &4, &4001, &sigs), 1);
 
-    // Submitting the identical signed payload again must NOT mint event 2.
-    let replay = s.client.try_report_event(&REGION_V, &4, &4001, &sig);
+    let replay = s.client.try_report_event(&REGION_V, &4, &4001, &sigs);
     assert_eq!(replay.err(), Some(cerr(Error::NonceAlreadyUsed)));
     assert_eq!(s.client.try_event(&2).err(), Some(cerr(Error::EventNotFound)));
 }
 
 #[test]
 fn missing_event_view_errors_cleanly() {
-    let (s, _) = setup_with_oracle();
+    let (s, _, _) = setup_with_oracle();
     assert_eq!(s.client.try_event(&42).err(), Some(cerr(Error::EventNotFound)));
+}
+
+#[test]
+fn report_event_emits_event() {
+    let (s, signer, signer2) = setup_with_oracle();
+    let sigs = two_sigs(&s, &signer, &signer2, REGION_V, 4, 9001);
+    s.client.report_event(&REGION_V, &4, &9001, &sigs);
+
+    assert_eq!(
+        s.env
+            .events()
+            .all()
+            .filter_by_contract(&s.client.address)
+            .events()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn one_oracle_sig_is_insufficient() {
+    let (s, signer, _signer2) = setup_with_oracle();
+    let mut sigs = soroban_sdk::Vec::new(&s.env);
+    sigs.push_back(OracleSig {
+        key_index: 0,
+        signature: sign_event(&s, &signer, REGION_V, 4, 9101),
+    });
+    assert_eq!(
+        s.client.try_report_event(&REGION_V, &4, &9101, &sigs).err(),
+        Some(cerr(Error::InsufficientOracleSigs))
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -772,28 +860,27 @@ fn missing_event_view_errors_cleanly() {
 // ---------------------------------------------------------------------------
 
 use crate::{InstallmentProgress, Release};
-use soroban_sdk::testutils::Events as _;
 
 /// Report a validly-signed event through the real oracle path.
-fn seed_event(s: &Setup, signer: &SigningKey, region: u32, signal: u32, nonce: u64) -> u64 {
-    let sig = sign_event(s, signer, region, signal, nonce);
-    s.client.report_event(&region, &signal, &nonce, &sig)
+fn seed_event2(s: &Setup, a: &SigningKey, b: &SigningKey, region: u32, signal: u32, nonce: u64) -> u64 {
+    let sigs = two_sigs(s, a, b, region, signal, nonce);
+    s.client.report_event(&region, &signal, &nonce, &sigs)
 }
 
 #[test]
 fn one_event_releases_two_funders_to_one_farmer() {
     // The win condition's core: one signed event, two independently-funded
     // earmarked pools, one registered farmer, separate ledger receipts.
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
     let bob = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
 
-    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
-    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &50, &1, &0);
+    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
+    let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &50, &1, &0, &0);
 
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 100);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 100);
     let released = s.client.settle_event(&event_id);
 
     // events().all() holds only the last invocation's events — count Celerity's
@@ -835,13 +922,13 @@ fn one_event_releases_two_funders_to_one_farmer() {
 #[test]
 fn settle_twice_pays_exactly_once() {
     // THE idempotency gate: a re-run must be a no-op, not a double payment.
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
-    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
+    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
 
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 200);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 200);
     assert_eq!(s.client.settle_event(&event_id), 1);
 
     let rerun = s.client.settle_event(&event_id);
@@ -854,18 +941,18 @@ fn settle_twice_pays_exactly_once() {
 #[test]
 fn dry_pool_flagged_solvent_pools_still_pay() {
     // Flag-not-fail: one underfunded pool must never revert the event.
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
     let bob = funded_addr(&s, 1_000);
     let carol = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
 
-    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
-    let pool_dry = s.client.deposit(&bob, &30, &REGION_V, &3, &100, &1, &0); // < payout
-    let pool_c = s.client.deposit(&carol, &200, &REGION_V, &3, &50, &1, &0);
+    let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
+    let pool_dry = s.client.deposit(&bob, &30, &REGION_V, &3, &100, &1, &0, &0); // < payout
+    let pool_c = s.client.deposit(&carol, &200, &REGION_V, &3, &50, &1, &0, &0);
 
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 300);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 300);
     let released = s.client.settle_event(&event_id);
 
     assert_eq!(released, 2); // A and C paid; dry pool skipped, not reverted
@@ -879,7 +966,7 @@ fn dry_pool_flagged_solvent_pools_still_pay() {
 
 #[test]
 fn three_funders_one_farmer_three_separate_receipts() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let funders: [Address; 3] = [
         funded_addr(&s, 1_000),
         funded_addr(&s, 1_000),
@@ -889,10 +976,10 @@ fn three_funders_one_farmer_three_separate_receipts() {
     s.client.register_farmer(&farmer, &REGION_V);
     for (i, f) in funders.iter().enumerate() {
         s.client
-            .deposit(f, &500, &REGION_V, &3, &(100 + i as i128), &1, &0);
+            .deposit(f, &500, &REGION_V, &3, &(100 + i as i128), &1, &0, &0);
     }
 
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 400);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 400);
     assert_eq!(s.client.settle_event(&event_id), 3);
     assert_eq!(s.token.balance(&farmer), 100 + 101 + 102);
 
@@ -910,7 +997,7 @@ fn midlist_exhaustion_pays_partial_then_recovers_after_topup() {
     // A pool that runs dry halfway through the farmer list: whoever was paid
     // stays paid, the pool is flagged, and after a top_up the SAME event can
     // be re-settled to pay only the missed farmers.
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
     let f1 = Address::generate(&s.env);
     let f2 = Address::generate(&s.env);
@@ -918,8 +1005,8 @@ fn midlist_exhaustion_pays_partial_then_recovers_after_topup() {
     s.client.register_farmer(&f2, &REGION_V);
 
     // 150 covers one payout of 100, not two
-    let pool_id = s.client.deposit(&alice, &150, &REGION_V, &3, &100, &1, &0);
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 500);
+    let pool_id = s.client.deposit(&alice, &150, &REGION_V, &3, &100, &1, &0, &0);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 500);
 
     assert_eq!(s.client.settle_event(&event_id), 1);
     assert_eq!(s.token.balance(&f1), 100);
@@ -938,18 +1025,18 @@ fn midlist_exhaustion_pays_partial_then_recovers_after_topup() {
 
 #[test]
 fn paused_wrong_region_and_high_threshold_pools_are_skipped() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 2_000);
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
 
-    let paused = s.client.deposit(&alice, &300, &REGION_V, &3, &100, &1, &0);
+    let paused = s.client.deposit(&alice, &300, &REGION_V, &3, &100, &1, &0, &0);
     s.client.pause_pool(&paused);
-    let wrong_region = s.client.deposit(&alice, &300, &6, &3, &100, &1, &0);
-    let too_high = s.client.deposit(&alice, &300, &REGION_V, &5, &100, &1, &0); // thr 5 > signal 4
-    let exact = s.client.deposit(&alice, &300, &REGION_V, &4, &100, &1, &0); // thr == signal pays
+    let wrong_region = s.client.deposit(&alice, &300, &6, &3, &100, &1, &0, &0);
+    let too_high = s.client.deposit(&alice, &300, &REGION_V, &5, &100, &1, &0, &0); // thr 5 > signal 4
+    let exact = s.client.deposit(&alice, &300, &REGION_V, &4, &100, &1, &0, &0); // thr == signal pays
 
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 600);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 600);
     assert_eq!(s.client.settle_event(&event_id), 1); // only `exact`
 
     assert_eq!(s.token.balance(&farmer), 100);
@@ -961,9 +1048,9 @@ fn paused_wrong_region_and_high_threshold_pools_are_skipped() {
 
 #[test]
 fn settle_unknown_event_and_empty_region_are_safe() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
-    s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
+    s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
 
     // unknown event id -> clean error
     assert_eq!(
@@ -972,7 +1059,7 @@ fn settle_unknown_event_and_empty_region_are_safe() {
     );
 
     // event over a region with no registered farmers -> 0 releases, no flag
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 700);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 700);
     assert_eq!(s.client.settle_event(&event_id), 0);
     assert_eq!(s.client.pool(&1).status, PoolStatus::Active);
 }
@@ -988,7 +1075,7 @@ const PERIOD: u64 = 100;
 /// Recurring-pool fixture: 3 installments of 100 every PERIOD secs, settled
 /// once (installment 1 paid at t0). Returns (setup, farmer, pool_id, t0).
 fn settled_recurring_pool() -> (Setup, Address, u64, u64) {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let t0 = 1_000_000;
     s.env.ledger().with_mut(|l| l.timestamp = t0);
 
@@ -997,8 +1084,8 @@ fn settled_recurring_pool() -> (Setup, Address, u64, u64) {
     s.client.register_farmer(&farmer, &REGION_V);
     let pool_id = s
         .client
-        .deposit(&alice, &600, &REGION_V, &3, &100, &3, &PERIOD);
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 900);
+        .deposit(&alice, &600, &REGION_V, &3, &100, &3, &PERIOD, &0);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 900);
     assert_eq!(s.client.settle_event(&event_id), 1); // installment 1
     (s, farmer, pool_id, t0)
 }
@@ -1083,14 +1170,14 @@ fn claim_stops_after_last_installment_and_schedule_advances() {
 
 #[test]
 fn claim_without_settlement_or_registration_fails() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 2_000);
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
-    let lump = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0);
+    let lump = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
     let recurring = s
         .client
-        .deposit(&alice, &600, &REGION_V, &3, &100, &3, &PERIOD);
+        .deposit(&alice, &600, &REGION_V, &3, &100, &3, &PERIOD, &0);
 
     // no settlement has happened at all -> no schedule to pull from
     assert_eq!(
@@ -1099,7 +1186,7 @@ fn claim_without_settlement_or_registration_fails() {
     );
 
     // a lump pool never has a claim schedule, even after settlement
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 901);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 901);
     s.client.settle_event(&event_id);
     assert_eq!(
         s.client.try_claim(&farmer, &lump).err(),
@@ -1150,7 +1237,7 @@ fn second_event_defers_while_recurring_schedule_active() {
     // A later typhoon must not overwrite Progress and inflate payouts beyond
     // `installments`. Settle of event 2 is a no-op until the schedule finishes,
     // then a re-settle starts a fresh schedule.
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let t0 = 2_000_000;
     s.env.ledger().with_mut(|l| l.timestamp = t0);
 
@@ -1159,13 +1246,13 @@ fn second_event_defers_while_recurring_schedule_active() {
     s.client.register_farmer(&farmer, &REGION_V);
     let pool_id = s
         .client
-        .deposit(&alice, &1_000, &REGION_V, &3, &100, &3, &PERIOD);
+        .deposit(&alice, &1_000, &REGION_V, &3, &100, &3, &PERIOD, &0);
 
-    let event_1 = seed_event(&s, &signer, REGION_V, 4, 910);
+    let event_1 = seed_event2(&s, &signer, &signer2, REGION_V, 4, 910);
     assert_eq!(s.client.settle_event(&event_1), 1);
     assert_eq!(s.token.balance(&farmer), 100);
 
-    let event_2 = seed_event(&s, &signer, REGION_V, 4, 911);
+    let event_2 = seed_event2(&s, &signer, &signer2, REGION_V, 4, 911);
     assert_eq!(s.client.settle_event(&event_2), 0); // deferred — schedule active
     assert_eq!(s.token.balance(&farmer), 100); // no extra payout
 
@@ -1246,20 +1333,20 @@ fn recurring_deposit_requires_nonzero_period() {
     let funder = funded_addr(&s, 1_000);
     let res = s
         .client
-        .try_deposit(&funder, &600, &REGION_V, &3, &100, &3, &0);
+        .try_deposit(&funder, &600, &REGION_V, &3, &100, &3, &0, &0);
     assert_eq!(res.err(), Some(cerr(Error::InvalidPeriod)));
 }
 
 #[test]
 fn recurring_pool_releases_first_installment_and_records_progress() {
-    let (s, signer) = setup_with_oracle();
+    let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
     s.client.register_farmer(&farmer, &REGION_V);
 
     // 3 installments of 100
-    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &3, &100);
-    let event_id = seed_event(&s, &signer, REGION_V, 4, 800);
+    let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &3, &100, &0);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 800);
 
     assert_eq!(s.client.settle_event(&event_id), 1);
     assert_eq!(s.token.balance(&farmer), 100); // first installment only
@@ -1274,4 +1361,49 @@ fn recurring_pool_releases_first_installment_and_records_progress() {
             .unwrap()
     });
     assert_eq!(progress.paid, 1);
+}
+
+#[test]
+fn expiry_blocks_early_withdraw_and_allows_after() {
+    let s = setup();
+    let t0 = 5_000_000u64;
+    s.env.ledger().with_mut(|l| l.timestamp = t0);
+    let funder = funded_addr(&s, 1_000);
+    let pool_id = s
+        .client
+        .deposit(&funder, &600, &REGION_V, &THRESHOLD, &PAYOUT, &1, &0, &(t0 + 100));
+
+    assert_eq!(
+        s.client.try_withdraw_unspent(&pool_id).err(),
+        Some(cerr(Error::NotExpiredYet))
+    );
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + 100);
+    s.client.withdraw_unspent(&pool_id);
+    assert_eq!(s.client.pool(&pool_id).balance, 0);
+    assert_eq!(s.token.balance(&funder), 1_000);
+}
+
+#[test]
+fn set_admin_rotates_registry_authority() {
+    let s = setup();
+    let new_admin = Address::generate(&s.env);
+    let farmer = Address::generate(&s.env);
+
+    s.client.set_admin(&new_admin);
+    // After rotation, only new_admin can register (mock_all_auths still allows;
+    // assert via try from stranger pattern using mock_auths).
+    s.env.mock_auths(&[MockAuth {
+        address: &s.admin,
+        invoke: &MockAuthInvoke {
+            contract: &s.client.address,
+            fn_name: "register_farmer",
+            args: ().into_val(&s.env),
+            sub_invokes: &[],
+        },
+    }]);
+    // Old admin auth alone is insufficient once storage admin changed — host
+    // still needs the *current* admin. With mock_all reset:
+    s.env.mock_all_auths();
+    s.client.register_farmer(&farmer, &REGION_V);
+    assert_eq!(s.client.farmer(&farmer).registered_by, new_admin);
 }

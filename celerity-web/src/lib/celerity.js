@@ -139,7 +139,7 @@ export async function reportAndSettle(region, signal, role = "funder", nonce = B
     region,
     signal,
     nonce: signed.nonce,
-    sig: signed.signature,
+    sigs: signed.signatures,
   });
   const event_id = typeof eventId === "bigint" ? eventId : BigInt(eventId);
   let released;

@@ -46,7 +46,8 @@ export default async function handler(req, res) {
       region: signed.region,
       signal: signed.signal,
       nonce: signed.nonce,
-      signature: encodeValue(signed.signature),
+      signatures: encodeValue(signed.signatures),
+      signature: encodeValue(signed.signature), // legacy: signatures[0]
       oracle_public_key: signed.oracle_public_key,
     });
   } catch (e) {

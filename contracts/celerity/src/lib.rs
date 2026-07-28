@@ -2,19 +2,14 @@
 //! Celerity — a programmable disaster-disbursement rail on Stellar/Soroban.
 //!
 //! Funders deposit into a shared on-chain escrow, each with an earmarked
-//! sub-pool and its own release rule. An objective, signed weather event
-//! (an Ed25519-signed typhoon signal from an authorized oracle key) triggers
-//! automatic release to pre-registered farmers. Every release is logged per
-//! funder.
+//! sub-pool and its own release rule. An objective, multi-sig weather event
+//! (Ed25519 threshold over authorized oracle keys) triggers automatic release
+//! to pre-registered farmers. Every release is logged per funder.
 //!
-//! Design rules (see PROJECT.md): the contract never interprets documents; it
-//! verifies a signature and compares numbers. Funders are independent. On an
-//! underfunded pool mid-event we flag, never silently fail. Releases are
-//! idempotent on a composite settled-key.
-//!
-//! Phase 1–4 are shipped: core escrow (deposit / top_up / withdraw_unspent /
-//! pause_pool / resume_pool), farmer registry, Ed25519 oracle path
-//! (report_event), multi-pool settlement (settle_event), and recurring claim.
+//! Design rules: the contract never interprets documents; it verifies
+//! signatures and compares numbers. Funders are independent. On an underfunded
+//! pool mid-event we flag, never silently fail. Releases are idempotent on a
+//! composite settled-key. Every mutator emits a Soroban event.
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, token,
@@ -46,10 +41,13 @@ pub enum Error {
     AllInstallmentsPaid = 16,
     ClaimNotDueYet = 17,
     RegionMismatch = 18,
+    NotExpiredYet = 19,
+    InsufficientOracleSigs = 20,
+    InvalidOracleConfig = 21,
 }
 
 // ---------------------------------------------------------------------------
-// Data model (doc §6.2 / §10)
+// Data model
 // ---------------------------------------------------------------------------
 
 #[contracttype]
@@ -69,12 +67,13 @@ pub struct SubPool {
     pub region: u32,
     pub signal_threshold: u32,
     pub payout_per_farmer: i128,
-    pub installments: u32,      // 1 = lump, >1 = recurring
-    pub claim_period_secs: u64, // min seconds between installments (recurring only)
+    pub installments: u32,
+    pub claim_period_secs: u64,
+    /// Unix ledger seconds; `0` = no expiry (withdraw anytime).
+    pub trigger_expiry: u64,
     pub status: PoolStatus,
 }
 
-/// A pre-registered payee, enrolled by an LGU/co-op admin (not the contract).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Farmer {
@@ -83,7 +82,6 @@ pub struct Farmer {
     pub registered_by: Address,
 }
 
-/// A signed weather event that has entered the contract.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Event {
@@ -91,12 +89,16 @@ pub struct Event {
     pub signal: u32,
 }
 
-/// Domain-separation prefix for the oracle's signed payload. The full message
-/// the oracle signs is: PREFIX || region (u32 BE) || signal (u32 BE) ||
-/// nonce (u64 BE). The Node signer in oracle/ builds the identical bytes.
+/// One oracle signature bound to a key index (avoids try-verify traps).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OracleSig {
+    pub key_index: u32,
+    pub signature: BytesN<64>,
+}
+
 const EVENT_PAYLOAD_PREFIX: &[u8; 17] = b"CELERITY-EVENT-V1";
 
-/// A single release receipt (one per funder→farmer payment), for the ledger.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Release {
@@ -107,31 +109,28 @@ pub struct Release {
     pub amount: i128,
 }
 
-/// Per-(pool, farmer) installment bookkeeping for recurring pools.
-/// Written by settle_event when the first installment releases; the claim
-/// schedule (Phase 4) advances it.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InstallmentProgress {
     pub paid: u32,
-    pub event_id: u64, // the triggering event, carried onto claim receipts
+    pub event_id: u64,
     pub last_ts: u64,
 }
 
-/// Storage keys (doc §6.2 / §10).
 #[contracttype]
 pub enum DataKey {
-    Pool(u64),                  // pool_id -> SubPool
-    FarmerReg(Address),         // addr -> Farmer
-    Settled(u64, Address, u64), // (event_id, farmer, pool_id) -> bool
-    Event(u64),                 // event_id -> Event
-    UsedNonce(u64),             // oracle nonce -> bool (replay protection)
-    Progress(u64, Address),     // (pool_id, farmer) -> InstallmentProgress
-    Ledger(Address),            // funder -> Vec<Release>
-    RegionFarmers(u32),         // region -> Vec<Address> of registered farmers
-    Token,                      // the settlement asset (SAC) address
-    OracleKey,                  // Ed25519 public key authorized to sign events
-    Admin,                      // registry admin (LGU/co-op)
+    Pool(u64),
+    FarmerReg(Address),
+    Settled(u64, Address, u64),
+    Event(u64),
+    UsedNonce(u64),
+    Progress(u64, Address),
+    Ledger(Address),
+    RegionFarmers(u32),
+    Token,
+    OracleKeys,
+    OracleThreshold,
+    Admin,
     NextPoolId,
     NextEventId,
 }
@@ -154,10 +153,17 @@ fn get_token(e: &Env) -> Address {
         .unwrap_or_else(|| panic_with_error!(e, Error::NotInitialized))
 }
 
-fn get_oracle(e: &Env) -> BytesN<32> {
+fn get_oracle_keys(e: &Env) -> Vec<BytesN<32>> {
     e.storage()
         .instance()
-        .get(&DataKey::OracleKey)
+        .get(&DataKey::OracleKeys)
+        .unwrap_or_else(|| panic_with_error!(e, Error::NotInitialized))
+}
+
+fn get_oracle_threshold(e: &Env) -> u32 {
+    e.storage()
+        .instance()
+        .get(&DataKey::OracleThreshold)
         .unwrap_or_else(|| panic_with_error!(e, Error::NotInitialized))
 }
 
@@ -179,37 +185,95 @@ fn region_farmers(e: &Env, region: u32) -> Vec<Address> {
         .unwrap_or_else(|| Vec::new(e))
 }
 
+fn event_payload_bytes(e: &Env, region: u32, signal: u32, nonce: u64) -> Bytes {
+    let mut payload = Bytes::from_slice(e, EVENT_PAYLOAD_PREFIX);
+    payload.extend_from_array(&region.to_be_bytes());
+    payload.extend_from_array(&signal.to_be_bytes());
+    payload.extend_from_array(&nonce.to_be_bytes());
+    payload
+}
+
+/// Verify indexed oracle signatures; each key_index may count at most once.
+fn verify_oracle_threshold(e: &Env, region: u32, signal: u32, nonce: u64, sigs: &Vec<OracleSig>) {
+    let keys = get_oracle_keys(e);
+    let threshold = get_oracle_threshold(e);
+    if keys.is_empty() || threshold == 0 || threshold > keys.len() {
+        panic_with_error!(e, Error::InvalidOracleConfig);
+    }
+    let payload = event_payload_bytes(e, region, signal, nonce);
+    let mut used: Vec<u32> = Vec::new(e);
+    let mut valid: u32 = 0;
+    for s in sigs.iter() {
+        if s.key_index >= keys.len() {
+            panic_with_error!(e, Error::InvalidOracleConfig);
+        }
+        let mut already = false;
+        for u in used.iter() {
+            if u == s.key_index {
+                already = true;
+                break;
+            }
+        }
+        if already {
+            continue;
+        }
+        let key = keys.get(s.key_index).unwrap();
+        e.crypto().ed25519_verify(&key, &payload, &s.signature);
+        used.push_back(s.key_index);
+        valid += 1;
+        if valid >= threshold {
+            return;
+        }
+    }
+    panic_with_error!(e, Error::InsufficientOracleSigs);
+}
+
 #[contract]
 pub struct Celerity;
 
-// ---------------------------------------------------------------------------
-// Contract surface (doc §6.3 / §10)
-// ---------------------------------------------------------------------------
-
 #[contractimpl]
 impl Celerity {
-    /// Runs exactly once, atomically with deployment (no separate init call to
-    /// front-run or replay): sets the registry admin, the oracle's Ed25519
-    /// public key, and the settlement token (a Stellar Asset Contract address).
-    pub fn __constructor(e: Env, admin: Address, oracle: BytesN<32>, token: Address) {
+    /// Atomic deploy init: registry admin, oracle key set + threshold, settlement SAC.
+    pub fn __constructor(
+        e: Env,
+        admin: Address,
+        oracle_keys: Vec<BytesN<32>>,
+        threshold: u32,
+        token: Address,
+    ) {
+        if oracle_keys.is_empty() || threshold == 0 || threshold > oracle_keys.len() {
+            panic_with_error!(&e, Error::InvalidOracleConfig);
+        }
+        // Reject duplicate oracle pubkeys (one signer must not fill two slots).
+        let n = oracle_keys.len();
+        for i in 0..n {
+            for j in (i + 1)..n {
+                if oracle_keys.get(i).unwrap() == oracle_keys.get(j).unwrap() {
+                    panic_with_error!(&e, Error::InvalidOracleConfig);
+                }
+            }
+        }
         e.storage().instance().set(&DataKey::Admin, &admin);
-        e.storage().instance().set(&DataKey::OracleKey, &oracle);
+        e.storage()
+            .instance()
+            .set(&DataKey::OracleKeys, &oracle_keys);
+        e.storage()
+            .instance()
+            .set(&DataKey::OracleThreshold, &threshold);
         e.storage().instance().set(&DataKey::Token, &token);
         e.storage().instance().set(&DataKey::NextPoolId, &1u64);
         e.storage().instance().set(&DataKey::NextEventId, &1u64);
     }
 
-    // --- funder -------------------------------------------------------------
+    /// Rotate registry authority. Current admin must authorize.
+    pub fn set_admin(e: Env, new_admin: Address) {
+        let admin = get_admin(&e);
+        admin.require_auth();
+        e.storage().instance().set(&DataKey::Admin, &new_admin);
+        e.events()
+            .publish((symbol_short!("set_admin"),), (admin, new_admin));
+    }
 
-    /// Create an earmarked sub-pool, transfer `amount` of the settlement token
-    /// from the funder into the contract, and return the new pool_id.
-    ///
-    /// Note: `amount` and `claim_period_secs` are additions to the doc §6.3
-    /// signature — the pool's escrowed balance is independent of `payout`
-    /// (the number of farmers a pool will cover is not known at deposit
-    /// time), and each funder sets its own installment cadence (rule 2:
-    /// funders are independent). `claim_period_secs` is ignored for lump
-    /// (installments == 1) pools.
     pub fn deposit(
         e: Env,
         funder: Address,
@@ -219,6 +283,7 @@ impl Celerity {
         payout: i128,
         installments: u32,
         claim_period_secs: u64,
+        trigger_expiry: u64,
     ) -> u64 {
         funder.require_auth();
         if amount <= 0 {
@@ -231,6 +296,10 @@ impl Celerity {
             panic_with_error!(&e, Error::InvalidInstallments);
         }
         if installments > 1 && claim_period_secs == 0 {
+            panic_with_error!(&e, Error::InvalidPeriod);
+        }
+        let now = e.ledger().timestamp();
+        if trigger_expiry != 0 && trigger_expiry <= now {
             panic_with_error!(&e, Error::InvalidPeriod);
         }
 
@@ -253,21 +322,22 @@ impl Celerity {
             &e,
             pool_id,
             &SubPool {
-                funder,
+                funder: funder.clone(),
                 balance: amount,
                 region,
                 signal_threshold: threshold,
                 payout_per_farmer: payout,
                 installments,
                 claim_period_secs,
+                trigger_expiry,
                 status: PoolStatus::Active,
             },
         );
+        e.events()
+            .publish((symbol_short!("deposit"), funder), (pool_id, amount));
         pool_id
     }
 
-    /// Add funds to an existing sub-pool. Only the pool's funder can top up
-    /// (the transfer is drawn from the funder's own account).
     pub fn top_up(e: Env, pool_id: u64, amount: i128) {
         let mut pool = get_pool(&e, pool_id);
         pool.funder.require_auth();
@@ -282,21 +352,22 @@ impl Celerity {
         );
 
         pool.balance += amount;
-        // New money cures the flag: Exhausted means "ran dry during settlement",
-        // so a refilled pool must rejoin future settlements rather than being
-        // silently skipped forever. Paused stays paused — that is the funder's
-        // explicit choice, undone only by resume_pool.
         if pool.status == PoolStatus::Exhausted {
             pool.status = PoolStatus::Active;
         }
         save_pool(&e, pool_id, &pool);
+        e.events()
+            .publish((symbol_short!("top_up"), pool_id), amount);
     }
 
-    /// Return the entire unspent balance of a sub-pool to its funder.
-    /// Funder-auth only: one funder can never touch another's pool.
+    /// Return unspent balance to the funder.
+    /// `trigger_expiry == 0`: anytime. Otherwise only when `now >= trigger_expiry`.
     pub fn withdraw_unspent(e: Env, pool_id: u64) {
         let mut pool = get_pool(&e, pool_id);
         pool.funder.require_auth();
+        if pool.trigger_expiry != 0 && e.ledger().timestamp() < pool.trigger_expiry {
+            panic_with_error!(&e, Error::NotExpiredYet);
+        }
 
         let amount = pool.balance;
         if amount > 0 {
@@ -308,19 +379,19 @@ impl Celerity {
         }
         pool.balance = 0;
         save_pool(&e, pool_id, &pool);
+        e.events()
+            .publish((symbol_short!("withdraw"), pool_id), amount);
     }
 
-    /// Pause a sub-pool so it is skipped by settlement/claims. Funder-auth only.
     pub fn pause_pool(e: Env, pool_id: u64) {
         let mut pool = get_pool(&e, pool_id);
         pool.funder.require_auth();
         pool.status = PoolStatus::Paused;
         save_pool(&e, pool_id, &pool);
+        e.events()
+            .publish((symbol_short!("pause"), pool_id), ());
     }
 
-    /// Reactivate a sub-pool the funder previously paused. Funder-auth only.
-    /// Strictly Paused -> Active: an Exhausted pool is cured only by new money
-    /// (top_up), never by flipping its status.
     pub fn resume_pool(e: Env, pool_id: u64) {
         let mut pool = get_pool(&e, pool_id);
         pool.funder.require_auth();
@@ -329,12 +400,10 @@ impl Celerity {
         }
         pool.status = PoolStatus::Active;
         save_pool(&e, pool_id, &pool);
+        e.events()
+            .publish((symbol_short!("resume"), pool_id), ());
     }
 
-    // --- registry (LGU/co-op admin) ----------------------------------------
-
-    /// Enroll a farmer in a region. Admin-auth only — who is a farmer is a
-    /// human (LGU/co-op) decision, never the contract's.
     pub fn register_farmer(e: Env, addr: Address, region: u32) {
         let admin = get_admin(&e);
         admin.require_auth();
@@ -356,13 +425,14 @@ impl Celerity {
         );
 
         let mut list = region_farmers(&e, region);
-        list.push_back(addr);
+        list.push_back(addr.clone());
         e.storage()
             .persistent()
             .set(&DataKey::RegionFarmers(region), &list);
+        e.events()
+            .publish((symbol_short!("reg_farm"), addr), region);
     }
 
-    /// Remove a farmer from the registry. Admin-auth only.
     pub fn remove_farmer(e: Env, addr: Address) {
         let admin = get_admin(&e);
         admin.require_auth();
@@ -385,34 +455,23 @@ impl Celerity {
                 .persistent()
                 .set(&DataKey::RegionFarmers(farmer.region), &list);
         }
+        e.events()
+            .publish((symbol_short!("rm_farm"), addr), ());
     }
 
-    // --- oracle -------------------------------------------------------------
-
-    /// Verify `sig` (Ed25519, from the authorized oracle key) over the event
-    /// payload, store the event, and return its event_id. Anyone may relay a
-    /// signed event — the signature, not the submitter, is the authority; no
-    /// other party can forge one.
-    ///
-    /// `nonce` is an addition to the doc §6.3 signature: it gives each signed
-    /// event a unique identity, and a used nonce is rejected — otherwise
-    /// replaying the same oracle signature would mint a fresh event_id and
-    /// defeat the Settled(event_id, farmer, pool_id) idempotency key.
-    pub fn report_event(e: Env, region: u32, signal: u32, nonce: u64, sig: BytesN<64>) -> u64 {
-        // Reject used nonces before the (more expensive) signature check so a
-        // replay never burns verify budget — and only burn a nonce after the
-        // signature actually verifies.
+    /// Threshold oracle report. Anyone may relay; signatures are the authority.
+    pub fn report_event(
+        e: Env,
+        region: u32,
+        signal: u32,
+        nonce: u64,
+        sigs: Vec<OracleSig>,
+    ) -> u64 {
         if e.storage().persistent().has(&DataKey::UsedNonce(nonce)) {
             panic_with_error!(&e, Error::NonceAlreadyUsed);
         }
 
-        // Reconstruct the exact bytes the oracle signed; verification traps
-        // on any mismatch of content or key.
-        let mut payload = Bytes::from_slice(&e, EVENT_PAYLOAD_PREFIX);
-        payload.extend_from_array(&region.to_be_bytes());
-        payload.extend_from_array(&signal.to_be_bytes());
-        payload.extend_from_array(&nonce.to_be_bytes());
-        e.crypto().ed25519_verify(&get_oracle(&e), &payload, &sig);
+        verify_oracle_threshold(&e, region, signal, nonce, &sigs);
 
         e.storage()
             .persistent()
@@ -429,36 +488,11 @@ impl Celerity {
         e.storage()
             .persistent()
             .set(&DataKey::Event(event_id), &Event { region, signal });
+        e.events()
+            .publish((symbol_short!("event"), event_id), (region, signal));
         event_id
     }
 
-    // --- release / claim ----------------------------------------------------
-
-    /// For each Active sub-pool whose region matches the event and whose
-    /// signal_threshold is met (event.signal >= threshold), release
-    /// `payout_per_farmer` to each registered farmer in that region — the
-    /// first installment for recurring pools. Returns the number of new
-    /// releases made.
-    ///
-    /// Permissionless by design: the signed event is the authority, so anyone
-    /// may crank settlement — the caller can neither choose who gets paid nor
-    /// how much.
-    ///
-    /// Idempotent on Settled(event_id, farmer, pool_id): re-running the same
-    /// event never double-pays; already-settled (farmer, pool) pairs are
-    /// skipped, so a re-run after a top_up pays only whoever was missed.
-    ///
-    /// Recurring pools keep one active installment schedule per farmer: if
-    /// Progress exists with `paid < installments`, a later event is deferred
-    /// (no pay, Settled unset) until that schedule finishes — so a second
-    /// typhoon cannot reset `paid` and inflate total payouts.
-    ///
-    /// Flag, never fail: a pool that cannot cover the next payout is marked
-    /// Exhausted and settlement continues with the remaining pools — one
-    /// funder's dry pool must never revert another funder's release.
-    ///
-    /// Scale note: iterates pools (1..NextPoolId) x farmers in the region in
-    /// one transaction — fine at demo scale; paginate before real-scale use.
     pub fn settle_event(e: Env, event_id: u64) -> u32 {
         let event: Event = e
             .storage()
@@ -491,14 +525,9 @@ impl Celerity {
             for farmer in farmers.iter() {
                 let settled_key = DataKey::Settled(event_id, farmer.clone(), pool_id);
                 if e.storage().persistent().has(&settled_key) {
-                    continue; // this event already paid this farmer from this pool
+                    continue;
                 }
 
-                // One active installment schedule per (pool, farmer). A later
-                // typhoon must not overwrite Progress mid-schedule (that would
-                // reset `paid` and let the farmer pull more than `installments`
-                // payouts). Defer this event until the current schedule finishes;
-                // Settled stays unset so a re-settle after the last claim pays.
                 if pool.installments > 1 {
                     let progress_key = DataKey::Progress(pool_id, farmer.clone());
                     if let Some(p) = e
@@ -513,7 +542,6 @@ impl Celerity {
                 }
 
                 if pool.balance < pool.payout_per_farmer {
-                    // Flag, never fail: mark and move on to the next pool.
                     pool.status = PoolStatus::Exhausted;
                     dirty = true;
                     e.events().publish(
@@ -569,18 +597,8 @@ impl Celerity {
         released
     }
 
-    /// Pull the next installment from a recurring sub-pool. Farmer-auth: the
-    /// farmer pulls their own schedule, started by settle_event's first
-    /// installment. Due when `claim_period_secs` have elapsed since the last
-    /// payment; a paused pool blocks the claim; an underfunded pool fails
-    /// loudly (top_up cures it — a panic must not persist an Exhausted flag,
-    /// since panicking reverts every write). The farmer's **current** registry
-    /// region must match the pool's region — remove → re-register elsewhere
-    /// cannot finish an old schedule.
     pub fn claim(e: Env, farmer: Address, pool_id: u64) {
         farmer.require_auth();
-        // Registry is a human decision — removing a farmer must stop further
-        // pulls even if an installment schedule was already opened.
         let registered: Farmer = e
             .storage()
             .persistent()
@@ -646,14 +664,10 @@ impl Celerity {
         );
     }
 
-    // --- views --------------------------------------------------------------
-
-    /// Read back a sub-pool.
     pub fn pool(e: Env, pool_id: u64) -> SubPool {
         get_pool(&e, pool_id)
     }
 
-    /// Read back a reported weather event.
     pub fn event(e: Env, event_id: u64) -> Event {
         e.storage()
             .persistent()
@@ -661,7 +675,6 @@ impl Celerity {
             .unwrap_or_else(|| panic_with_error!(&e, Error::EventNotFound))
     }
 
-    /// Read back a farmer registration.
     pub fn farmer(e: Env, addr: Address) -> Farmer {
         e.storage()
             .persistent()
@@ -669,12 +682,10 @@ impl Celerity {
             .unwrap_or_else(|| panic_with_error!(&e, Error::FarmerNotFound))
     }
 
-    /// All registered farmers in a region (demo/frontend helper).
     pub fn farmers_in_region(e: Env, region: u32) -> Vec<Address> {
         region_farmers(&e, region)
     }
 
-    /// All releases made from a given funder's pools, newest last.
     pub fn funder_ledger(e: Env, funder: Address) -> Vec<Release> {
         e.storage()
             .persistent()

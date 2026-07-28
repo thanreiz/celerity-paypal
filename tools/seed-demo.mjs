@@ -135,6 +135,7 @@ async function main() {
       payout: xlm(p.payout),
       installments: p.installments,
       claim_period_secs: BigInt(p.period),
+      trigger_expiry: 0n,
     });
     created.push({ ...p, id });
     console.log(`  ✓ pool #${id} — ${p.name} — ${p.amount} XLM escrow, payout ${p.payout} XLM${p.installments > 1 ? ` ×${p.installments}` : ""}`);

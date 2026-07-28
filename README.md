@@ -25,7 +25,7 @@
   <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
   <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-Ed25519_signed-d99a2b?style=flat-square" />
   <img alt="SEP-31" src="https://img.shields.io/badge/Anchor-SEP--31_stub-b45309?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-48%2F48_passing-2e7d32?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-54%2F54_passing-2e7d32?style=flat-square" />
 </p>
 
 ---
@@ -48,8 +48,8 @@ cross-border settlement layer *underneath* them.
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
 > - **Demo video script:** [`docs/hackathon/DEMO-VIDEO-TWITTER.md`](docs/hackathon/DEMO-VIDEO-TWITTER.md)
-> - **Contract address (Stellar Testnet):** `CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S)
+> - **Contract address (Stellar Testnet):** `CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX)
 > - **Docs index:** [`docs/`](docs/README.md)
 > - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
 > - **Design system:** [`docs/product/design.md`](docs/product/design.md)
@@ -135,7 +135,7 @@ whole design leans on. What's actually in use, all live on Testnet:
 | 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
 
 Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
-per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S).
+per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX).
 
 ## Features
 
@@ -156,6 +156,11 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
   region must match the pool's region.
 - **Farmer registry** — admin-auth `register_farmer` / `remove_farmer`, region-keyed.
 - **Per-funder ledger** — `funder_ledger` and one `release` event per (funder, farmer).
+- **On-chain transparency** — every mutator (`deposit`, `top_up`, `withdraw`, `pause`, `resume`,
+  `reg_farm`, `rm_farm`, `event`, `release`, `exhausted`, `claim`) emits a Soroban contract event.
+  Combined with `funder_ledger`, the full disbursement history is verifiable directly on-chain —
+  not in any private database Celerity controls. Judges can inspect all events on
+  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX).
 
 ### Funder Console (React)
 
@@ -214,7 +219,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S` |
+| Contract address | `CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX` |
 
 ## Repo Layout
 

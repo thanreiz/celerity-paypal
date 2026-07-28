@@ -21,6 +21,7 @@ const ALLOWED_METHODS = new Set([
   "report_event",
   "settle_event",
   "claim",
+  "set_admin",
 ]);
 
 const clients = {};
@@ -80,19 +81,41 @@ export async function invokeOnChain(role, method, args) {
   return result;
 }
 
-/** Sign CELERITY-EVENT-V1 || region || signal || nonce with the oracle key. */
+/** Sign CELERITY-EVENT-V1 || region || signal || nonce with the oracle key(s).
+ *  Returns signatures from ORACLE_SECRET (key_index 0) and ORACLE_SECRET_2 (key_index 1).
+ *  ORACLE_SECRET_2 is required; the contract enforces a 2-of-N threshold.
+ */
 export function signOracleEvent(region, signal, nonce) {
   const payload = Buffer.alloc(33);
   Buffer.from("CELERITY-EVENT-V1", "ascii").copy(payload, 0);
   payload.writeUInt32BE(Number(region), 17);
   payload.writeUInt32BE(Number(signal), 21);
   payload.writeBigUInt64BE(BigInt(nonce), 25);
-  const kp = Keypair.fromSecret(roleSecret("oracle"));
+
+  const kp0 = Keypair.fromSecret(roleSecret("oracle"));
+
+  const secret2 = process.env.ORACLE_SECRET_2 || process.env.VITE_ORACLE_SECRET_2;
+  if (!secret2) throw new Error("ORACLE_SECRET_2 required — multi-sig oracle needs at least 2 keys");
+  const kp1 = Keypair.fromSecret(secret2);
+
+  const signatures = [
+    { key_index: 0, signature: Buffer.from(kp0.sign(payload)) },
+    { key_index: 1, signature: Buffer.from(kp1.sign(payload)) },
+  ];
+
+  // ORACLE_SECRET_3 is optional; include it if present (key_index 2).
+  const secret3 = process.env.ORACLE_SECRET_3 || process.env.VITE_ORACLE_SECRET_3;
+  if (secret3) {
+    const kp2 = Keypair.fromSecret(secret3);
+    signatures.push({ key_index: 2, signature: Buffer.from(kp2.sign(payload)) });
+  }
+
   return {
-    signature: Buffer.from(kp.sign(payload)),
+    signatures,
+    signature: signatures[0].signature, // legacy compat
     nonce: BigInt(nonce).toString(),
     region: Number(region),
     signal: Number(signal),
-    oracle_public_key: kp.publicKey(),
+    oracle_public_key: kp0.publicKey(),
   };
 }

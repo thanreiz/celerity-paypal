@@ -46,6 +46,7 @@ export default function CreatePoolModal({ onClose, who, me, busy, run }) {
           payout: toStroops(payoutUnits),
           installments: Number(installments),
           claim_period_secs: BigInt(installments > 1 ? period : 0),
+          trigger_expiry: 0n,
         })
       );
       if (poolId !== undefined && poolId !== null) setPoolName(poolId, name);

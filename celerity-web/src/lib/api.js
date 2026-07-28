@@ -73,6 +73,7 @@ export async function apiOracleSign(region, signal, nonce) {
   });
   return {
     ...data,
+    signatures: decodeValue(data.signatures),
     signature: decodeValue(data.signature),
     nonce: BigInt(data.nonce),
   };
