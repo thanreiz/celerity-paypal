@@ -120,8 +120,16 @@ export async function farmersByRegion(pools) {
   return groups;
 }
 
-export async function registerFarmer(farmerAddr, region) {
-  return invoke("admin", "register_farmer", { addr: farmerAddr, region: Number(region) });
+export async function registerFarmer(farmerAddr, region, source = "RSBSA") {
+  return invoke("admin", "register_farmer", {
+    addr: farmerAddr,
+    region: Number(region),
+    source: String(source),
+  });
+}
+
+export async function oracleConfig() {
+  return view("oracle_config", {});
 }
 
 export async function removeFarmer(farmerAddr) {

@@ -4,7 +4,8 @@
 
 const KEYS = {
   farmer: "celerity.tour.farmer.v2",
-  funder: "celerity.tour.funder.v2",
+  // v3 — re-offer funder coach after home/checklist layout shipped for Demo Day.
+  funder: "celerity.tour.funder.v3",
 };
 
 function readDone(key) {
@@ -130,7 +131,7 @@ export const FUNDER_TOUR = [
   {
     id: "settings",
     title: "Settings & replay",
-    body: "Tap Settings for demo preferences and technical details. To see these tips again, use Replay coach tips on the Home checklist.",
+    body: "Tap Settings for demo preferences and technical details — or use Replay tips in the top corner anytime (same idea as Replay tutorial tips on the farmer Profile).",
     anchor: "settings",
   },
 ];

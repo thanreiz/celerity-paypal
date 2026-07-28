@@ -6,7 +6,7 @@ import { CONTRACT_ID, short } from "../../lib/config";
 import { FUNDERS, funderByRole } from "../../lib/funders";
 import { addr } from "../../lib/celerity";
 
-export default function SettingsPage({ who, me, funders }) {
+export default function SettingsPage({ who, me, funders, onReplayTour }) {
   const [prefs, setPrefs] = useState({ disbursements: true, threshold: true, audits: false });
   const identity = funderByRole(who);
   const labelFor = (address) => FUNDERS.find((f) => addr(f.role) === address)?.label;
@@ -23,6 +23,40 @@ export default function SettingsPage({ who, me, funders }) {
           <p style={{ margin: 0, font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase" }}>Address</p>
           <p style={{ margin: 0, font: "var(--text-table)", fontVariantNumeric: "tabular-nums" }}>{short(me)}</p>
         </div>
+        {onReplayTour && (
+          <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
+            <h3 style={{ margin: "0 0 8px", font: "var(--text-body-lg)" }}>Coach tips</h3>
+            <p style={{ margin: "0 0 14px", font: "var(--text-fine)", color: "var(--text-faint)" }}>
+              Same walkthrough as first login — highlights escrow, pools, farmers, and the typhoon trigger.
+            </p>
+            <button
+              type="button"
+              onClick={onReplayTour}
+              className="cel-press"
+              style={{
+                width: "100%",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                border: "1px solid var(--container-highest)",
+                background: "var(--surface)",
+                color: "var(--primary)",
+                borderRadius: 12,
+                padding: "12px 16px",
+                font: "var(--text-table)",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" /><path d="M12 8v4l2.5 1.5" />
+              </svg>
+              Replay tutorial tips
+            </button>
+          </div>
+        )}
         <div className="cel-card-surface cel-raise" style={{ padding: 24 }}>
           <h3 style={{ margin: "0 0 12px", font: "var(--text-body-lg)" }}>Network Connectivity</h3>
           <div style={{ background: "var(--surface-low)", border: "1px solid var(--container-highest)", borderRadius: 8, padding: 12 }}>

@@ -25,7 +25,7 @@
   <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
   <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-Ed25519_signed-d99a2b?style=flat-square" />
   <img alt="SEP-31" src="https://img.shields.io/badge/Anchor-SEP--31_stub-b45309?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-54%2F54_passing-2e7d32?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-56%2F56_passing-2e7d32?style=flat-square" />
 </p>
 
 ---
@@ -48,8 +48,8 @@ cross-border settlement layer *underneath* them.
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
 > - **Demo video script:** [`docs/hackathon/DEMO-VIDEO-TWITTER.md`](docs/hackathon/DEMO-VIDEO-TWITTER.md)
-> - **Contract address (Stellar Testnet):** `CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU)
+> - **Contract address (Stellar Testnet):** `CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU)
 > - **Docs index:** [`docs/`](docs/README.md)
 > - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
 > - **Design system:** [`docs/product/design.md`](docs/product/design.md)
@@ -95,9 +95,9 @@ every peso auditable.
    never touches another's.
 
 2. **An LGU/co-op admin registers farmers.**
-   `register_farmer(address, region)` maintains the beneficiary list. The contract pays only
-   registered addresses in the triggered region — it doesn't decide who's a farmer, it pays a
-   verified list.
+   `register_farmer(address, region, source)` maintains the beneficiary list (`source` tags
+   provenance — RSBSA / COOP / NGO). The contract pays only registered addresses in the
+   triggered region — it doesn't decide who's a farmer, it pays a verified list.
 
 3. **A signed weather bulletin enters the contract.**
    The oracle signs `region · signal · nonce` with an Ed25519 key; `report_event` verifies it
@@ -135,7 +135,7 @@ whole design leans on. What's actually in use, all live on Testnet:
 | 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
 
 Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
-per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU).
+per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU).
 
 ## Features
 
@@ -154,13 +154,15 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
 - **Recurring installments** — `claim` pulls the next tranche on the pool's cadence; hard-stops
   at the installment count; a paused pool blocks the claim; the farmer's current registry
   region must match the pool's region.
-- **Farmer registry** — admin-auth `register_farmer` / `remove_farmer`, region-keyed.
+- **Farmer registry** — admin-auth `register_farmer` / `remove_farmer`, region-keyed, with
+  on-chain `source` tagging (RSBSA / COOP / NGO) for APAC registry provenance.
+- **Oracle config view** — `oracle_config()` returns constructor-pinned keys + threshold.
 - **Per-funder ledger** — `funder_ledger` and one `release` event per (funder, farmer).
 - **On-chain transparency** — every mutator (`deposit`, `top_up`, `withdraw`, `pause`, `resume`,
   `reg_farm`, `rm_farm`, `event`, `release`, `exhausted`, `claim`) emits a Soroban contract event.
   Combined with `funder_ledger`, the full disbursement history is verifiable directly on-chain —
   not in any private database Celerity controls. Judges can inspect all events on
-  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU).
+  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU).
 
 ### Funder Console (React)
 
@@ -219,7 +221,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU` |
+| Contract address | `CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU` |
 
 ## Repo Layout
 
@@ -361,7 +363,7 @@ transaction metadata).
 # Build the contract to Wasm
 cd contracts/celerity && stellar contract build
 
-# Run the test suite (49 tests, adversarial cases included)
+# Run the test suite (56 tests, adversarial cases included)
 cargo test
 
 # Deploy to Testnet. The constructor runs atomically at deploy — admin, oracle

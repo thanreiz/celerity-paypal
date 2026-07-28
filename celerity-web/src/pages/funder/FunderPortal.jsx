@@ -92,6 +92,7 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
   const [bulletin, setBulletin] = useState(null);
   const portalRef = useRef(null);
   const [showTour, setShowTour] = useState(false);
+  const tourArmed = useRef(false);
 
   const me = who ? addr(who) : null;
   const identity = who ? funderByRole(who) : null;
@@ -99,14 +100,19 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
   const myPools = who ? pools.filter((p) => p.funder === me) : [];
   const farmerCount = farmerGroups.reduce((n, g) => n + g.list.length, 0);
 
+  // First login — arm the coach once home + pool state are painted so anchors exist
+  // (parity with FarmerApp, which starts the tour on mount).
   useEffect(() => {
-    if (!who) return;
-    // First login to an institution — show coach tips once per browser.
-    if (!isTourDone("funder")) {
-      setPage("home");
-      setShowTour(true);
+    if (!who) {
+      tourArmed.current = false;
+      setShowTour(false);
+      return;
     }
-  }, [who]);
+    if (tourArmed.current || isTourDone("funder") || !loaded) return;
+    tourArmed.current = true;
+    setPage("home");
+    setShowTour(true);
+  }, [who, loaded]);
 
   useEffect(() => {
     if (!me) return;
@@ -124,7 +130,9 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
 
   const replayTour = () => {
     resetTour("funder");
+    tourArmed.current = true;
     setPage("home");
+    setShowCreate(false);
     setShowTour(true);
   };
 
@@ -148,6 +156,12 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
       {page === "home" && (
         <>
+          <MiniButton onClick={replayTour}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" /><path d="M12 8v4l2.5 1.5" />
+            </svg>
+            Replay tips
+          </MiniButton>
           <MiniButton onClick={onBackToFarmer}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <rect x="7" y="2" width="10" height="20" rx="2.5" /><path d="M11 18h2" />
@@ -269,7 +283,14 @@ export default function FunderPortal({ pools, loaded, busy, run, refresh, onBack
         {page === "oracle" && (
           <OraclePage pools={pools} myPools={myPools} who={who} busy={busy} run={run} refresh={refresh} onBulletin={setBulletin} />
         )}
-        {page === "settings" && <SettingsPage who={who} me={me} funders={[...new Set(pools.map((p) => p.funder))]} />}
+        {page === "settings" && (
+          <SettingsPage
+            who={who}
+            me={me}
+            funders={[...new Set(pools.map((p) => p.funder))]}
+            onReplayTour={replayTour}
+          />
+        )}
       </div>
 
       {showTour && page === "home" && !showCreate && (

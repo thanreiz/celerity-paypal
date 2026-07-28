@@ -3,12 +3,12 @@
   "testnet": {
     "network_passphrase": "Test SDF Network ; September 2015",
     "rpc_url": "https://soroban-testnet.stellar.org:443",
-    "contract_id": "CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU",
+    "contract_id": "CD74SBDG5DZDTWF4YRMSIFWNBXTUKPNZRPPQ4E5UY43RD5JBPQSV2KNU",
     "deployer_identity": "alice (fee payer); constructor admin = FUNDER_SECRET pubkey (demo ADB)",
     "settlement_token": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC (native XLM SAC)",
     "oracle_public_key_hex": "978174400489bcc80ec1e29d77380a3a9bcbd1adfcd1017a32ae5c7df3d30859",
     "oracle_note": "2-of-3 multi-sig: keys 0/1/2 from ORACLE_SECRET{,_2,_3}; threshold 2. Pubkeys hex in deploy args.",
-    "phase": "11 \u2014 full mutator events; trigger_expiry; 2-of-3 oracle; set_admin; seed expiry 0",
+    "phase": "12 \u2014 registry source tagging + oracle_config view; 2-of-3 oracle; seed RSBSA",
     "demo_url": "https://stellar-celerity.me/",
     "previous_contract_ids": {
       "phase_0": "CCNGY2SDMTXYTXU57EK37NBR4D7M43LVV4HF632BIALIJ2ZRISUVWIMX",
@@ -24,7 +24,8 @@
       "phase_9_pre_claim_region": "CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7",
       "phase_10_wrong_admin": "CBQ3LOUWWIEN654AXW2QOEMBIHUWE5SBPX2GWDHMBEHFI2IDSCT5YOD3",
       "phase_10_claim_region": "CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S",
-      "phase_11_smoke": "CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX"
+      "phase_11_smoke": "CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX",
+      "phase_11_multisig": "CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU"
     },
     "oracle_keys_hex": [
       "978174400489bcc80ec1e29d77380a3a9bcbd1adfcd1017a32ae5c7df3d30859",

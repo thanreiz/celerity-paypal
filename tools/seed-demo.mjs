@@ -110,8 +110,8 @@ async function main() {
     ...EXTRA_FARMERS,
   ];
   for (const f of farmers) {
-    await invoke("alice", "register_farmer", { addr: f.addr, region: f.region });
-    console.log(`  ✓ registered ${f.name} — region ${f.region} — ${f.addr.slice(0, 4)}…${f.addr.slice(-4)}`);
+    await invoke("alice", "register_farmer", { addr: f.addr, region: f.region, source: "RSBSA" });
+    console.log(`  ✓ registered ${f.name} — region ${f.region} — RSBSA — ${f.addr.slice(0, 4)}…${f.addr.slice(-4)}`);
   }
 
   // --- Pools: sized so region-5 Bicol can pay BOTH Mang Ramon + Aling Nena ---

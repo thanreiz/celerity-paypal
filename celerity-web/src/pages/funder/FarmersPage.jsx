@@ -25,11 +25,19 @@ export default function FarmersPage({ groups, busy, run }) {
   const [showAdd, setShowAdd] = useState(false);
   const [addr, setAddr] = useState("");
   const [region, setRegion] = useState(5);
+  const [source, setSource] = useState("RSBSA");
+
+  const SOURCE_OPTIONS = [
+    { value: "RSBSA", label: "RSBSA (national)" },
+    { value: "COOP", label: "LGU co-op" },
+    { value: "NGO", label: "NGO partner" },
+  ];
 
   const register = () =>
-    run("Register farmer", () => registerFarmer(addr.trim(), region)).then(() => {
+    run("Register farmer", () => registerFarmer(addr.trim(), region, source)).then(() => {
       setShowAdd(false);
       setAddr("");
+      setSource("RSBSA");
     });
 
   const columns = [
@@ -45,6 +53,11 @@ export default function FarmersPage({ groups, busy, run }) {
           </div>
         </div>
       ),
+    },
+    {
+      key: "source",
+      label: "Registry source",
+      render: (r) => (typeof r.source === "string" ? r.source : String(r.source ?? "—")),
     },
     { key: "registered_by", label: "Enrolled By (LGU)", render: (r) => short(r.registered_by) },
     { key: "status", label: "Status", render: () => <StatusPill status="Registered" /> },
@@ -108,6 +121,9 @@ export default function FarmersPage({ groups, busy, run }) {
           </div>
           <div style={{ flex: "1 1 220px" }}>
             <Select label="Region" value={region} onChange={(e) => setRegion(e.target.value)} options={REGION_OPTIONS} />
+          </div>
+          <div style={{ flex: "1 1 200px" }}>
+            <Select label="Registry source" value={source} onChange={(e) => setSource(e.target.value)} options={SOURCE_OPTIONS} />
           </div>
           <Button variant="primary" disabled={busy || !addr.trim()} onClick={register}>Enroll</Button>
         </div>

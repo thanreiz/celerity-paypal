@@ -13,7 +13,7 @@
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, token,
-    Address, Bytes, BytesN, Env, Vec,
+    Address, Bytes, BytesN, Env, Symbol, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -80,6 +80,8 @@ pub struct Farmer {
     pub addr: Address,
     pub region: u32,
     pub registered_by: Address,
+    /// Registry provenance — e.g. `RSBSA`, `COOP`, `NGO` (Symbol ≤9 chars).
+    pub source: Symbol,
 }
 
 #[contracttype]
@@ -404,7 +406,7 @@ impl Celerity {
             .publish((symbol_short!("resume"), pool_id), ());
     }
 
-    pub fn register_farmer(e: Env, addr: Address, region: u32) {
+    pub fn register_farmer(e: Env, addr: Address, region: u32, source: Symbol) {
         let admin = get_admin(&e);
         admin.require_auth();
 
@@ -421,6 +423,7 @@ impl Celerity {
                 addr: addr.clone(),
                 region,
                 registered_by: admin,
+                source,
             },
         );
 
@@ -680,6 +683,11 @@ impl Celerity {
             .persistent()
             .get(&DataKey::FarmerReg(addr))
             .unwrap_or_else(|| panic_with_error!(&e, Error::FarmerNotFound))
+    }
+
+    /// Public read of constructor-pinned oracle keys and threshold.
+    pub fn oracle_config(e: Env) -> (Vec<BytesN<32>>, u32) {
+        (get_oracle_keys(&e), get_oracle_threshold(&e))
     }
 
     pub fn farmers_in_region(e: Env, region: u32) -> Vec<Address> {

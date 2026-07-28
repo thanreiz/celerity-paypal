@@ -49,6 +49,10 @@ const REGION_V: u32 = 5;
 const THRESHOLD: u32 = 3;
 const PAYOUT: i128 = 100;
 
+fn src(s: &Setup) -> Symbol {
+    Symbol::new(&s.env, "RSBSA")
+}
+
 struct Setup {
     env: Env,
     client: CelerityClient<'static>,
@@ -530,7 +534,7 @@ fn register_and_read_back_farmer() {
     let s = setup();
     let farmer_addr = Address::generate(&s.env);
 
-    s.client.register_farmer(&farmer_addr, &REGION_V);
+    s.client.register_farmer(&farmer_addr, &REGION_V, &src(&s));
 
     // registration demanded the admin's authorization on the contract call
     assert_root_auth(&s, &s.admin, "register_farmer");
@@ -539,6 +543,7 @@ fn register_and_read_back_farmer() {
     assert_eq!(farmer.addr, farmer_addr);
     assert_eq!(farmer.region, REGION_V);
     assert_eq!(farmer.registered_by, s.admin);
+    assert_eq!(farmer.source, src(&s));
 
     let in_region = s.client.farmers_in_region(&REGION_V);
     assert_eq!(in_region.len(), 1);
@@ -552,15 +557,14 @@ fn non_admin_cannot_register_farmer() {
     let farmer_addr = Address::generate(&s.env);
 
     s.env.mock_auths(&[MockAuth {
-        address: &mallory,
-        invoke: &MockAuthInvoke {
+        address: &mallory, invoke: &MockAuthInvoke {
             contract: &s.client.address,
             fn_name: "register_farmer",
-            args: (farmer_addr.clone(), REGION_V).into_val(&s.env),
+            args: (farmer_addr.clone(), REGION_V, src(&s)).into_val(&s.env),
             sub_invokes: &[],
         },
     }]);
-    let res = s.client.try_register_farmer(&farmer_addr, &REGION_V);
+    let res = s.client.try_register_farmer(&farmer_addr, &REGION_V, &src(&s));
     assert_eq!(res.err(), Some(auth_err()));
 
     // and the registry is untouched
@@ -576,8 +580,8 @@ fn duplicate_registration_fails() {
     let s = setup();
     let farmer_addr = Address::generate(&s.env);
 
-    s.client.register_farmer(&farmer_addr, &REGION_V);
-    let res = s.client.try_register_farmer(&farmer_addr, &REGION_V);
+    s.client.register_farmer(&farmer_addr, &REGION_V, &src(&s));
+    let res = s.client.try_register_farmer(&farmer_addr, &REGION_V, &src(&s));
     assert_eq!(res.err(), Some(cerr(Error::FarmerAlreadyRegistered)));
 
     // no duplicate entry in the region list either
@@ -589,7 +593,7 @@ fn remove_farmer_clears_registry_and_region_list() {
     let s = setup();
     let farmer_addr = Address::generate(&s.env);
 
-    s.client.register_farmer(&farmer_addr, &REGION_V);
+    s.client.register_farmer(&farmer_addr, &REGION_V, &src(&s));
     s.client.remove_farmer(&farmer_addr);
 
     assert_eq!(
@@ -607,7 +611,7 @@ fn non_admin_cannot_remove_farmer() {
     let s = setup();
     let mallory = Address::generate(&s.env);
     let farmer_addr = Address::generate(&s.env);
-    s.client.register_farmer(&farmer_addr, &REGION_V);
+    s.client.register_farmer(&farmer_addr, &REGION_V, &src(&s));
 
     s.env.mock_auths(&[MockAuth {
         address: &mallory,
@@ -633,9 +637,9 @@ fn remove_then_reregister_in_new_region_keeps_lists_consistent() {
     let farmer_addr = Address::generate(&s.env);
     const REGION_VII: u32 = 7;
 
-    s.client.register_farmer(&farmer_addr, &REGION_V);
+    s.client.register_farmer(&farmer_addr, &REGION_V, &src(&s));
     s.client.remove_farmer(&farmer_addr);
-    s.client.register_farmer(&farmer_addr, &REGION_VII);
+    s.client.register_farmer(&farmer_addr, &REGION_VII, &src(&s));
 
     let farmer = s.client.farmer(&farmer_addr);
     assert_eq!(farmer.region, REGION_VII);
@@ -875,7 +879,7 @@ fn one_event_releases_two_funders_to_one_farmer() {
     let alice = funded_addr(&s, 1_000);
     let bob = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
 
     let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
     let pool_b = s.client.deposit(&bob, &400, &REGION_V, &4, &50, &1, &0, &0);
@@ -925,7 +929,7 @@ fn settle_twice_pays_exactly_once() {
     let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
     let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
 
     let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 200);
@@ -946,7 +950,7 @@ fn dry_pool_flagged_solvent_pools_still_pay() {
     let bob = funded_addr(&s, 1_000);
     let carol = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
 
     let pool_a = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
     let pool_dry = s.client.deposit(&bob, &30, &REGION_V, &3, &100, &1, &0, &0); // < payout
@@ -973,7 +977,7 @@ fn three_funders_one_farmer_three_separate_receipts() {
         funded_addr(&s, 1_000),
     ];
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
     for (i, f) in funders.iter().enumerate() {
         s.client
             .deposit(f, &500, &REGION_V, &3, &(100 + i as i128), &1, &0, &0);
@@ -1001,8 +1005,8 @@ fn midlist_exhaustion_pays_partial_then_recovers_after_topup() {
     let alice = funded_addr(&s, 1_000);
     let f1 = Address::generate(&s.env);
     let f2 = Address::generate(&s.env);
-    s.client.register_farmer(&f1, &REGION_V);
-    s.client.register_farmer(&f2, &REGION_V);
+    s.client.register_farmer(&f1, &REGION_V, &src(&s));
+    s.client.register_farmer(&f2, &REGION_V, &src(&s));
 
     // 150 covers one payout of 100, not two
     let pool_id = s.client.deposit(&alice, &150, &REGION_V, &3, &100, &1, &0, &0);
@@ -1028,7 +1032,7 @@ fn paused_wrong_region_and_high_threshold_pools_are_skipped() {
     let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 2_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
 
     let paused = s.client.deposit(&alice, &300, &REGION_V, &3, &100, &1, &0, &0);
     s.client.pause_pool(&paused);
@@ -1081,7 +1085,7 @@ fn settled_recurring_pool() -> (Setup, Address, u64, u64) {
 
     let alice = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
     let pool_id = s
         .client
         .deposit(&alice, &600, &REGION_V, &3, &100, &3, &PERIOD, &0);
@@ -1173,7 +1177,7 @@ fn claim_without_settlement_or_registration_fails() {
     let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 2_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
     let lump = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &1, &0, &0);
     let recurring = s
         .client
@@ -1223,7 +1227,7 @@ fn reregister_in_new_region_cannot_claim_old_pool() {
 
     const REGION_VII: u32 = 7;
     s.client.remove_farmer(&farmer);
-    s.client.register_farmer(&farmer, &REGION_VII);
+    s.client.register_farmer(&farmer, &REGION_VII, &src(&s));
 
     assert_eq!(
         s.client.try_claim(&farmer, &pool_id).err(),
@@ -1243,7 +1247,7 @@ fn second_event_defers_while_recurring_schedule_active() {
 
     let alice = funded_addr(&s, 2_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
     let pool_id = s
         .client
         .deposit(&alice, &1_000, &REGION_V, &3, &100, &3, &PERIOD, &0);
@@ -1342,7 +1346,7 @@ fn recurring_pool_releases_first_installment_and_records_progress() {
     let (s, signer, signer2) = setup_with_oracle();
     let alice = funded_addr(&s, 1_000);
     let farmer = Address::generate(&s.env);
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
 
     // 3 installments of 100
     let pool_id = s.client.deposit(&alice, &600, &REGION_V, &3, &100, &3, &100, &0);
@@ -1404,6 +1408,26 @@ fn set_admin_rotates_registry_authority() {
     // Old admin auth alone is insufficient once storage admin changed — host
     // still needs the *current* admin. With mock_all reset:
     s.env.mock_all_auths();
-    s.client.register_farmer(&farmer, &REGION_V);
+    s.client.register_farmer(&farmer, &REGION_V, &src(&s));
     assert_eq!(s.client.farmer(&farmer).registered_by, new_admin);
+}
+
+#[test]
+fn register_farmer_stores_source_symbol() {
+    let s = setup();
+    let farmer = Address::generate(&s.env);
+    let coop = Symbol::new(&s.env, "COOP");
+    s.client.register_farmer(&farmer, &REGION_V, &coop);
+    assert_eq!(s.client.farmer(&farmer).source, coop);
+}
+
+#[test]
+fn oracle_config_returns_constructor_keys_and_threshold() {
+    let s = setup();
+    let (keys, threshold) = s.client.oracle_config();
+    assert_eq!(threshold, 2u32);
+    assert_eq!(keys.len(), 3);
+    assert_eq!(keys.get(0).unwrap(), BytesN::from_array(&s.env, &[1u8; 32]));
+    assert_eq!(keys.get(1).unwrap(), BytesN::from_array(&s.env, &[2u8; 32]));
+    assert_eq!(keys.get(2).unwrap(), BytesN::from_array(&s.env, &[3u8; 32]));
 }

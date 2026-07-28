@@ -186,16 +186,16 @@ export default function FunderHome({ myPools, loaded, ledger, farmerCount, onGot
           ))}
       </div>
 
-      {loaded && (
-        <DemoGuide
-          pools={myPools}
-          farmerCount={farmerCount}
-          releases={ledger.length}
-          onGoto={onGoto}
-          onCreatePool={onCreatePool}
-          onReplayTour={onReplayTour}
-        />
-      )}
+      {/* Always mount so the coach tour can spotlight `data-tour="tutorial"`
+          even while pool RPC is still catching up. */}
+      <DemoGuide
+        pools={loaded ? myPools : []}
+        farmerCount={farmerCount}
+        releases={ledger.length}
+        onGoto={onGoto}
+        onCreatePool={onCreatePool}
+        onReplayTour={onReplayTour}
+      />
 
       {/* recent releases, grouped by the event that caused them */}
       <div>
