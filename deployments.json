@@ -3,7 +3,7 @@
   "testnet": {
     "network_passphrase": "Test SDF Network ; September 2015",
     "rpc_url": "https://soroban-testnet.stellar.org:443",
-    "contract_id": "CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX",
+    "contract_id": "CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU",
     "deployer_identity": "alice (fee payer); constructor admin = FUNDER_SECRET pubkey (demo ADB)",
     "settlement_token": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC (native XLM SAC)",
     "oracle_public_key_hex": "978174400489bcc80ec1e29d77380a3a9bcbd1adfcd1017a32ae5c7df3d30859",
@@ -23,7 +23,8 @@
       "phase_8_pre_recurring_fix": "CCTI4UD4HEPDT27CLBD6KMFS6CU5DESHX4NTQBQAH45GY6DG3FOA7LWQ",
       "phase_9_pre_claim_region": "CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7",
       "phase_10_wrong_admin": "CBQ3LOUWWIEN654AXW2QOEMBIHUWE5SBPX2GWDHMBEHFI2IDSCT5YOD3",
-      "phase_10_claim_region": "CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S"
+      "phase_10_claim_region": "CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S",
+      "phase_11_smoke": "CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX"
     },
     "oracle_keys_hex": [
       "978174400489bcc80ec1e29d77380a3a9bcbd1adfcd1017a32ae5c7df3d30859",

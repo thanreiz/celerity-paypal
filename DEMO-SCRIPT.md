@@ -20,7 +20,7 @@
 - [ ] Coach tours: Skip (×) on stage if rehearsed; leave funder **Tutorial** panel open for judges exploring after; Profile → Replay tutorial tips if needed
 - [ ] Confirm production JS has **no** Stellar `S…` secrets (View Source / Network → main bundle search)
 
-**Live contract (as of last prep):** `CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX`  
+**Live contract (as of last prep):** `CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU`  
 Keys are server-side (see `celerity-web/.rotate-pubs.json` locally — not committed). Prior Phase-7 contract retired after secret rotation.
 
 ---
@@ -67,7 +67,7 @@ Say once: *Testnet XLM stands in for USDC. XLM is not the product currency.*
 - ADB (multilateral) and PCIC (state insurer) as independent funders  
 - LGU owns the farmer registry — human judgment stays with humans  
 - Per-funder ledger on-chain; stellar.expert links  
-- Every action emits a contract event — judges can verify disbursements directly via [stellar.expert](https://stellar.expert/explorer/testnet/contract/CA6HI34MNNFKTZ5PC6EUDOL7KPBUVOHFSZQVB4OTVDSFXNEJB375K7YX), not our DB  
+- Every action emits a contract event — judges can verify disbursements directly via [stellar.expert](https://stellar.expert/explorer/testnet/contract/CCBYIINXFRTA54PKLPISWLOSII3AIXRV53KMLN42G2IFL5YKGK3BO3PU), not our DB  
 
 ### 6. Close (20s)
 
