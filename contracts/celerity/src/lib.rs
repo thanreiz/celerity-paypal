@@ -45,6 +45,7 @@ pub enum Error {
     NothingToClaim = 15,
     AllInstallmentsPaid = 16,
     ClaimNotDueYet = 17,
+    RegionMismatch = 18,
 }
 
 // ---------------------------------------------------------------------------
@@ -573,19 +574,22 @@ impl Celerity {
     /// installment. Due when `claim_period_secs` have elapsed since the last
     /// payment; a paused pool blocks the claim; an underfunded pool fails
     /// loudly (top_up cures it — a panic must not persist an Exhausted flag,
-    /// since panicking reverts every write).
+    /// since panicking reverts every write). The farmer's **current** registry
+    /// region must match the pool's region — remove → re-register elsewhere
+    /// cannot finish an old schedule.
     pub fn claim(e: Env, farmer: Address, pool_id: u64) {
         farmer.require_auth();
         // Registry is a human decision — removing a farmer must stop further
         // pulls even if an installment schedule was already opened.
-        if !e
+        let registered: Farmer = e
             .storage()
             .persistent()
-            .has(&DataKey::FarmerReg(farmer.clone()))
-        {
-            panic_with_error!(&e, Error::FarmerNotFound);
-        }
+            .get(&DataKey::FarmerReg(farmer.clone()))
+            .unwrap_or_else(|| panic_with_error!(&e, Error::FarmerNotFound));
         let mut pool = get_pool(&e, pool_id);
+        if registered.region != pool.region {
+            panic_with_error!(&e, Error::RegionMismatch);
+        }
         if pool.status == PoolStatus::Paused {
             panic_with_error!(&e, Error::PoolPaused);
         }

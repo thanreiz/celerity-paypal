@@ -48,8 +48,8 @@ cross-border settlement layer *underneath* them.
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
 > - **Demo video script:** [`DEMO-VIDEO-TWITTER.md`](DEMO-VIDEO-TWITTER.md)
-> - **Contract address (Stellar Testnet):** `CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7)
+> - **Contract address (Stellar Testnet):** `CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S)
 > - **Design rules & win condition:** [`PROJECT.md`](PROJECT.md)
 > - **Design system:** [`design.md`](design.md)
 > - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
@@ -110,7 +110,8 @@ every peso auditable.
 
 5. **Farmers claim recurring installments on schedule.**
    Recurring pools release the first installment at settlement; the farmer pulls the rest with
-   `claim` on the pool's own cadence.
+   `claim` on the pool's own cadence. `claim` requires the farmer's **current** registry region
+   to match the pool's region — remove → re-register elsewhere cannot finish an old schedule.
 
 6. **Value cashes out to PHP and every release is logged.**
    Released value routes through a SEP-31 anchor to spendable pesos, and `funder_ledger` gives
@@ -133,7 +134,7 @@ whole design leans on. What's actually in use, all live on Testnet:
 | 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
 
 Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
-per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7).
+per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S).
 
 ## Features
 
@@ -145,10 +146,13 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
   contract compares numbers, never reads a document. Replays are rejected.
 - **Idempotent multi-funder release** — `settle_event` pays every matching pool once, keyed on
   `(event_id, farmer, pool_id)`; a re-run after a top-up pays only whoever was missed.
+  Demo-scale: one transaction scans `1..NextPoolId` × farmers in the region; paginate before
+  real-scale use.
 - **Flag-not-fail** — an underfunded pool is flagged `Exhausted` and skipped; one funder's dry
   pool never reverts another's payout. `top_up` cures the flag.
 - **Recurring installments** — `claim` pulls the next tranche on the pool's cadence; hard-stops
-  at the installment count; a paused pool blocks the claim.
+  at the installment count; a paused pool blocks the claim; the farmer's current registry
+  region must match the pool's region.
 - **Farmer registry** — admin-auth `register_farmer` / `remove_farmer`, region-keyed.
 - **Per-funder ledger** — `funder_ledger` and one `release` event per (funder, farmer).
 
@@ -209,7 +213,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7` |
+| Contract address | `CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S` |
 
 ## Repo Layout
 
@@ -350,7 +354,7 @@ transaction metadata).
 # Build the contract to Wasm
 cd contracts/celerity && stellar contract build
 
-# Run the test suite (46 tests, adversarial cases included)
+# Run the test suite (49 tests, adversarial cases included)
 cargo test
 
 # Deploy to Testnet. The constructor runs atomically at deploy — admin, oracle
@@ -422,6 +426,10 @@ Built, designed, and shipped Celerity end to end (contract, oracle stub, farmer 
 - The oracle feed and the anchor cash-out are deliberate, clearly-labeled stubs — everything
   else (escrow, trigger verification, multi-funder release, registry, ledger, claim) is real and
   live on Testnet.
+- `settle_event` is demo-scale: one transaction iterates `1..NextPoolId` × farmers in the
+  triggered region. Pagination is roadmap before any real-money pilot.
+- Admin, oracle Ed25519 public key, and settlement token are constructor-pinned for the
+  hackathon — there is no on-chain rotation path yet.
 - Contract IDs are public and safe to commit; they live in `deployments.json`, with every prior
   redeploy preserved under `previous_contract_ids`.
 

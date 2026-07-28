@@ -20,7 +20,7 @@
 - [ ] Coach tours: Skip (×) on stage if rehearsed; leave funder **Tutorial** panel open for judges exploring after; Profile → Replay tutorial tips if needed
 - [ ] Confirm production JS has **no** Stellar `S…` secrets (View Source / Network → main bundle search)
 
-**Live contract (as of last prep):** `CC4CNJUTY5FCMVG3MFSMIMP6CSKAFDTK7DU6BKW5LNORGHGROJZAGKT7`  
+**Live contract (as of last prep):** `CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S`  
 Keys are server-side (see `celerity-web/.rotate-pubs.json` locally — not committed). Prior Phase-7 contract retired after secret rotation.
 
 ---

@@ -1129,6 +1129,23 @@ fn removed_farmer_cannot_claim_remaining_installments() {
 }
 
 #[test]
+fn reregister_in_new_region_cannot_claim_old_pool() {
+    // Remove → re-register elsewhere must not finish an old Progress schedule.
+    let (s, farmer, pool_id, t0) = settled_recurring_pool();
+    s.env.ledger().with_mut(|l| l.timestamp = t0 + PERIOD);
+
+    const REGION_VII: u32 = 7;
+    s.client.remove_farmer(&farmer);
+    s.client.register_farmer(&farmer, &REGION_VII);
+
+    assert_eq!(
+        s.client.try_claim(&farmer, &pool_id).err(),
+        Some(cerr(Error::RegionMismatch))
+    );
+    assert_eq!(s.token.balance(&farmer), 100);
+}
+
+#[test]
 fn second_event_defers_while_recurring_schedule_active() {
     // A later typhoon must not overwrite Progress and inflate payouts beyond
     // `installments`. Settle of event 2 is a no-op until the schedule finishes,
