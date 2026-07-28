@@ -32,9 +32,13 @@ dist
 .context/
 .agents/
 .cursor/
-docs/
+docs/counterpoint/
+docs/internal/
 reference/
 skills-lock.json
+
+# Local demo video PDF (not part of the public tree)
+DEMO-VIDEO-MOTION.pdf
 
 # VS Code MCP config carries the Stitch API key — never commit
 .vscode/

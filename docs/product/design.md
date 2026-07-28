@@ -24,7 +24,7 @@ is the human-readable map on top of them.
 4. **Honest stubs, always labeled.** The oracle signer and the SEP-31 anchor
    cash-out are simulated for the hackathon. Every stubbed boundary gets an
    amber `Badge` next to it — never disguised as working infrastructure
-   (see PROJECT.md rule 6).
+   (see [`PROJECT.md`](PROJECT.md) rule 6).
 5. **Plain language on the farmer side.** The farmer app never says
    "escrow," "pool," or "disbursement." It says "relief funds," "claim," and
    "withdraw to pesos." Money is always shown in pesos on that surface —
@@ -218,7 +218,7 @@ All respect `prefers-reduced-motion: reduce` (zeroed at the top of
 ## Provenance
 
 Originally generated in Google Stitch ("Celerity Design System Evolution"),
-exported via `tools/stitch-pull.py`. Rebuilt into the current React
+exported via [`tools/stitch-pull.py`](../../tools/stitch-pull.py). Rebuilt into the current React
 component kit (`src/design/`) and token file
 (`src/design/tokens.css`) during the "Stitch design system" implementation
 pass — warm paper light theme, forest-green money semantics, Quicksand,

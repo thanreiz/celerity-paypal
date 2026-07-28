@@ -387,7 +387,7 @@ what actually landed; milestones hit are marked ✅.
   sidebar console into a login-first, GCash-style app — pick-your-institution login
   (ADB APDRF / PCIC), escrow hero + circular quick-actions + event-grouped release
   feed, and strict per-funder isolation (one funder's pools/ledger never surface under
-  another). Design system in `design.md`; iterated from HTML mockups before touching
+  another). Design system in [`docs/product/design.md`](../product/design.md); iterated from HTML mockups before touching
   React.
 - **Multi-region typhoon (shipped):** the oracle screen became a PAGASA-bulletin
   drop-zone — drop a signed JSON bulletin, the app shows region-by-region what will

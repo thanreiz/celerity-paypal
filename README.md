@@ -47,11 +47,12 @@ cross-border settlement layer *underneath* them.
 > - **Live demo:** [stellar-celerity.me](https://stellar-celerity.me/)
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Google Drive](https://drive.google.com/file/d/1xSrghLvS7HGgZDI5f59QABwXWCzt8r91/view?usp=sharing)
-> - **Demo video script:** [`DEMO-VIDEO-TWITTER.md`](DEMO-VIDEO-TWITTER.md)
+> - **Demo video script:** [`docs/hackathon/DEMO-VIDEO-TWITTER.md`](docs/hackathon/DEMO-VIDEO-TWITTER.md)
 > - **Contract address (Stellar Testnet):** `CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S`
 >   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CD3PDHHN447KRSSDIG2LB5ZQUZA7EJEF5TFPP4IB4N2NT4TSMR7UM67S)
-> - **Design rules & win condition:** [`PROJECT.md`](PROJECT.md)
-> - **Design system:** [`design.md`](design.md)
+> - **Docs index:** [`docs/`](docs/README.md)
+> - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
+> - **Design system:** [`docs/product/design.md`](docs/product/design.md)
 > - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
 
 ---
@@ -231,7 +232,8 @@ celerity-web/            React frontend
 oracle/                  Node.js Ed25519 oracle signer (demo stub for the weather feed)
 tools/seed-demo.mjs      Repeatable demo-slate seed (pools + farmers, no event fired)
 screenshots/             Product screenshots (refresh with `node tools/capture-screenshots.mjs`)
-DEMO-VIDEO-TWITTER.md    Short demo video roadmap + teleprompter script
+docs/                    Categorized product + hackathon docs ([docs/README.md](docs/README.md))
+DEMO-SCRIPT.md           Stage demo checklist
 tools/capture-screenshots.mjs  Playwright capture of live farmer + funder screens
 deployments.json         Public Testnet deployment metadata + contract-id history
 ```
