@@ -1466,3 +1466,91 @@ fn oracle_config_returns_constructor_keys_and_threshold() {
     assert_eq!(keys.get(1).unwrap(), BytesN::from_array(&s.env, &[2u8; 32]));
     assert_eq!(keys.get(2).unwrap(), BytesN::from_array(&s.env, &[3u8; 32]));
 }
+
+// ---------------------------------------------------------------------------
+// Additional adversarial tests — oracle threshold + multi-farmer edge cases
+// ---------------------------------------------------------------------------
+
+#[test]
+fn duplicate_key_index_does_not_satisfy_threshold() {
+    // A single oracle key submitted twice (key_index=0 twice) must NOT count as
+    // two threshold slots — one signer cannot satisfy a 2-of-3 requirement alone.
+    let (s, signer, _signer2) = setup_with_oracle();
+    let sig = sign_event(&s, &signer, REGION_V, 4, 7001);
+    let mut sigs = soroban_sdk::Vec::new(&s.env);
+    sigs.push_back(OracleSig { key_index: 0, signature: sig.clone() });
+    sigs.push_back(OracleSig { key_index: 0, signature: sig }); // same index repeated
+    assert_eq!(
+        s.client.try_report_event(&REGION_V, &4, &7001, &sigs).err(),
+        Some(cerr(Error::InsufficientOracleSigs))
+    );
+    // No event stored
+    assert_eq!(s.client.try_event(&1).err(), Some(cerr(Error::EventNotFound)));
+}
+
+#[test]
+fn second_event_does_not_pay_farmers_with_active_recurring_schedule() {
+    // Two farmers on one recurring pool (installments=3). Event 1 settles → both
+    // get installment 1 and have active Progress schedules. Event 2 fires
+    // immediately (before claim_period_secs elapses) → settle_event must return 0
+    // and neither balance may change.
+    let (s, signer, signer2) = setup_with_oracle();
+    let t0 = 3_000_000u64;
+    s.env.ledger().with_mut(|l| l.timestamp = t0);
+
+    let alice = funded_addr(&s, 2_000);
+    let f1 = Address::generate(&s.env);
+    let f2 = Address::generate(&s.env);
+    s.client.register_farmer(&f1, &REGION_V, &src(&s));
+    s.client.register_farmer(&f2, &REGION_V, &src(&s));
+    s.client.deposit(&alice, &1_000, &REGION_V, &3, &100, &3, &PERIOD, &0);
+
+    let event_1 = seed_event2(&s, &signer, &signer2, REGION_V, 4, 7100);
+    assert_eq!(s.client.settle_event(&event_1), 2); // both farmers get installment 1
+    assert_eq!(s.token.balance(&f1), 100);
+    assert_eq!(s.token.balance(&f2), 100);
+
+    // Fire event 2 immediately — both farmers still have active schedules (paid=1 < 3)
+    let event_2 = seed_event2(&s, &signer, &signer2, REGION_V, 4, 7101);
+    let deferred = s.client.settle_event(&event_2);
+    assert_eq!(deferred, 0); // deferred — no double-pay
+    assert_eq!(s.token.balance(&f1), 100); // unchanged
+    assert_eq!(s.token.balance(&f2), 100); // unchanged
+}
+
+#[test]
+fn exhausted_pool_topup_recovery_covers_all_skipped_farmers() {
+    // Three farmers, pool funded for exactly 1 payout. First farmer is paid,
+    // pool goes Exhausted before farmer 2 and 3. Top up with 2 payouts.
+    // Re-settle the same event must pay BOTH skipped farmers, not just the next one.
+    let (s, signer, signer2) = setup_with_oracle();
+    let alice = funded_addr(&s, 2_000);
+    let f1 = Address::generate(&s.env);
+    let f2 = Address::generate(&s.env);
+    let f3 = Address::generate(&s.env);
+    s.client.register_farmer(&f1, &REGION_V, &src(&s));
+    s.client.register_farmer(&f2, &REGION_V, &src(&s));
+    s.client.register_farmer(&f3, &REGION_V, &src(&s));
+
+    // Fund for exactly 1 payout so pool goes Exhausted after f1
+    let pool_id = s.client.deposit(&alice, &100, &REGION_V, &3, &100, &1, &0, &0);
+    let event_id = seed_event2(&s, &signer, &signer2, REGION_V, 4, 7200);
+
+    assert_eq!(s.client.settle_event(&event_id), 1);
+    assert_eq!(s.token.balance(&f1), 100);
+    assert_eq!(s.token.balance(&f2), 0);
+    assert_eq!(s.token.balance(&f3), 0);
+    assert_eq!(s.client.pool(&pool_id).status, PoolStatus::Exhausted);
+
+    // Top up with enough for both remaining farmers
+    s.client.top_up(&pool_id, &200);
+    assert_eq!(s.client.pool(&pool_id).status, PoolStatus::Active);
+
+    // Re-settle: f1 is already settled (idempotent); f2 and f3 both get paid
+    let recovered = s.client.settle_event(&event_id);
+    assert_eq!(recovered, 2);
+    assert_eq!(s.token.balance(&f1), 100); // not paid again
+    assert_eq!(s.token.balance(&f2), 100);
+    assert_eq!(s.token.balance(&f3), 100);
+    assert_eq!(s.client.funder_ledger(&alice).len(), 3); // 3 total release records
+}

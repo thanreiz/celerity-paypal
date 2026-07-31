@@ -81,7 +81,7 @@ Say once: *Testnet XLM stands in for USDC. XLM is not the product currency.*
 |---|---|
 | **Unregistered farmer?** | Registry is LGU/admin. Unregistered addresses get nothing. |
 | **LGU pause?** | `pause_pool` — that funder’s pool skips; others still settle. |
-| **Oracle trust?** | Authorized Ed25519 key; nonce replay protection; contract never parses essays. |
+| **Oracle trust?** | Three authorized Ed25519 keys — 2-of-3 threshold required per event; nonce blocks replay; contract verifies signatures and compares numbers, never reads a document. |
 | **Why XLM?** | Testnet stand-in for USDC. Production = SAC stablecoin; XLM is fees/sponsorship. |
 | **PDAX UAT?** | Target licensed VASP for SEP-24/31. Demo uses protocol-faithful mocks so the stage never flakes. |
 | **vs Pijin?** | Pijin moves money when a person can text. We move disaster capital when weather is signed. |
@@ -89,6 +89,8 @@ Say once: *Testnet XLM stands in for USDC. XLM is not the product currency.*
 | **Mainnet?** | Same contract pattern; swap SAC + live VASP quotes. Not required for this demo. |
 | **Dry pool mid-event?** | Flag that pool; continue solvent pools. Never revert the whole typhoon. |
 | **Double pay?** | Settled composite key `(event, farmer, pool)` — re-settle is a no-op. |
+| **Oracle key rotation?** | Keys are constructor-pinned — rotation needs a redeploy. In production: PAGASA holds one key, JMA a second, independent auditor a third — no single entity can fire a payout alone. Roadmap: `set_oracle_keys` with an admin-auth time-lock. |
+| **Scale / compute limits?** | Demo is 2 pools × 2 farmers per transaction — well within Soroban limits. `settle_event` is O(pools × farmers); pagination before any real-money pilot is documented as roadmap in the README and contract comments. |
 
 ---
 
