@@ -5,6 +5,78 @@ in `deployments.json` (`previous_contract_ids`).
 
 ---
 
+## 2026-07-28 — v1.0.0 Championship Submission · Top 10 Finalist · 57/57 tests
+
+**Live contract:** `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3`
+**Demo:** [stellar-celerity.me](https://stellar-celerity.me/)
+
+### Contract — Phases 11–13 (final)
+
+- **Phase 11 — Multi-sig oracle (report_event):** `report_event` now accepts
+  `Vec<OracleSig>` and a `nonce: u64`. The contract enforces a configurable
+  k-of-n Ed25519 threshold (demo: 2-of-3) against constructor-pinned keys.
+  `OracleSig { key_index, signature }` bounds each sig to a specific key so the
+  verifier never attempts a spurious verify against a non-signing key.
+  `UsedNonce(u64)` in persistent storage blocks replays at the contract level —
+  no nonce can be accepted twice.  
+  Duplicate pubkeys rejected at constructor; duplicate `key_index` values within
+  one call count at most once toward the threshold.
+
+- **Phase 12 — Farmer source tag:** `register_farmer` now records
+  `source: Symbol` (e.g. `RSBSA`, `COOP`, `NGO`) per farmer. `oracle_config()`
+  returns the constructor-pinned keys and threshold for on-chain inspection.
+
+- **Phase 13 — Claim region guard:** `claim()` now validates that the farmer's
+  *current* registered region matches the pool's region. Remove → re-register
+  elsewhere cannot drain an old installment schedule from a different region's
+  pool. Added `set_admin` for registry authority rotation.
+
+### Test suite — 57 tests (was 46 at phase 4/5)
+
+Added tests covering: 2-of-3 oracle threshold, nonce replay rejection, tampered
+event rejection, unauthorized key rejection, 1-of-3 insufficient threshold,
+source-tag storage, oracle_config view, farmer-region claim guard
+(RegionMismatch), re-register-in-new-region blocks old pool, ghost-entry guard
+(corrupted RegionFarmers does not pay wrong-region farmer), second-event deferral
+while recurring schedule is active, expiry blocks early withdraw + allows after,
+admin rotation, three-funders-three-receipts escrow invariant, midlist exhaustion
+with partial recovery after top-up.
+
+### Frontend — Farmer app polish (post-redesign)
+
+- **Farmer splash / connect** — brand-first: dove lockup + *Relief that moves*,
+  farmer name, full region label (Region V — Bicol), optional account reveal, and
+  a quiet multi-farmer switch for the demo slate.
+- **Overlays** — Quick Help / Cash Out / tx detail are isolated overlays that
+  never bleed under the tab bar; Home nav stays visible and does not bleed through.
+- **Dove favicon** in the browser tab; splash and Connect share the same mark and
+  tagline as the live site.
+- **Recurring installments** — on-chain schedule shown on Home; claim button
+  respects the pool's cadence and hard-stops at the installment count.
+- **SEP-31 cash-out flow** — 5-step overlay (destination → recipient → amount →
+  confirm → success) with labeled PDAX UAT status chips and an explicit honest
+  label on the stub leg.
+
+### Frontend — Oracle / bulletin UX
+
+- **Coach tour** — step-by-step funder onboarding tour with skip and replay-via-
+  profile; deferred on stage if pre-dismissed.
+- **Multi-region bulletin idempotency** — `reportAndSettleMany()` signs one event
+  per region with unique nonces; a `NonceAlreadyUsed` error on one region never
+  aborts the rest (flag-not-fail mirroring the contract).
+
+### Demo slate
+
+- `tools/seed-demo.mjs` updated for current contract API (2-of-3 oracle keys,
+  source tags). Seeds ADB + PCIC pools across islands, 4 registered farmers,
+  ledger empty — typhoon is triggered live on stage.
+- `DEMO-SCRIPT.md` updated to championship format (8–9 min, fail-safes,
+  pre-flight checklist, Q&A cards for all anticipated judge questions).
+- `screenshots/` refreshed — 28 screens covering full farmer app, funder
+  console, and public transparency ledger.
+
+---
+
 ## 2026-07-10 — Funder-console redesign shipped, fresh demo slate, docs
 
 ### Frontend — funder console redesign (login-first, GCash-style)
@@ -62,7 +134,7 @@ a sidebar console to a login-first, isolation-safe product.
   so the trigger is live on stage.
 
 ### QA
-- Full-stack gate (2026-07-10): contract `cargo test` 46/46, frontend build clean,
+- Full-stack gate (2026-07-10): contract `cargo test` 46/46 (at phase 4/5; current suite is 57/57 — see entry above), frontend build clean,
   18-check headless sweep of the live stack (both identities, funder isolation,
   oracle bulletin analysis, no console errors, 390px no-overflow). Verdict PASS.
 

@@ -123,12 +123,12 @@ Each funder calls `deposit` and creates a sub-pool: an earmarked balance plus a 
 > Build the multi-sub-pool data model and *one* funded sub-pool in the live demo. Show a second funder's sub-pool as pre-seeded state (not funded live on stage) to prove independence without spending demo time on two funding flows.
 
 ### 4.2 Oracle Trigger — a signed event, not a read document
-An authorized oracle key submits `report_event(region, signal_level)` with a signature. The contract verifies the signature against a stored PAGASA-role public key and treats the event as ground truth. It does **not** read or interpret any document — it checks a signature and a number.
-- The contract compares `signal_level` to each sub-pool's threshold and `region` to its scope.
-- Backup oracle (JMA/RSMC Tokyo role key) can be added as a second authorized signer for cross-check.
+An authorized oracle submits `report_event(region, signal, nonce, sigs)` with a vector of Ed25519 signatures. The contract verifies a **2-of-3 threshold** of signatures against constructor-pinned oracle public keys and treats the event as ground truth. It does **not** read or interpret any document — it verifies signatures and compares numbers.
+- The contract compares `signal` to each sub-pool's `signal_threshold` and `region` to its scope.
+- A JMA/RSMC Tokyo role key is already included as a second key in the constructor key set; the threshold enforces how many must co-sign before any event is accepted — no single entity can fire payouts alone.
 
 > **Oracle note**
-> The trust of the whole system rests on the oracle key; a compromised key could release funds on a false event. Mitigation: time-boxed/scoped oracle keys plus funder-side spot-check sampling on released events (see §5.1). In the demo the oracle is a Node.js signer simulating PAGASA; live-feed ingestion is roadmap (§4.8).
+> The trust of the whole system rests on the oracle keys. The live contract enforces a 2-of-3 threshold — no single compromised key can fire any payout. Additional mitigations: constructor-pinned keys (no hot rotation), nonce-based replay prevention, and funder-side spot-check sampling on released events (see §5.1). In the demo the oracle is a Node.js signer simulating PAGASA; live-feed ingestion is roadmap (§4.8).
 
 ### 4.3 Multi-Funder Release — one trigger, all act
 On a valid event, the contract iterates matching sub-pools and releases each independently, emitting one ledger event per funder per farmer.
@@ -171,14 +171,20 @@ Stubs are deliberate scope boundaries, not shortfalls.
 > **Risk**
 > The oracle key is a single point of trust. If it's stolen or misissued, an attacker submits a false "signal 5, region X" event and drains real sub-pools faster than any paper process could catch — the very speed that is the product becomes the attack surface.
 
-Fix: scope and time-box the oracle key, require a second signer (JMA-role) above a payout size threshold, and gate large releases behind a short challenge window with funder spot-check sampling.
+Fix (shipped): the live contract enforces a **2-of-3 Ed25519 threshold on every event** — no single compromised key can fire any payout of any size. Oracle keys are constructor-pinned (no hot rotation); each event carries a unique nonce that is stored permanently to block replays. Additional production mitigations: time-boxed key sets and funder-side spot-check sampling on released events.
 
 ```rust
-// require dual-sig above a threshold; single-sig only for small, fast payouts
-fn report_event(e: Env, region: u32, signal: u32, sigs: Vec<Signature>) {
-    let required = if payout_exposure(&e, region) > DUAL_SIG_LIMIT { 2 } else { 1 };
-    verify_authorized_signers(&e, &sigs, required); // PAGASA + optional JMA role
-    // ... proceed to release
+// Live implementation — 2-of-3 threshold enforced on every report_event call.
+// OracleSig { key_index: u32, signature: BytesN<64> } bounds each sig to a key slot;
+// duplicate key_index values count at most once toward the threshold.
+pub fn report_event(e: Env, region: u32, signal: u32, nonce: u64, sigs: Vec<OracleSig>) -> u64 {
+    // nonce dedup — replay at any future time is rejected
+    if e.storage().persistent().has(&DataKey::UsedNonce(nonce)) {
+        panic_with_error!(&e, Error::NonceAlreadyUsed);
+    }
+    verify_oracle_threshold(&e, region, signal, nonce, &sigs); // enforces k-of-n
+    e.storage().persistent().set(&DataKey::UsedNonce(nonce), &true);
+    // ... store event, return event_id
 }
 ```
 
@@ -233,50 +239,83 @@ pub struct SubPool {
     pub region: u32,
     pub signal_threshold: u32,
     pub payout_per_farmer: i128,
-    pub installments: u32,      // 1 = lump, >1 = recurring
-    pub status: PoolStatus,     // Active | Paused | Exhausted
+    pub installments: u32,        // 1 = lump, >1 = recurring
+    pub claim_period_secs: u64,   // seconds between installment claims (0 if lump)
+    pub trigger_expiry: u64,      // unix ts; 0 = no expiry (withdraw anytime)
+    pub status: PoolStatus,       // Active | Paused | Exhausted
 }
 
 #[contracttype]
 pub struct Farmer {
     pub addr: Address,
     pub region: u32,
-    pub registered_by: Address, // LGU/co-op admin
+    pub registered_by: Address,   // LGU/co-op admin
+    pub source: Symbol,           // registry provenance: RSBSA | COOP | NGO
+}
+
+// Oracle signature — binds a sig to a constructor-pinned key slot.
+#[contracttype]
+pub struct OracleSig {
+    pub key_index: u32,           // index into the Vec<BytesN<32>> set at construction
+    pub signature: BytesN<64>,    // Ed25519 signature over CELERITY-EVENT-V1 || region || signal || nonce
 }
 
 #[contracttype]
 pub enum DataKey {
-    Pool(u64),                  // pool_id -> SubPool
-    FarmerReg(Address),         // addr -> Farmer
-    Settled(u64, Address, u64), // (event_id, farmer, pool_id) -> bool
-    OracleKey,
+    Pool(u64),                    // pool_id -> SubPool
+    FarmerReg(Address),           // addr -> Farmer
+    Settled(u64, Address, u64),   // (event_id, farmer, pool_id) -> bool  [idempotency key]
+    Event(u64),                   // event_id -> Event
+    UsedNonce(u64),               // nonce -> bool  [replay prevention]
+    Progress(u64, Address),       // (pool_id, farmer) -> InstallmentProgress
+    Ledger(Address),              // funder -> Vec<Release>
+    RegionFarmers(u32),           // region -> Vec<Address>
+    Token,                        // settlement SAC address
+    OracleKeys,                   // Vec<BytesN<32>> — k-of-n public key set
+    OracleThreshold,              // u32 — minimum sigs required per event
     Admin,
+    NextPoolId,
+    NextEventId,
 }
 ```
 
 ### 6.3 Full Contract Function Set
 
 ```rust
+// --- constructor (atomic deploy — no separate init to front-run) ---
+fn __constructor(e: Env, admin: Address, oracle_keys: Vec<BytesN<32>>,
+                 threshold: u32, token: Address);
+
+// --- admin ---
+fn set_admin(e: Env, new_admin: Address);                          // admin-auth
+
 // --- funder ---
-fn deposit(e: Env, funder: Address, region: u32, threshold: u32,
-           payout: i128, installments: u32) -> u64; // creates sub-pool
-fn top_up(e: Env, pool_id: u64, amount: i128);
-fn withdraw_unspent(e: Env, pool_id: u64);
-fn pause_pool(e: Env, pool_id: u64);
+fn deposit(e: Env, funder: Address, amount: i128, region: u32,
+           threshold: u32, payout: i128, installments: u32,
+           claim_period_secs: u64, trigger_expiry: u64) -> u64;   // funder-auth
+fn top_up(e: Env, pool_id: u64, amount: i128);                    // funder-auth
+fn withdraw_unspent(e: Env, pool_id: u64);                        // funder-auth; blocked until trigger_expiry if set
+fn pause_pool(e: Env, pool_id: u64);                              // funder-auth
+fn resume_pool(e: Env, pool_id: u64);                             // funder-auth; only from Paused
 
 // --- registry (LGU/co-op admin) ---
-fn register_farmer(e: Env, addr: Address, region: u32);
-fn remove_farmer(e: Env, addr: Address);
+fn register_farmer(e: Env, addr: Address, region: u32, source: Symbol); // admin-auth
+fn remove_farmer(e: Env, addr: Address);                                 // admin-auth
 
-// --- oracle ---
-fn report_event(e: Env, region: u32, signal: u32, sigs: Vec<Signature>) -> u64;
+// --- oracle (permissionless relay — signatures are the authority) ---
+fn report_event(e: Env, region: u32, signal: u32, nonce: u64,
+                sigs: Vec<OracleSig>) -> u64; // k-of-n Ed25519 threshold, nonce dedup
 
 // --- release / claim ---
-fn settle_event(e: Env, event_id: u64);        // releases all matching pools
-fn claim(e: Env, farmer: Address, pool_id: u64); // pull next installment
+fn settle_event(e: Env, event_id: u64) -> u32; // releases all matching pools; returns count
+fn claim(e: Env, farmer: Address, pool_id: u64); // farmer-auth; pull next installment on schedule
 
 // --- views ---
 fn pool(e: Env, pool_id: u64) -> SubPool;
+fn event(e: Env, event_id: u64) -> Event;
+fn farmer(e: Env, addr: Address) -> Farmer;
+fn oracle_config(e: Env) -> (Vec<BytesN<32>>, u32);   // constructor-pinned keys + threshold
+fn farmers_in_region(e: Env, region: u32) -> Vec<Address>;
 fn funder_ledger(e: Env, funder: Address) -> Vec<Release>;
 ```
 
@@ -434,9 +473,11 @@ engineering ones.
 
 ## 10. Appendix — Contract Skeleton (Rust / Soroban)
 
+This appendix shows the original planning skeleton. **The live contract has shipped all of these functions** — see `contracts/celerity/src/lib.rs` for the full implementation and `src/test.rs` for 57 adversarial tests. Key differences from the skeleton: `__constructor` replaces `init`, `report_event` takes `Vec<OracleSig>` with a 2-of-3 threshold (not a single `BytesN<64>`), and `settle_event` returns `u32` (release count).
+
 ```rust
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Vec, BytesN};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol, Vec, BytesN};
 
 #[contracttype]
 pub enum PoolStatus { Active, Paused, Exhausted }
@@ -445,16 +486,23 @@ pub enum PoolStatus { Active, Paused, Exhausted }
 pub struct SubPool {
     pub funder: Address, pub balance: i128, pub region: u32,
     pub signal_threshold: u32, pub payout_per_farmer: i128,
-    pub installments: u32, pub status: PoolStatus,
+    pub installments: u32, pub claim_period_secs: u64,
+    pub trigger_expiry: u64, pub status: PoolStatus,
 }
 
 #[contracttype]
-pub struct Farmer { pub addr: Address, pub region: u32, pub registered_by: Address }
+pub struct Farmer { pub addr: Address, pub region: u32,
+    pub registered_by: Address, pub source: Symbol }
+
+#[contracttype]
+pub struct OracleSig { pub key_index: u32, pub signature: BytesN<64> }
 
 #[contracttype]
 pub enum DataKey {
     Pool(u64), FarmerReg(Address), Settled(u64, Address, u64),
-    OracleKey, Admin, NextPoolId, NextEventId,
+    Event(u64), UsedNonce(u64), Progress(u64, Address), Ledger(Address),
+    RegionFarmers(u32), Token, OracleKeys, OracleThreshold, Admin,
+    NextPoolId, NextEventId,
 }
 
 #[contract]
@@ -462,46 +510,57 @@ pub struct Celerity;
 
 #[contractimpl]
 impl Celerity {
-    pub fn init(e: Env, admin: Address, oracle: BytesN<32>) { /* set Admin, OracleKey */ }
+    // Atomic deploy — admin, oracle key set + threshold, settlement token (SAC).
+    // No separate init() to front-run.
+    pub fn __constructor(e: Env, admin: Address, oracle_keys: Vec<BytesN<32>>,
+                         threshold: u32, token: Address) { /* ... */ }
 
-    pub fn deposit(e: Env, funder: Address, region: u32, threshold: u32,
-                   payout: i128, installments: u32) -> u64 {
+    pub fn deposit(e: Env, funder: Address, amount: i128, region: u32,
+                   threshold: u32, payout: i128, installments: u32,
+                   claim_period_secs: u64, trigger_expiry: u64) -> u64 {
         funder.require_auth();
         // create SubPool, transfer funds into contract, return pool_id
         unimplemented!()
     }
 
     pub fn top_up(e: Env, pool_id: u64, amount: i128) { unimplemented!() }
-    pub fn withdraw_unspent(e: Env, pool_id: u64) { /* funder-auth only */ unimplemented!() }
-    pub fn pause_pool(e: Env, pool_id: u64) { /* funder-auth only */ unimplemented!() }
+    pub fn withdraw_unspent(e: Env, pool_id: u64) { /* funder-auth; expiry guard */ unimplemented!() }
+    pub fn pause_pool(e: Env, pool_id: u64) { /* funder-auth */ unimplemented!() }
+    pub fn resume_pool(e: Env, pool_id: u64) { /* funder-auth; only from Paused */ unimplemented!() }
 
-    pub fn register_farmer(e: Env, addr: Address, region: u32) {
-        // registry-admin auth; store Farmer
+    pub fn register_farmer(e: Env, addr: Address, region: u32, source: Symbol) {
+        // admin-auth; store Farmer; append to RegionFarmers(region)
         unimplemented!()
     }
     pub fn remove_farmer(e: Env, addr: Address) { unimplemented!() }
 
-    pub fn report_event(e: Env, region: u32, signal: u32, sig: BytesN<64>) -> u64 {
-        // verify sig against OracleKey; store event; return event_id
+    // Permissionless relay — Ed25519 k-of-n threshold is the authority, not the caller.
+    pub fn report_event(e: Env, region: u32, signal: u32, nonce: u64,
+                        sigs: Vec<OracleSig>) -> u64 {
+        // nonce dedup; verify_oracle_threshold; store Event; return event_id
         unimplemented!()
     }
 
-    pub fn settle_event(e: Env, event_id: u64) {
+    pub fn settle_event(e: Env, event_id: u64) -> u32 {
         // for each Active pool matching region & signal >= threshold:
-        //   for each registered farmer in region:
-        //     k = Settled(event_id, farmer, pool_id); skip if set
-        //     transfer payout (or first installment); mark settled; emit Release
-        //   flag PoolExhausted instead of reverting on low balance
+        //   for each farmer in RegionFarmers(event.region):
+        //     verify FarmerReg.region matches (ghost-entry guard)
+        //     skip if Settled(event_id, farmer, pool_id) set (idempotency)
+        //     skip if installments>1 AND Progress active AND paid < installments
+        //     flag PoolExhausted instead of reverting on low balance (flag-not-fail)
+        //     transfer payout; mark Settled; update Ledger; set Progress if recurring
+        // return count of releases made
         unimplemented!()
     }
 
     pub fn claim(e: Env, farmer: Address, pool_id: u64) {
-        // pull next installment if due; advance schedule
+        // farmer.require_auth(); region match check; cooldown check; transfer installment
         unimplemented!()
     }
 
     pub fn pool(e: Env, pool_id: u64) -> SubPool { unimplemented!() }
-    // pub fn funder_ledger(...) -> Vec<Release> { ... }
+    pub fn oracle_config(e: Env) -> (Vec<BytesN<32>>, u32) { unimplemented!() }
+    pub fn funder_ledger(e: Env, funder: Address) -> Vec<Release> { unimplemented!() }
 }
 ```
 
@@ -550,10 +609,10 @@ Concede it, then reframe: *"PCIC going parametric validates the trigger — that
 *"For a single national insurer in one currency — you're right, a database works. The moment you have multiple independent funders, in different currencies, who don't trust each other's books and need cross-border settlement into spendable local cash — that's exactly what a shared ledger plus anchors does natively and a database can't. The chain earns its place on multi-funder trust and fiat settlement, not on the trigger."*
 
 ### Q4. "Who is the oracle in production, and why should anyone trust it?"
-*"PAGASA — the Philippine weather authority, under DOST — issues the official typhoon signals, cross-checked against Japan's RSMC Tokyo, which is the regional standard for the whole Western Pacific. The contract verifies a signature from an authorized weather-authority key; it never reads or interprets a document. And above a payout threshold I require dual-signature, so no single compromised key can drain a pool."*
+*"PAGASA — the Philippine weather authority, under DOST — issues the official typhoon signals, cross-checked against Japan's RSMC Tokyo, which is the regional standard for the whole Western Pacific. The contract verifies a 2-of-3 threshold of Ed25519 signatures from constructor-pinned oracle keys; it never reads or interprets a document. No single entity controls the release — you need two of the three authorized keys to co-sign any event."*
 
 ### Q5. "What stops a stolen oracle key from draining every pool?"
-*"That's the real risk, and I've designed for it. Oracle keys are scoped and time-boxed; releases above a threshold need a second signer; and large releases pass through a short challenge window with funder-side spot-check sampling. The speed is gated exactly where the money is largest."*
+*"The 2-of-3 threshold is the first line: one stolen key cannot fire any payout of any size — you need a second co-signer. Beyond that, keys are constructor-pinned (no hot-swap attack surface), and every event carries a unique nonce stored permanently on-chain, so a stolen-key replay of a past event is also blocked. Additional production mitigations: time-boxed key sets and funder-side spot-check sampling on released events."*
 
 ### Q6. "You're not a licensed money operator. Isn't the cash-out fake?"
 *"Correct — I'm not a licensed anchor and I'm not pretending to be. Everything on-chain is real and live on Testnet. The fiat cash-out is where a licensed anchor like Coins.ph plugs in — I mock that leg and I'm explicit about it. That's the architecture working as designed: I build the programmable release layer, the anchor does the regulated conversion."*

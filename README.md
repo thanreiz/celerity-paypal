@@ -25,7 +25,7 @@
   <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
   <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-2--of--3_Ed25519-d99a2b?style=flat-square" />
   <img alt="SEP-31" src="https://img.shields.io/badge/Anchor-SEP--31_stub-b45309?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-57%2F57_passing-2e7d32?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-60%2F60_passing-2e7d32?style=flat-square" />
 </p>
 
 ---
@@ -139,9 +139,11 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
 
 - **Shared escrow, isolated sub-pools** — many funders, one contract; `deposit`, `top_up`,
   `withdraw_unspent`, `pause_pool` / `resume_pool`, all funder-auth scoped.
-- **Multi-sig oracle trigger (2-of-3)** — `report_event` takes indexed Ed25519 signatures,
-  enforces the constructor threshold, and rejects replays via nonce. The contract compares
-  numbers, never reads a bulletin document. Inspect keys anytime with `oracle_config()`.
+- **Multi-sig oracle trigger (2-of-3)** — `report_event` takes indexed Ed25519 signatures
+  (`OracleSig { key_index, signature }`), enforces the constructor threshold (duplicate
+  `key_index` values count once), and rejects replays via nonce stored permanently on-chain.
+  The contract compares numbers, never reads a bulletin document. Inspect keys anytime with
+  `oracle_config()`.
 - **Idempotent multi-funder release** — `settle_event` pays every matching pool once, keyed on
   `(event_id, farmer, pool_id)`; a re-run after a top-up pays only whoever was missed.
   Demo-scale: one transaction scans `1..NextPoolId` × farmers in the region; paginate before
@@ -360,7 +362,7 @@ transaction metadata).
 # Build the contract to Wasm
 cd contracts/celerity && stellar contract build
 
-# Run the test suite (57 tests, adversarial cases included)
+# Run the test suite (60 tests, adversarial cases included)
 cargo test
 
 # Deploy to Testnet. The constructor runs atomically at deploy — admin,
