@@ -48,8 +48,13 @@ cross-border settlement layer *underneath* them.
 > - **Live demo:** [stellar-celerity.me](https://stellar-celerity.me/)
 > - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
 > - **Demo video:** [Teaser and Demo Video ](https://x.com/stellarcelerity/status/2081772476070318463?s=20)
-> - **Contract address (Stellar Testnet):** `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3)
+> - **Contract address (Stellar Testnet):** `CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF)
+> - **Custom token (CLTY):** `CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA`
+>   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA)
+>   | issuer: `GCLK7T543Z43RDSRVVMDIBUYEH72XW6FRKNIK55L4MWONMLB4V3GXYP2`
+> - **Inter-contract call proof tx:** [`3afd494d…`](https://stellar.expert/explorer/testnet/tx/3afd494ded04128e70b517b40ac3eb711baaddaee9f857b59c48eb2c446ffeeb)
+>   — `settle_event` calls CLTY SAC via `token::TokenClient::transfer()`; sub-invocation visible in tx
 > - **Docs index:** [`docs/`](docs/README.md)
 > - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
 > - **Design system:** [`docs/product/design.md`](docs/product/design.md)
@@ -137,7 +142,28 @@ whole design leans on. What's actually in use, all live on Testnet:
 | 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
 
 Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
-per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3).
+per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF).
+
+## Inter-Contract Call
+
+`settle_event` calls the **CLTY Stellar Asset Contract** (`CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA`) via
+`token::TokenClient::new(&e, &get_token(&e)).transfer(...)` for every farmer payout. This is a
+cross-contract invocation — visible as a nested `invoke_contract` sub-invocation inside the
+settlement transaction.
+
+**Proof tx:** [`3afd494d…`](https://stellar.expert/explorer/testnet/tx/3afd494ded04128e70b517b40ac3eb711baaddaee9f857b59c48eb2c446ffeeb)
+(expand the Operations → sub-invocations tree to see `CAYCM4JG…` calling `CDLZMFYC…`)
+
+**CLTY SAC contract:** [`CDLZMFYC…`](https://stellar.expert/explorer/testnet/contract/CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA)
+
+### Key transaction hashes
+
+| Action | Tx hash |
+| --- | --- |
+| CLTY SAC deploy | [`ef35bf32…`](https://stellar.expert/explorer/testnet/tx/ef35bf322ac92446ceaddd54b2c987e2a042bfb28a452af095a86f0640335c3b) |
+| Celerity contract deploy (phase 14) | [`329ba311…`](https://stellar.expert/explorer/testnet/tx/329ba311f0ec22f84c00765b830c51b51861a310bbdc2daa4b7ab0c3fc467582) |
+| First `report_event` (typhoon signal 4, Region V) | [`7438f55e…`](https://stellar.expert/explorer/testnet/tx/7438f55edc70ff0102c7331d2f177112c2d3f851aa0b6b0a97bdde5a52c037f6) |
+| First `settle_event` — inter-contract call proof | [`3afd494d…`](https://stellar.expert/explorer/testnet/tx/3afd494ded04128e70b517b40ac3eb711baaddaee9f857b59c48eb2c446ffeeb) |
 
 ## Features
 
@@ -167,7 +193,7 @@ per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/cont
   `reg_farm`, `rm_farm`, `event`, `release`, `exhausted`, `claim`) emits a Soroban contract event.
   Combined with `funder_ledger`, the full disbursement history is verifiable directly on-chain —
   not in any private database Celerity controls. Judges can inspect all events on
-  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3).
+  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF).
 
 ### Funder Console (React)
 
@@ -226,7 +252,7 @@ flowchart TD
 | Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
 | Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
 | Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3` |
+| Contract address | `CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF` |
 
 ## Repo Layout
 
