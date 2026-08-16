@@ -17,6 +17,7 @@ Judge- and public-facing documentation for **Celerity**. The live product is unc
 | --- | --- |
 | [`product/PROJECT.md`](product/PROJECT.md) | Design rules and win condition |
 | [`product/design.md`](product/design.md) | Design system |
+| [`product/TEST-COVERAGE.md`](product/TEST-COVERAGE.md) | Visible test suite + error-path matrix (57/57) |
 
 ## Hackathon
 

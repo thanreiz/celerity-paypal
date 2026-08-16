@@ -26,6 +26,7 @@
   <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-2--of--3_Ed25519-d99a2b?style=flat-square" />
   <img alt="SEP-31" src="https://img.shields.io/badge/Anchor-SEP--31_stub-b45309?style=flat-square" />
   <img alt="Tests" src="https://img.shields.io/badge/tests-60%2F60_passing-2e7d32?style=flat-square" />
+  <a href="https://github.com/thanreiz/Celerity/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/thanreiz/Celerity/actions/workflows/ci.yml/badge.svg" /></a>
 </p>
 
 ---
@@ -49,6 +50,11 @@ cross-border settlement layer *underneath* them.
 > - **Demo video:** [Teaser and Demo Video ](https://x.com/stellarcelerity/status/2081772476070318463?s=20)
 > - **Contract address (Stellar Testnet):** `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3`
 >   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3)
+> - **Docs index:** [`docs/`](docs/README.md)
+> - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
+> - **Design system:** [`docs/product/design.md`](docs/product/design.md)
+> - **Test suite & error paths:** [`docs/product/TEST-COVERAGE.md`](docs/product/TEST-COVERAGE.md)
+> - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
 
 ---
 
