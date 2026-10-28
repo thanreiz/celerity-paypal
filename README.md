@@ -1,485 +1,223 @@
 <p align="center">
-  <img alt="Celerity" src="https://raw.githubusercontent.com/thanreiz/Celerity/main/celerity-web/public/logo-dove.png" width="120" />
+  <img alt="Celerity" src="celerity-web/public/logo-dove.png" width="110" />
 </p>
 
-<h1 align="center">Celerity</h1>
+<h1 align="center">Celerity Relief</h1>
 
 <p align="center">
-  <strong>Relief that moves.</strong>
-</p>
-
-<p align="center">
-  A programmable disaster-disbursement rail on Stellar — many funders, one signed
-  weather trigger, instant payouts to registered farmers.
+  <strong>Typhoon cash aid, drafted by an AI agent, approved by a person, sent by PayPal.</strong>
 </p>
 
 <p align="center">
-  <img alt="Stellar" src="https://img.shields.io/badge/Stellar-Soroban-000000?style=for-the-badge&labelColor=1a1c1a" />
-  <img alt="Rust" src="https://img.shields.io/badge/Contract-Rust-CE422B?style=for-the-badge&labelColor=1a1c1a" />
-  <img alt="React" src="https://img.shields.io/badge/Frontend-React-61DAFB?style=for-the-badge&labelColor=1a1c1a" />
-  <img alt="Testnet" src="https://img.shields.io/badge/Live_on-Testnet-16452d?style=for-the-badge&labelColor=1a1c1a" />
-</p>
-
-<p align="center">
-  <img alt="Soroban" src="https://img.shields.io/badge/Soroban-Smart_Contract-16452d?style=flat-square" />
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
-  <img alt="Ed25519" src="https://img.shields.io/badge/Oracle-2--of--3_Ed25519-d99a2b?style=flat-square" />
-  <img alt="SEP-31" src="https://img.shields.io/badge/Anchor-SEP--31_stub-b45309?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-60%2F60_passing-2e7d32?style=flat-square" />
-  <a href="https://github.com/thanreiz/Celerity/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/thanreiz/Celerity/actions/workflows/ci.yml/badge.svg" /></a>
+  <img alt="PayPal Payouts" src="https://img.shields.io/badge/PayPal-Payouts_API-003087?style=flat-square&logo=paypal&logoColor=white" />
+  <img alt="Claude" src="https://img.shields.io/badge/AI-Claude_tool_use-d97757?style=flat-square" />
+  <img alt="Node" src="https://img.shields.io/badge/Server-Node_24_+_Express-16452d?style=flat-square" />
+  <img alt="React" src="https://img.shields.io/badge/Frontend-React_18_+_Vite-61DAFB?style=flat-square" />
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-2e7d32?style=flat-square" />
 </p>
 
 ---
 
-## Celerity
+When a typhoon hits the Philippines, relief money usually already exists. What's slow is
+deciding who gets it and getting it into their hands. Celerity Relief cuts that to minutes:
 
-Celerity is a programmable disaster-disbursement rail on Stellar. Funders deposit into a
-shared on-chain escrow, each with an earmarked sub-pool and its own release rule. When an
-objective, signed weather event (a typhoon signal meeting a **2-of-3 oracle threshold**) fires,
-the smart contract releases payouts automatically to pre-registered farmers, cashes out to
-PHP through a Stellar anchor, and logs every movement so each funder can see exactly where
-its money went. No agency hand-off, no physical check, no waiting.
+1. **A bulletin arrives.** A coordinator pastes a tropical cyclone bulletin, or picks one from the feed.
+2. **The agent drafts.** Claude reads the free-text bulletin, works out which provinces and towns
+   are under which wind signal, finds registered families there, and drafts a payout for each
+   eligible family with a one-line reason.
+3. **Code enforces the limits.** Every draft goes through a policy engine: signal minimum, per-family
+   cap, per-run cap, recipient cap, no double payment for the same storm. The agent proposes; code
+   decides. If the agent asks for too much, the draft is refused and it has to adjust.
+4. **A person approves.** Nothing moves until a coordinator reviews the drafts and approves the run.
+   Policy is checked again at approval.
+5. **PayPal pays.** One Payouts batch per run. Verified PayPal webhooks update each family's status
+   (Pending → Delivered, or Unclaimed) on a live timeline.
+6. **Everything is on the record.** Every agent run, approval, PayPal batch and webhook goes into
+   an append-only SHA-256 hash-chained evidence log. A public page shows totals and the chain,
+   with no names or emails.
 
-It is **not** a crop insurer and **not** a faster claims processor — it is the multi-funder,
-cross-border settlement layer *underneath* them.
-
-> **Key links**
+> **Hosted demo:** _coming soon (Render)_ · **Demo video:** _coming soon_
 >
-> - **Live demo:** [stellar-celerity.me](https://stellar-celerity.me/)
-> - **Presentation:** [canva.link/ydnjf2yvz0dybpw](https://canva.link/ydnjf2yvz0dybpw)
-> - **Demo video:** [Teaser and Demo Video ](https://x.com/stellarcelerity/status/2081772476070318463?s=20)
-> - **Contract address (Stellar Testnet):** `CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF)
-> - **Custom token (CLTY):** `CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA`
->   — [view on stellar.expert](https://stellar.expert/explorer/testnet/contract/CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA)
->   | issuer: `GCLK7T543Z43RDSRVVMDIBUYEH72XW6FRKNIK55L4MWONMLB4V3GXYP2`
-> - **Inter-contract call proof tx:** [`3afd494d…`](https://stellar.expert/explorer/testnet/tx/3afd494ded04128e70b517b40ac3eb711baaddaee9f857b59c48eb2c446ffeeb)
->   — `settle_event` calls CLTY SAC via `token::TokenClient::transfer()`; sub-invocation visible in tx
-> - **Docs index:** [`docs/`](docs/README.md)
-> - **Design rules & win condition:** [`docs/product/PROJECT.md`](docs/product/PROJECT.md)
-> - **Design system:** [`docs/product/design.md`](docs/product/design.md)
-> - **Test suite & error paths:** [`docs/product/TEST-COVERAGE.md`](docs/product/TEST-COVERAGE.md)
-> - **App screenshots:** [`screenshots/`](screenshots/) ([jump to gallery below](#screenshots))
+> The demo runs on the **PayPal sandbox** with **simulated bulletins** for a fictional
+> Typhoon Dalisay. No real money moves.
 
 ---
 
-## Problem
+## What's PayPal, what's AI, what's ours
 
-When a typhoon destroys a farmer's crop, the money to help them recover usually *already
-exists* — in a national crop-insurance fund, a regional disaster pool, or an NGO earmark.
-What's slow and lossy is the last mile.
-
-| Pain point | What it costs |
+| Piece | What it does |
 | --- | --- |
-| Payouts distributed as physical checks at regional offices | Farmers wait weeks after the claim is even approved |
-| Single-funder, peso-only insurers | Foreign USD disaster capital can't reach a farmer directly |
-| No way for an outside funder to verify disbursement | Money routes through agencies with no audit trail |
-| Uninsured / unregistered farmers | No fast path at all |
+| **PayPal Payouts API** (`/v1/payments/payouts`) | Sends every approved run as one batch to families' PayPal emails. `sender_batch_id` is derived from the run ID, so a retried approval can never pay twice. |
+| **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`) | Push status updates. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
+| **PayPal OAuth 2.0** (client credentials) | Server-side only; the token is cached until shortly before it expires. |
+| **Claude** (Messages API, tool use, `claude-opus-5-5`) | The agent loop. Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. |
+| **Policy engine** ([`server/src/policy.js`](server/src/policy.js)) | Deterministic eligibility and caps. The only thing that decides whether a draft is allowed. |
+| **Evidence log** ([`server/src/store.js`](server/src/store.js)) | Append-only, hash-chained. Editing or deleting any past entry breaks verification. |
 
-The root problem: the money exists, but turning it into cash in a farmer's hands takes
-layers of intermediaries. Celerity collapses that into one flow — **fund, trigger, pay.**
+### Guardrails, not vibes
 
-## Solution
+The **Tampered bulletin** in the demo contains an injected instruction telling the agent to ignore
+limits, pay every family 500 USD, and add an outside email address. Run it and watch what happens:
+the agent can only pay family IDs from the registry, to the email on file, up to the policy cap,
+and a human still has to approve. The bulletin is passed to the model as data, and the
+system prompt says so, but the guarantee comes from the code, not the prompt.
 
-Funders deposit into a shared Soroban escrow, each deposit earmarked as a sub-pool with its
-own payout rule and recipient scope. Authorized oracles submit a **threshold-signed** weather
-event (region, typhoon signal). The contract verifies enough Ed25519 signatures and compares
-numbers — it never reads or interprets a document. For every sub-pool whose condition the
-event meets, it releases the payout only to farmers whose **registry region matches that
-pool's region**, on the funder's schedule, and logs a per-funder ledger entry. Payouts
-convert to spendable pesos through a Stellar anchor at the edge.
-
-**Core claim:** a national insurer, a regional fund, and a foreign foundation can co-fund the
-same typhoon trigger and pay a farmer instant, spendable pesos — with no agency hand-off and
-every peso auditable.
-
-## How It Works
-
-1. **Funders deposit into earmarked sub-pools.**
-   Each `deposit` creates a sub-pool: a balance plus a rule (region, signal threshold, payout,
-   installment schedule). Balances never commingle; one funder's release, pause, or exhaustion
-   never touches another's.
-
-2. **An LGU/co-op admin registers farmers.**
-   `register_farmer(address, region, source)` maintains the beneficiary list (`source` tags
-   provenance — RSBSA / COOP / NGO). The contract pays only registered addresses in the
-   triggered region — it doesn't decide who's a farmer, it pays a verified list.
-
-3. **A multi-sig weather bulletin enters the contract.**
-   Authorized oracles each sign `region · signal · nonce` with Ed25519; `report_event`
-   verifies a **threshold** of signatures against constructor-pinned keys (live demo: 2-of-3).
-   A real typhoon hits many regions at once, so the app ingests a bulletin and reports
-   **one event per region**.
-
-4. **Settlement releases every matching sub-pool at once.**
-   `settle_event` iterates matching sub-pools and pays each registered farmer — idempotent on
-   `(event, farmer, pool)` so a replay never double-pays, and *flag-not-fail* so a dry pool is
-   marked `Exhausted` and skipped rather than reverting everyone else's release.
-
-5. **Farmers claim recurring installments on schedule.**
-   Recurring pools release the first installment at settlement; the farmer pulls the rest with
-   `claim` on the pool's own cadence. `claim` requires the farmer's **current** registry region
-   to match the pool's region — remove → re-register elsewhere cannot finish an old schedule.
-
-6. **Value cashes out to PHP and every release is logged.**
-   Released value routes through a SEP-31 anchor to spendable pesos, and `funder_ledger` gives
-   each funder a per-release, on-chain record.
-
-## Stellar Integrations
-
-Celerity isn't "an app with a Stellar payout at the end" — Stellar is the trust layer the
-whole design leans on. What's actually in use, all live on Testnet:
-
-| # | Integration | Where / how |
-| --- | --- | --- |
-| 1 | **Soroban smart contract** | The full escrow, trigger, and settlement logic runs as a Rust contract on Stellar, not a backend server — funds and rules live on-chain. |
-| 2 | **Stellar Asset Contract (SAC) transfers** | Payouts move with `token::TokenClient::new(&e, &get_token(&e)).transfer(...)` — native Stellar asset transfers, not an internal ledger entry. |
-| 3 | **On-chain multi-sig verification (Ed25519)** | `report_event` verifies a threshold of `ed25519_verify` checks against constructor-pinned oracle keys — no single agency key can fire payouts alone. |
-| 4 | **Per-address authorization** | Every state-changing call (`deposit`, `register_farmer`, `claim`, …) requires `.require_auth()` from the correct Stellar account — funder isolation is enforced by the protocol, not just app logic. |
-| 5 | **On-chain persistent storage** | Sub-pools, farmer registry, and settled-event keys live in `e.storage().persistent()` / `.instance()` — the state judges can audit is the same state the contract runs on. |
-| 6 | **On-chain event log** | Every release publishes via `e.events().publish(...)`, giving each funder a verifiable, independent release trail — not an app database log. |
-| 7 | **Ledger-timestamped scheduling** | Recurring installment cooldowns are enforced against `e.ledger().timestamp()`, so claim pacing can't be gamed by a client clock. |
-| 8 | **SEP-31 anchor cash-out (stub)** | The PHP off-ramp is modeled on Stellar's own cross-border payment standard, SEP-31 — the *shape* of the integration is real, the receiver is a labeled mock for the hackathon. |
-
-Everything above except #8 is live, unmocked infrastructure on Stellar Testnet — verifiable
-per-transaction on [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF).
-
-## Inter-Contract Call
-
-`settle_event` calls the **CLTY Stellar Asset Contract** (`CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA`) via
-`token::TokenClient::new(&e, &get_token(&e)).transfer(...)` for every farmer payout. This is a
-cross-contract invocation — visible as a nested `invoke_contract` sub-invocation inside the
-settlement transaction.
-
-**Proof tx:** [`3afd494d…`](https://stellar.expert/explorer/testnet/tx/3afd494ded04128e70b517b40ac3eb711baaddaee9f857b59c48eb2c446ffeeb)
-(expand the Operations → sub-invocations tree to see `CAYCM4JG…` calling `CDLZMFYC…`)
-
-**CLTY SAC contract:** [`CDLZMFYC…`](https://stellar.expert/explorer/testnet/contract/CDLZMFYC7E2SJLJY4XTEWBUVBQSJXXKJFTZCXKLD4EYOQUWG54TXMKWA)
-
-### Key transaction hashes
-
-| Action | Tx hash |
-| --- | --- |
-| CLTY SAC deploy | [`ef35bf32…`](https://stellar.expert/explorer/testnet/tx/ef35bf322ac92446ceaddd54b2c987e2a042bfb28a452af095a86f0640335c3b) |
-| Celerity contract deploy (phase 14) | [`329ba311…`](https://stellar.expert/explorer/testnet/tx/329ba311f0ec22f84c00765b830c51b51861a310bbdc2daa4b7ab0c3fc467582) |
-| First `report_event` (typhoon signal 4, Region V) | [`7438f55e…`](https://stellar.expert/explorer/testnet/tx/7438f55edc70ff0102c7331d2f177112c2d3f851aa0b6b0a97bdde5a52c037f6) |
-| First `settle_event` — inter-contract call proof | [`3afd494d…`](https://stellar.expert/explorer/testnet/tx/3afd494ded04128e70b517b40ac3eb711baaddaee9f857b59c48eb2c446ffeeb) |
-
-## Features
-
-### Smart Contract (live on Testnet)
-
-- **Shared escrow, isolated sub-pools** — many funders, one contract; `deposit`, `top_up`,
-  `withdraw_unspent`, `pause_pool` / `resume_pool`, all funder-auth scoped.
-- **Multi-sig oracle trigger (2-of-3)** — `report_event` takes indexed Ed25519 signatures
-  (`OracleSig { key_index, signature }`), enforces the constructor threshold (duplicate
-  `key_index` values count once), and rejects replays via nonce stored permanently on-chain.
-  The contract compares numbers, never reads a bulletin document. Inspect keys anytime with
-  `oracle_config()`.
-- **Idempotent multi-funder release** — `settle_event` pays every matching pool once, keyed on
-  `(event_id, farmer, pool_id)`; a re-run after a top-up pays only whoever was missed.
-  Demo-scale: one transaction scans `1..NextPoolId` × farmers in the region; paginate before
-  real-scale use.
-- **Flag-not-fail** — an underfunded pool is flagged `Exhausted` and skipped; one funder's dry
-  pool never reverts another's payout. `top_up` cures the flag.
-- **Recurring installments** — `claim` pulls the next tranche on the pool's cadence; hard-stops
-  at the installment count; a paused pool blocks the claim; the farmer's current registry
-  region must match the pool's region.
-- **Farmer registry** — admin-auth `register_farmer` / `remove_farmer`, region-keyed, with
-  on-chain `source` tagging (RSBSA / COOP / NGO) for APAC registry provenance.
-- **Oracle config view** — `oracle_config()` returns constructor-pinned keys + threshold.
-- **Per-funder ledger** — `funder_ledger` and one `release` event per (funder, farmer).
-- **On-chain transparency** — every mutator (`deposit`, `top_up`, `withdraw`, `pause`, `resume`,
-  `reg_farm`, `rm_farm`, `event`, `release`, `exhausted`, `claim`) emits a Soroban contract event.
-  Combined with `funder_ledger`, the full disbursement history is verifiable directly on-chain —
-  not in any private database Celerity controls. Judges can inspect all events on
-  [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF).
-
-### Funder Console (React)
-
-- **Login-first, GCash-style** — pick an institution (ADB APDRF / PCIC), then an escrow hero,
-  circular quick-actions, and a release feed grouped by signed event.
-- **Strict funder isolation** — the dashboard is scoped to the logged-in funder; the other
-  funder's pools and ledger never appear.
-- **Escrow pools** — island-grouped (Luzon / Visayas / Mindanao), status-mix pills, plain-language
-  release rules, and a typhoon-context banner.
-- **Trigger Typhoon** — drop a signed PAGASA-style JSON bulletin; the app shows region-by-region
-  what will settle vs. skip, then signs and settles each matching region.
-- **Farmers registry** — read-only for funders, with an explicit LGU registrar mode that signs
-  with the admin key.
-
-### Farmer App + Transparency
-
-- **Connect** — brand-first “Is this you?” screen: dove lockup + **Relief that moves**, farmer
-  name, full region label (e.g. Region V — Bicol), optional account reveal, and a quiet
-  multi-farmer switch for the demo slate.
-- **Farmer shell** — wallet total, receipts, recurring-installment claims, Quick Help / Cash Out /
-  tx detail as isolated overlays (Home nav never bleeds through), and a labeled SEP-31 anchor
-  cash-out to PHP.
-- **Brand chrome** — dove favicon in the browser tab; splash and Connect share the same mark and
-  tagline as the live site.
-- **Public transparency ledger** — every release across all funders, no login required.
-
-### Honest Stubs (clearly labeled)
-
-- **Live PAGASA/JMA feed** — a Node.js Ed25519 signer stands in for the authorized weather feed.
-- **Licensed anchor cash-out** — a SEP-31 receiver mock stands in for a licensed VASP (e.g.
-  Coins.ph). Everything on-chain is real; only the fiat conversion is simulated.
+---
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    funder["Funders (ADB APDRF, PCIC, NGOs)"] -->|deposit| pool["Soroban escrow: earmarked sub-pools"]
-    lgu["LGU / co-op admin"] -->|register_farmer| registry["Farmer registry (region-keyed)"]
-    pagasa["PAGASA / JMA signal"] --> signer["Oracle signer (Ed25519, demo stub)"]
-    signer -->|report_event: region, signal, nonce, sig| contract["Celerity contract"]
-    pool --> contract
-    registry --> contract
-    contract -->|settle_event: idempotent, flag-not-fail| release["Release to farmers"]
-    release --> ledger["Per-funder ledger + release events"]
-    release --> anchor["SEP-31 anchor stub → PHP"]
-    anchor --> farmer["Farmer: spendable pesos"]
+```
+            ┌───────────────────────── Render web service ──────────────────────────┐
+ browser    │  Express (server/)                                                    │
+ ─────────► │   /api/state, /api/public ── JSON store + hash-chained evidence log   │
+ React SPA  │   /api/bulletins/:id/runs ── agent.js ──► Claude Messages API         │
+ (served    │                                │  tool calls                          │
+  from the  │                                ▼                                      │
+  same      │                            policy.js  (eligibility, caps, no repeats) │
+  server)   │   /api/runs/:id/approve ── payouts.js ──► PayPal Payouts API          │
+            │   /api/webhooks/paypal  ◄── verify signature ◄── PayPal Webhooks      │
+            └───────────────────────────────────────────────────────────────────────┘
 ```
 
-## Tech Stack
+- **`server/`**: Node 24, Express 5, `@anthropic-ai/sdk`. PayPal is called with Node's built-in
+  `fetch` (no SDK). State is a single JSON file written atomically; the evidence log lives in it.
+- **`celerity-web/`**: React 18 + Vite. Coordinator console (Overview, Respond, Payouts,
+  Families, Evidence log) and a public transparency page at `/#/public`.
 
-| Layer | Technology |
-| --- | --- |
-| Smart contract | Soroban (Rust), deployed to Stellar Testnet |
-| Frontend | React + Vite, `@stellar/stellar-sdk` (≥ 16), design tokens + shared CSS |
-| Oracle signer | Node.js Ed25519 multi-sig (2-of-3 demo keys standing in for PAGASA/JMA/NDRRMC) |
-| Settlement token | Native XLM SAC (a USD stablecoin in the production narrative) |
-| Anchor | Stubbed SEP-31 receiver for USD/stablecoin → PHP |
-| Network | Stellar Testnet — every on-chain step verifiable on stellar.expert |
-| Contract address | `CAYCM4JG5NCXGQLQOPL6AK3CVDJFJIQYAQGMU64L5RMNYU7K3SHWJGZF` |
+## Repo layout
 
-## Repo Layout
-
-```text
-contracts/celerity/       Soroban smart contract (Rust)
-  src/lib.rs              Data model + full function surface
-  src/test.rs            Unit / adversarial tests (idempotency, isolation, dry-pool)
-celerity-web/            React frontend
-  public/                Brand assets (dove favicon, logo lockup)
-  src/pages/funder/      Login, home, pools, oracle (bulletin drop), ledger, registry, settings
-  src/pages/farmer/      Farmer app: splash, connect, home, activity, cash-out, profile
-  src/pages/transparency/ Public transparency ledger
-  src/design/            Design-system components + tokens.css
-  src/lib/               celerity.js (contract client), regions.js, funders.js, anchor.js
-oracle/                  Node.js Ed25519 oracle signer (demo stub for the weather feed)
-tools/seed-demo.mjs      Repeatable demo-slate seed (pools + farmers, no event fired)
-screenshots/             Product screenshots (refresh with `node tools/capture-screenshots.mjs`)
-docs/                    Categorized product + hackathon docs ([docs/README.md](docs/README.md))
-DEMO-SCRIPT.md           Stage demo checklist
-tools/capture-screenshots.mjs  Playwright capture of live farmer + funder screens
-deployments.json         Public Testnet deployment metadata + contract-id history
 ```
-
-## Screenshots
-
-Every screen and sub-screen of the live app, captured from the deployed build. Full-size
-originals are in [`screenshots/`](screenshots/).
-
-<details open>
-<summary><strong>Farmer app</strong> (mobile)</summary>
-
-<br />
-
-<table>
-<tr>
-<td align="center"><img src="screenshots/01-farmer-splash.png" width="200" alt="Splash" /><br /><sub>Splash</sub></td>
-<td align="center"><img src="screenshots/02-farmer-connect.png" width="200" alt="Connect" /><br /><sub>Connect</sub></td>
-<td align="center"><img src="screenshots/03-farmer-home.png" width="200" alt="Farmer home" /><br /><sub>Home</sub></td>
-<td align="center"><img src="screenshots/04-farmer-activity.png" width="200" alt="Farmer activity" /><br /><sub>Activity</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="screenshots/07-farmer-installments.png" width="200" alt="Installments" /><br /><sub>Installments</sub></td>
-<td align="center"><img src="screenshots/05-farmer-profile.png" width="200" alt="Farmer profile" /><br /><sub>Profile</sub></td>
-<td align="center"><img src="screenshots/06-farmer-relief-programs.png" width="200" alt="Relief programs" /><br /><sub>Relief programs</sub></td>
-<td align="center"><img src="screenshots/08-farmer-my-region.png" width="200" alt="My region" /><br /><sub>My region</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="screenshots/10-farmer-tx-detail.png" width="200" alt="Transaction detail" /><br /><sub>Tx detail</sub></td>
-<td align="center"><img src="screenshots/09-farmer-help.png" width="200" alt="Help" /><br /><sub>Help</sub></td>
-<td></td>
-<td></td>
-</tr>
-</table>
-
-**Cash-out flow (SEP-31 anchor stub → PHP):**
-
-<table>
-<tr>
-<td align="center"><img src="screenshots/11-farmer-cashout-destination.png" width="200" alt="Cash-out destination" /><br /><sub>Destination</sub></td>
-<td align="center"><img src="screenshots/12-farmer-cashout-recipient.png" width="200" alt="Cash-out recipient" /><br /><sub>Recipient</sub></td>
-<td align="center"><img src="screenshots/13-farmer-cashout-amount.png" width="200" alt="Cash-out amount" /><br /><sub>Amount</sub></td>
-<td align="center"><img src="screenshots/14-farmer-cashout-confirm.png" width="200" alt="Cash-out confirm" /><br /><sub>Confirm</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="screenshots/15-farmer-cashout-success.png" width="200" alt="Cash-out success" /><br /><sub>Success</sub></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-</table>
-
-</details>
-
-<details open>
-<summary><strong>Funder console</strong> (desktop)</summary>
-
-<br />
-
-<table>
-<tr>
-<td align="center"><img src="screenshots/16-funder-login.png" width="260" alt="Funder login" /><br /><sub>Login (pick institution)</sub></td>
-<td align="center"><img src="screenshots/17-funder-summary.png" width="260" alt="Funder home" /><br /><sub>Home / escrow summary</sub></td>
-<td align="center"><img src="screenshots/18-funder-pools.png" width="260" alt="Escrow pools" /><br /><sub>Escrow pools</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="screenshots/19-funder-create-pool-modal.png" width="260" alt="Create pool" /><br /><sub>Create pool</sub></td>
-<td align="center"><img src="screenshots/20-funder-topup-modal.png" width="260" alt="Top up" /><br /><sub>Top up pool</sub></td>
-<td align="center"><img src="screenshots/21-funder-farmers.png" width="260" alt="Farmers registry" /><br /><sub>Farmers registry</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="screenshots/22-funder-farmers-lgu-mode.png" width="260" alt="LGU registrar mode" /><br /><sub>LGU registrar mode</sub></td>
-<td align="center"><img src="screenshots/23-funder-trigger-empty.png" width="260" alt="Trigger Typhoon, empty" /><br /><sub>Trigger Typhoon (empty)</sub></td>
-<td align="center"><img src="screenshots/24-funder-trigger-parsed.png" width="260" alt="Trigger Typhoon, parsed bulletin" /><br /><sub>Bulletin parsed</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="screenshots/25-funder-trigger-manual-fallback.png" width="260" alt="Manual single-region fallback" /><br /><sub>Manual fallback</sub></td>
-<td align="center"><img src="screenshots/26-funder-ledger.png" width="260" alt="Funder ledger" /><br /><sub>Ledger</sub></td>
-<td align="center"><img src="screenshots/27-funder-settings.png" width="260" alt="Settings" /><br /><sub>Settings</sub></td>
-</tr>
-</table>
-
-</details>
-
-<details open>
-<summary><strong>Public transparency ledger</strong></summary>
-
-<br />
-
-<img src="screenshots/28-transparency-ledger.png" width="700" alt="Public transparency ledger" />
-
-</details>
-
-## Run Locally
-
-### Frontend
-
-```bash
-cd celerity-web
-npm install
-cp .env.example .env   # fill in: contract ID from deployments.json, demo secrets
-                       # from `stellar keys show <name>` + oracle/.env
-npm run dev
+server/
+  src/
+    index.js        boot: load store, serve API + built frontend
+    app.js          HTTP routes, coordinator auth, rate limit
+    agent.js        Claude tool-use loop and tool implementations
+    policy.js       hard limits and eligibility
+    payouts.js      approval → PayPal batch, webhook + poll status sync
+    paypal.js       OAuth, Payouts, webhook verification
+    store.js        JSON store, hash-chained evidence log
+    seed.js         demo families and simulated bulletins
+  scripts/paypal-smoke.mjs   sandbox smoke test (token → payout → poll)
+  test/             node:test suites (policy, store, end-to-end flow)
+celerity-web/
+  src/pages/console/  coordinator console
+  src/pages/public/   public transparency page
+  src/design/         design system (tokens, Card, Table, StatusPill, …)
+render.yaml          Render blueprint
 ```
-
-The UI never embeds signing secrets. Money-moving calls go through `/api/*`
-server routes (Vercel serverless + Vite dev middleware). Requires
-`@stellar/stellar-sdk` ≥ 16 (older majors can't parse current-protocol
-transaction metadata).
-
-### Prerequisites (contract build / deploy)
-
-- Rust ≥ 1.84 with the `wasm32v1-none` target (`rustup target add wasm32v1-none`)
-- Stellar CLI (`cargo install stellar-cli`) — this repo used v27
-- A funded Testnet identity named `alice` (`stellar keys generate alice --network testnet --fund`)
-
-### Build, test, deploy
-
-```bash
-# Build the contract to Wasm
-cd contracts/celerity && stellar contract build
-
-# Run the test suite (60 tests, adversarial cases included)
-cargo test
-
-# Deploy to Testnet. The constructor runs atomically at deploy — admin,
-# oracle key set + threshold, and settlement token (SAC address) are set with
-# no separate init call to front-run.
-stellar contract deploy \
-  --wasm target/wasm32v1-none/release/celerity.wasm \
-  --source-account alice --network testnet -- \
-  --admin "$(stellar keys address alice)" \
-  --oracle_keys '["<64-hex pubkey 0>", "<64-hex pubkey 1>", "<64-hex pubkey 2>"]' \
-  --threshold 2 \
-  --token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
-```
-
-### Seed a demo slate
-
-After a fresh deploy, seed pools + farmers (leaves everything **Armed** with an empty
-ledger, so the typhoon is triggered live):
-
-```bash
-cd celerity-web && node ../tools/seed-demo.mjs
-```
-
-## Demo Flow
-
-1. Open the funder console and log in as **ADB APDRF**. On **Escrow Pools**, read a
-   plain-language rule: *"When typhoon signal ≥ 3 hits Bicol → release the payout per
-   registered farmer."* (Demo amounts are small Testnet XLM shown as pesos at a fixed demo
-   rate, so the escrow doesn't drain the demo accounts.)
-2. Tap the **PCIC** pill in the "Acting as" switcher (top of Escrow Pools) and watch the whole
-   dashboard — pools, totals, ledger — re-scope to PCIC's own money. Strict funder isolation:
-   neither funder ever sees the other's balance.
-3. In **Farmers (LGU)**, show the registry belongs to the government, not the funders.
-4. Open **Trigger Typhoon**, drop the PAGASA bulletin, and watch it settle every matching region
-   at once — one signed bulletin, many releases.
-5. Jump to the **farmer app**: confirm identity on **Connect** (name + region), then show the
-   wallet — the money has already arrived. Every release is one click from stellar.expert; the
-   funder **Ledger** matches what the farmer sees.
-6. Run the farmer's balance through the labeled **SEP-31 anchor stub** to spendable pesos
-   (overlays stay above the tab bar the whole way).
-
-## Environment
-
-`celerity-web/.env` (gitignored — copy from `.env.example`):
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `VITE_RPC_URL` | yes | Soroban Testnet RPC (**public** — safe in the browser bundle) |
-| `VITE_NETWORK_PASSPHRASE` | yes | Testnet passphrase (**public**) |
-| `VITE_CONTRACT_ID` | yes | Deployed contract id from `deployments.json` (**public**) |
-| `FUNDER_SECRET` | yes | Server-only — funder + registry admin (alice). **Never** use a `VITE_` prefix |
-| `FUNDER2_SECRET` | yes | Server-only — second funder (PCIC / mallory) |
-| `FARMER_SECRET` | yes | Server-only — Mang Ramon |
-| `FARMER2_SECRET` | yes | Server-only — Aling Nena |
-| `ORACLE_SECRET` | yes | Server-only — oracle key index 0 (same as `oracle/.env`) |
-| `ORACLE_SECRET_2` | yes | Server-only — oracle key index 1 (required for 2-of-3) |
-| `ORACLE_SECRET_3` | no | Server-only — oracle key index 2 (optional third signer) |
-
-Do **not** set `VITE_*_SECRET` in Vercel Production — Vite would bake them into the public JS bundle.
-
-## Credits
-
-**Ethan Dreiz Baltazar** — solo developer.
-Built, designed, and shipped Celerity end to end (contract, oracle stub, farmer app, funder console, and demo).
-
-- GitHub: [thanreiz](https://github.com/thanreiz)
-
-## Notes
-
-- Never print, log, or commit a secret key. Oracle signer keys are generated and injected,
-  never hardcoded; `.env` and `oracle/.env` are gitignored.
-- The oracle feed and the anchor cash-out are deliberate, clearly-labeled stubs — everything
-  else (escrow, trigger verification, multi-funder release, registry, ledger, claim) is real and
-  live on Testnet.
-- `settle_event` is demo-scale: one transaction iterates `1..NextPoolId` × farmers in the
-  triggered region. Pagination is roadmap before any real-money pilot.
-- Admin is rotatable via `set_admin`; oracle keys + threshold and the settlement token are
-  constructor-pinned for the hackathon (inspect with `oracle_config()`).
-- Contract IDs are public and safe to commit; they live in `deployments.json`, with every prior
-  redeploy preserved under `previous_contract_ids`.
 
 ---
 
-> **Status:** Demo-ready on [stellar-celerity.me](https://stellar-celerity.me/). A signed typhoon
-> bulletin releases multiple independently-funded sub-pools to registered farmers, live on Stellar
-> Testnet, with a per-funder ledger and a labeled SEP-31 cash-out. Farmer Connect is brand-first
-> (**Relief that moves** + full region label); overlays no longer bleed under the tab bar; the dove
-> mark is the site favicon.
+## Run it locally
+
+Requires **Node 22+** (24 recommended).
+
+### 1. PayPal sandbox
+
+1. Go to [developer.paypal.com](https://developer.paypal.com) → **Apps & Credentials** → **Sandbox** →
+   **Create App** (type: Merchant). Copy the **Client ID** and **Secret**.
+2. Under **Sandbox accounts**, note the email of a **Personal** account. Demo payouts will land there.
+3. (Optional, for webhooks) In the app's **Webhooks** section, add
+   `https://<your-public-host>/api/webhooks/paypal` and subscribe to `PAYMENT.PAYOUTSBATCH.*` and
+   `PAYMENT.PAYOUTS-ITEM.*`. Copy the **Webhook ID**. Without it, use **Refresh from PayPal** on the
+   Payouts page to pull status instead.
+
+### 2. Configure
+
+```bash
+cp server/.env.example server/.env
+```
+
+Fill in `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `ANTHROPIC_API_KEY`, `COORDINATOR_KEY`, and set
+`SEED_RECEIVER_EMAILS` and `SMOKE_RECEIVER_EMAIL` to your sandbox personal account email(s).
+
+### 3. Smoke-test PayPal
+
+```bash
+cd server && npm install && npm run smoke
+```
+
+This gets an OAuth token, sends one 1.00 payout to `SMOKE_RECEIVER_EMAIL`, and polls the batch
+until it succeeds or fails.
+
+### 4. Run
+
+```bash
+cd server && npm run dev
+```
+
+```bash
+cd celerity-web && npm install && npm run dev
+```
+
+Open the Vite URL (it proxies `/api` to the server on port 8787) and sign in with your
+`COORDINATOR_KEY`. Or build the frontend once (`npm run build` in `celerity-web/`) and open
+<http://localhost:8787>: the server serves the build itself.
+
+### Tests
+
+```bash
+cd server && npm test
+```
+
+The suites cover policy caps and eligibility, hash-chain tamper detection, and a full
+end-to-end flow (bulletin → scripted agent run with policy refusals → approval → PayPal batch →
+webhooks → public view without PII), run against a fake Claude client and a fake PayPal.
+
+## Deploy to Render
+
+The repo includes [`render.yaml`](render.yaml). In Render: **New → Blueprint**, pick this repo, then
+set the secret env vars (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`,
+`ANTHROPIC_API_KEY`, `COORDINATOR_KEY`, `SEED_RECEIVER_EMAILS`). Point the PayPal webhook at
+`https://<service>.onrender.com/api/webhooks/paypal`.
+
+On the free plan the disk is not persistent: a restart or redeploy reseeds the demo data and
+clears the evidence log.
+
+## Environment
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | yes | PayPal REST app credentials |
+| `PAYPAL_ENV` | no | `sandbox` (default) or `live` |
+| `PAYPAL_WEBHOOK_ID` | for webhooks | Verifies webhook signatures; webhooks are rejected without it |
+| `ANTHROPIC_API_KEY` | yes | Claude API key for the agent |
+| `CLAUDE_MODEL`, `CLAUDE_EFFORT` | no | Default `claude-opus-5-5`, `medium` |
+| `COORDINATOR_KEY` | yes in prod | Passcode for running the agent and approving payouts |
+| `SEED_RECEIVER_EMAILS` | no | Sandbox emails assigned to demo families |
+| `PAYOUT_CURRENCY` | no | Default `USD` |
+| `AGENT_RUNS_PER_HOUR` | no | Default `20`; protects a public demo |
+| `DATA_DIR`, `PORT` | no | Default `server/data`, `8787` |
+
+---
+
+## Tools used
+
+- **PayPal**: Payouts API, Webhooks + webhook signature verification, OAuth 2.0 client credentials (sandbox)
+- **Anthropic Claude API**: Messages API with strict tool use, adaptive thinking, server-side refusal fallback (`@anthropic-ai/sdk`)
+- **Node.js 24** and **Express 5** for the API server
+- **React 18** and **Vite 6** for the frontend
+- **Render** for hosting
+- **GitHub Actions** for CI (server tests + frontend build)
+- **Claude Code** was used as a coding assistant during development
+
+## What changed from the original Celerity
+
+Celerity began as a Stellar/Soroban disbursement rail
+([github.com/thanreiz/Celerity](https://github.com/thanreiz/Celerity)). For this hackathon it was rebuilt
+after Oct 1, 2026:
+
+- **Removed:** the Soroban smart contract, the Ed25519 oracle signer, the Stellar SDK, the
+  anchor (SEP-24/31) cash-out, and the farmer wallet app.
+- **Added:** an Express backend; a Claude tool-use agent that reads free-text bulletins and drafts
+  payouts; a deterministic policy engine; human approval; PayPal Payouts with verified webhooks
+  and a live status timeline; a hash-chained evidence log in place of the on-chain ledger; and a
+  public transparency page.
+- **Kept:** the design system and the core rules from the original: objective triggers, no
+  double payment for the same event, and the registry stays in human hands.
+
+## Credits
+
+**Ethan Dreiz Baltazar**, solo developer. [github.com/thanreiz](https://github.com/thanreiz)
+
+Licensed under the [MIT License](LICENSE).

@@ -1,80 +1,80 @@
-export function encodeValue(v) {
-  if (typeof v === "bigint") return { __type: "bigint", value: v.toString() };
-  if (typeof Buffer !== "undefined" && Buffer.isBuffer?.(v)) {
-    return { __type: "bytes", value: v.toString("base64") };
+// Browser client for the Celerity Relief API (server/). The coordinator key
+// lives in sessionStorage so closing the tab signs you out.
+
+const KEY_STORAGE = "celerity.coordinatorKey";
+const NAME_STORAGE = "celerity.coordinatorName";
+
+function read(storage, key) {
+  try {
+    return storage.getItem(key) || "";
+  } catch {
+    return "";
   }
-  if (v instanceof Uint8Array) {
-    let bin = "";
-    for (let i = 0; i < v.length; i++) bin += String.fromCharCode(v[i]);
-    const b64 = typeof btoa === "function" ? btoa(bin) : Buffer.from(v).toString("base64");
-    return { __type: "bytes", value: b64 };
+}
+function write(storage, key, value) {
+  try {
+    if (value) storage.setItem(key, value);
+    else storage.removeItem(key);
+  } catch {
+    /* private mode: stay signed in for this page load only */
   }
-  if (Array.isArray(v)) return v.map(encodeValue);
-  if (v && typeof v === "object") {
-    const out = {};
-    for (const [k, val] of Object.entries(v)) out[k] = encodeValue(val);
-    return out;
-  }
-  return v;
 }
 
-export function decodeValue(v) {
-  if (v && typeof v === "object" && v.__type === "bigint") return BigInt(v.value);
-  if (v && typeof v === "object" && v.__type === "bytes") {
-    const bin = atob(v.value);
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
+let memoryKey = read(sessionStorage, KEY_STORAGE);
+let memoryName = read(localStorage, NAME_STORAGE);
+
+export const session = {
+  get key() {
+    return memoryKey;
+  },
+  get name() {
+    return memoryName;
+  },
+  signIn(key, name) {
+    memoryKey = key;
+    memoryName = name;
+    write(sessionStorage, KEY_STORAGE, key);
+    write(localStorage, NAME_STORAGE, name);
+  },
+  signOut() {
+    memoryKey = "";
+    write(sessionStorage, KEY_STORAGE, "");
+  },
+};
+
+export class ApiError extends Error {
+  constructor(message, status, body) {
+    super(message);
+    this.status = status;
+    this.body = body;
   }
-  if (Array.isArray(v)) return v.map(decodeValue);
-  if (v && typeof v === "object") {
-    const out = {};
-    for (const [k, val] of Object.entries(v)) out[k] = decodeValue(val);
-    return out;
-  }
-  return v;
 }
 
-async function apiFetch(path, { method = "GET", body } = {}) {
+async function request(path, { method = "GET", body } = {}) {
   const headers = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  const res = await fetch(path, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `API ${res.status}`);
+  if (memoryKey) headers["x-coordinator-key"] = memoryKey;
+  if (memoryName) headers["x-coordinator-name"] = memoryName;
+  let res;
+  try {
+    res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  } catch {
+    throw new ApiError("Can't reach the Celerity server. Check your connection.", 0);
   }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.error || `Request failed (${res.status})`, res.status, data);
   return data;
 }
 
-export async function apiAddresses() {
-  return apiFetch("/api/addresses");
-}
-
-export async function apiInvoke(role, method, args) {
-  const data = await apiFetch("/api/invoke", {
-    method: "POST",
-    body: { role, method, args: encodeValue(args || {}) },
-  });
-  return data.result;
-}
-
-export async function apiOracleSign(region, signal, nonce) {
-  const data = await apiFetch("/api/oracle-sign", {
-    method: "POST",
-    body: {
-      region,
-      signal,
-      nonce: nonce != null ? String(nonce) : undefined,
-    },
-  });
-  return {
-    ...data,
-    signatures: decodeValue(data.signatures),
-    signature: decodeValue(data.signature),
-    nonce: BigInt(data.nonce),
-  };
-}
+export const api = {
+  config: () => request("/api/config"),
+  state: () => request("/api/state"),
+  publicView: () => request("/api/public"),
+  addFamily: (family) => request("/api/families", { method: "POST", body: family }),
+  setFamilyStatus: (id, status) => request(`/api/families/${id}`, { method: "PATCH", body: { status } }),
+  addBulletin: (title, text) => request("/api/bulletins", { method: "POST", body: { title, text } }),
+  startRun: (bulletinId) => request(`/api/bulletins/${bulletinId}/runs`, { method: "POST" }),
+  approveRun: (runId) => request(`/api/runs/${runId}/approve`, { method: "POST" }),
+  rejectRun: (runId, reason) => request(`/api/runs/${runId}/reject`, { method: "POST", body: { reason } }),
+  refreshBatch: (batchId) => request(`/api/batches/${batchId}/refresh`, { method: "POST" }),
+};
