@@ -14,6 +14,8 @@ export function PageHeader({ title, lede, children }) {
   );
 }
 
+const PROVIDER_NAMES = { anthropic: "Claude", openai: "OpenAI" };
+
 function Dot({ on }) {
   return (
     <span
@@ -32,7 +34,7 @@ function Dot({ on }) {
 export function SystemStatus({ config }) {
   const items = [
     [config.paypalConfigured, `PayPal ${config.paypalEnv}`, "PayPal keys missing"],
-    [config.aiConfigured, `Claude agent (${config.model})`, "Claude key missing"],
+    [config.aiConfigured, `${PROVIDER_NAMES[config.aiProvider] || "AI"} agent (${config.model})`, "AI key missing"],
     [config.webhooksVerified, "Webhooks verified", "Webhooks off: use Refresh"],
   ];
   return (

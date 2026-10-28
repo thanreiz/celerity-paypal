@@ -8,7 +8,7 @@ import { PageHeader, SystemStatus, Label } from "./parts";
 
 const STEPS = [
   ["Bulletin arrives", "A typhoon bulletin is pasted in or picked from the feed."],
-  ["Agent drafts", "Claude reads it, finds families in signal areas, and drafts payouts. Code enforces every cap."],
+  ["Agent drafts", "An AI agent reads it, finds families in signal areas, and drafts payouts. Code enforces every cap."],
   ["Human approves", "A coordinator reviews each draft and its reason, then approves or rejects the run."],
   ["PayPal pays", "Payouts sends the money. Webhooks update each family's status here."],
 ];

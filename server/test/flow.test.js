@@ -8,6 +8,7 @@ process.env.PAYPAL_CLIENT_ID = "test-id";
 process.env.PAYPAL_CLIENT_SECRET = "test-secret";
 process.env.PAYPAL_WEBHOOK_ID = "";
 process.env.ALLOW_UNVERIFIED_WEBHOOKS = "1";
+process.env.AI_PROVIDER = "anthropic";
 
 const { createStore } = await import("../src/store.js");
 const { seedState } = await import("../src/seed.js");
@@ -81,7 +82,7 @@ const api = (path, { method = "GET", body, key = KEY } = {}) =>
 
 before(async () => {
   store = createStore({ seed: seedState });
-  const app = createApp({ store, anthropicClient: fakeClaude, coordinatorKey: KEY });
+  const app = createApp({ store, aiClient: fakeClaude, coordinatorKey: KEY });
   await new Promise((resolve) => {
     server = app.listen(0, resolve);
   });

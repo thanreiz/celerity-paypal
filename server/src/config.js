@@ -11,6 +11,20 @@ function num(name, fallback) {
   return n;
 }
 
+// AI_PROVIDER picks the agent's model vendor. Unset, it follows whichever
+// key is present, preferring Anthropic.
+function aiConfig() {
+  const hasAnthropic = Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN);
+  const hasOpenAI = Boolean(env.OPENAI_API_KEY);
+  const provider = env.AI_PROVIDER || (hasAnthropic || !hasOpenAI ? "anthropic" : "openai");
+  return {
+    provider,
+    model: provider === "openai" ? env.OPENAI_MODEL || "gpt-5.5" : env.CLAUDE_MODEL || "claude-opus-5-5",
+    effort: env.AI_EFFORT || "medium",
+    configured: provider === "openai" ? hasOpenAI : hasAnthropic,
+  };
+}
+
 export const config = {
   port: num("PORT", 8787),
   dataDir: env.DATA_DIR || new URL("../data/", import.meta.url).pathname,
@@ -22,13 +36,9 @@ export const config = {
     webhookId: env.PAYPAL_WEBHOOK_ID || "",
   },
 
-  anthropic: {
-    model: env.CLAUDE_MODEL || "claude-opus-5-5",
-    effort: env.CLAUDE_EFFORT || "medium",
-    configured: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
-  },
+  ai: aiConfig(),
 
-  // Coordinator passcode for actions that spend money or Claude credits.
+  // Coordinator passcode for actions that spend money or AI credits.
   // Empty = open (local dev only; the server warns on boot).
   coordinatorKey: env.COORDINATOR_KEY || "",
 
@@ -53,8 +63,9 @@ export function publicConfig(policy) {
     paypalEnv: config.paypal.env,
     paypalConfigured: Boolean(config.paypal.clientId && config.paypal.clientSecret),
     webhooksVerified: Boolean(config.paypal.webhookId),
-    aiConfigured: config.anthropic.configured,
-    model: config.anthropic.model,
+    aiConfigured: config.ai.configured,
+    aiProvider: config.ai.provider,
+    model: config.ai.model,
     coordinatorKeyRequired: Boolean(config.coordinatorKey),
     policy,
   };

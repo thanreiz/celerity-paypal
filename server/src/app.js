@@ -1,5 +1,5 @@
 // HTTP API. createApp() takes its dependencies so tests can run it with an
-// in-memory store and a fake Claude client.
+// in-memory store and a fake LLM client.
 
 import express from "express";
 import { timingSafeEqual } from "node:crypto";
@@ -20,7 +20,7 @@ function sameSecret(a, b) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export function createApp({ store, anthropicClient, staticDir, coordinatorKey = config.coordinatorKey } = {}) {
+export function createApp({ store, aiClient, staticDir, coordinatorKey = config.coordinatorKey } = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json({ limit: "200kb" }));
@@ -173,8 +173,9 @@ export function createApp({ store, anthropicClient, staticDir, coordinatorKey = 
     wrap(async (req, res) => {
       const bulletin = state.bulletins.find((b) => b.id === req.params.id);
       if (!bulletin) throw new HttpError(404, "bulletin not found");
-      if (!anthropicClient && !config.anthropic.configured) {
-        throw new HttpError(503, "AI is not configured: set ANTHROPIC_API_KEY on the server");
+      if (!aiClient && !config.ai.configured) {
+        const key = config.ai.provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
+        throw new HttpError(503, `AI is not configured: set ${key} on the server`);
       }
       if (state.runs.some((r) => r.status === "running")) throw new HttpError(409, "an agent run is already in progress");
       if (!underRateLimit()) throw new HttpError(429, "agent run limit reached for this hour");
@@ -185,7 +186,7 @@ export function createApp({ store, anthropicClient, staticDir, coordinatorKey = 
         bulletin_id: bulletin.id,
         bulletin_title: bulletin.title,
         status: "running",
-        model: config.anthropic.model,
+        model: config.ai.model,
         started_by: req.actor,
         started_at: new Date().toISOString(),
         finished_at: null,
@@ -204,7 +205,7 @@ export function createApp({ store, anthropicClient, staticDir, coordinatorKey = 
       res.status(202).json(run);
 
       // Run in the background; the console polls /api/state for progress.
-      runAgent({ state, run, bulletin, client: anthropicClient, onProgress: () => store.persist() })
+      runAgent({ state, run, bulletin, client: aiClient, onProgress: () => store.persist() })
         .then(() => {
           run.status = run.drafts.length ? "awaiting_approval" : "no_action";
           const totals = runTotals(run);

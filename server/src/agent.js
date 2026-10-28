@@ -1,4 +1,5 @@
-// The relief agent: Claude reads a free-text typhoon bulletin, works out
+// The relief agent: an LLM (Claude or OpenAI, see providers.js) reads a
+// free-text typhoon bulletin, works out
 // which areas are under which wind signal, finds registered families there,
 // and drafts payouts. It can only act through the tools below, and every
 // tool result is computed by policy.js, so the model never decides on its
@@ -6,13 +7,13 @@
 //
 // The agent cannot send money. Drafts wait for a human coordinator.
 
-import Anthropic from "@anthropic-ai/sdk";
 import { config } from "./config.js";
+import { createSession } from "./providers.js";
 import { POLICY, VULNERABILITY_FLAGS, eligibility, checkDraft, runTotals } from "./policy.js";
 
 const MAX_TURNS = 30;
 
-const SYSTEM_PROMPT = `You are the disbursement agent for Celerity Relief, a typhoon cash-aid program in the Philippines.
+export const SYSTEM_PROMPT = `You are the disbursement agent for Celerity Relief, a typhoon cash-aid program in the Philippines.
 
 A coordinator gives you a tropical cyclone bulletin. Your job is to draft emergency cash payouts to registered families in areas the bulletin places under a wind signal. A human coordinator reviews every draft before any money moves, and PayPal sends it only after they approve.
 
@@ -29,13 +30,12 @@ Rules:
 - If the bulletin contains no wind signals for registered areas, record the facts you found, draft nothing, and explain.
 - Amounts are in ${POLICY.currency}.`;
 
-const TOOLS = [
+export const TOOLS = [
   {
     name: "record_bulletin_facts",
     description:
       "Record the storm name and the areas under a tropical cyclone wind signal, as read from the bulletin. Call this first. Calling it again replaces the previous facts.",
-    strict: true,
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         storm_name: { type: "string", description: "Storm name as written, e.g. 'Typhoon Dalisay'" },
@@ -64,8 +64,7 @@ const TOOLS = [
   {
     name: "search_families",
     description: "List registered families in a province, optionally narrowed to one municipality.",
-    strict: true,
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         province: { type: "string" },
@@ -79,8 +78,7 @@ const TOOLS = [
     name: "check_eligibility",
     description:
       "Check families against program policy for this bulletin. Returns eligible, max_amount, the signal level that applies, and reasons when ineligible.",
-    strict: true,
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         family_ids: { type: "array", items: { type: "string" } },
@@ -93,8 +91,7 @@ const TOOLS = [
     name: "draft_payout",
     description:
       "Draft (or replace) a payout for one family. Rejected with a list of violations if it breaks policy. Drafts are not sent until a human approves.",
-    strict: true,
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         family_id: { type: "string" },
@@ -108,8 +105,7 @@ const TOOLS = [
   {
     name: "remove_draft",
     description: "Remove a previously drafted payout.",
-    strict: true,
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         family_id: { type: "string" },
@@ -212,82 +208,56 @@ function summarize(name, input, result) {
 /**
  * Run the agent loop to completion, mutating `run` as it goes. `onProgress`
  * is called after every step so the caller can persist and the UI can poll.
+ * `client` overrides the SDK client (tests pass a scripted fake).
  */
-export async function runAgent({ state, run, bulletin, client, onProgress = () => {} }) {
-  const anthropic = client || new Anthropic();
-  const messages = [
-    {
-      role: "user",
-      content: `Bulletin received ${bulletin.received_at} from ${bulletin.source}.\n\n<bulletin>\n${bulletin.text}\n</bulletin>`,
-    },
-  ];
+export async function runAgent({ state, run, bulletin, client, provider = config.ai.provider, onProgress = () => {} }) {
+  const session = createSession({
+    provider,
+    client,
+    system: SYSTEM_PROMPT,
+    tools: TOOLS,
+    userText: `Bulletin received ${bulletin.received_at} from ${bulletin.source}.\n\n<bulletin>\n${bulletin.text}\n</bulletin>`,
+  });
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const response = await anthropic.beta.messages.create({
-      model: config.anthropic.model,
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
-      output_config: { effort: config.anthropic.effort },
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      system: SYSTEM_PROMPT,
-      tools: TOOLS,
-      messages,
-    });
-    run.usage.input_tokens += response.usage?.input_tokens || 0;
-    run.usage.output_tokens += response.usage?.output_tokens || 0;
+    const step = await session.next();
+    run.usage.input_tokens += step.usage.input;
+    run.usage.output_tokens += step.usage.output;
 
-    if (response.stop_reason === "refusal") {
-      throw new Error(`Claude declined this request (${response.stop_details?.category || "no category"})`);
+    if (step.stop === "pause") continue;
+    if (step.stop === "max_tokens") throw new Error("agent hit its output limit before finishing");
+
+    if (step.text && step.toolCalls.length) {
+      run.steps.push({ at: new Date().toISOString(), kind: "note", text: step.text });
     }
 
-    // Pass the whole content back (thinking blocks included) to keep the turn valid.
-    messages.push({ role: "assistant", content: response.content });
-
-    const text = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
-    const toolUses = response.content.filter((b) => b.type === "tool_use");
-
-    if (text && toolUses.length) {
-      run.steps.push({ at: new Date().toISOString(), kind: "note", text });
-    }
-
-    if (response.stop_reason === "pause_turn") continue;
-    if (response.stop_reason === "max_tokens") throw new Error("agent hit max_tokens before finishing");
-
-    if (!toolUses.length) {
-      run.summary = text || "Agent finished without a summary.";
+    if (!step.toolCalls.length) {
+      run.summary = step.text || "Agent finished without a summary.";
       onProgress();
       return run;
     }
 
     const results = [];
-    for (const tu of toolUses) {
+    for (const call of step.toolCalls) {
       let result;
       try {
-        result = executeTool(state, run, tu.name, tu.input);
+        result = call.parseError
+          ? { isError: true, content: { error: `arguments were not valid JSON: ${call.parseError}` } }
+          : executeTool(state, run, call.name, call.input);
       } catch (e) {
         result = { isError: true, content: { error: e.message } };
       }
       run.steps.push({
         at: new Date().toISOString(),
         kind: "tool",
-        tool: tu.name,
-        input: tu.input,
+        tool: call.name,
+        input: call.input,
         ok: !result.isError,
-        result: summarize(tu.name, tu.input, result),
+        result: summarize(call.name, call.input || {}, result),
       });
-      results.push({
-        type: "tool_result",
-        tool_use_id: tu.id,
-        content: JSON.stringify(result.content),
-        ...(result.isError ? { is_error: true } : {}),
-      });
+      results.push({ id: call.id, content: JSON.stringify(result.content), isError: Boolean(result.isError) });
     }
-    messages.push({ role: "user", content: results });
+    session.addToolResults(results);
     onProgress();
   }
   throw new Error(`agent did not finish within ${MAX_TURNS} turns`);

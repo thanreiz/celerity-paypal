@@ -10,7 +10,7 @@
 
 <p align="center">
   <img alt="PayPal Payouts" src="https://img.shields.io/badge/PayPal-Payouts_API-003087?style=flat-square&logo=paypal&logoColor=white" />
-  <img alt="Claude" src="https://img.shields.io/badge/AI-Claude_tool_use-d97757?style=flat-square" />
+  <img alt="AI agent" src="https://img.shields.io/badge/AI-OpenAI_or_Claude_tool_use-d97757?style=flat-square" />
   <img alt="Node" src="https://img.shields.io/badge/Server-Node_24_+_Express-16452d?style=flat-square" />
   <img alt="React" src="https://img.shields.io/badge/Frontend-React_18_+_Vite-61DAFB?style=flat-square" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-2e7d32?style=flat-square" />
@@ -22,7 +22,7 @@ When a typhoon hits the Philippines, relief money usually already exists. What's
 deciding who gets it and getting it into their hands. Celerity Relief cuts that to minutes:
 
 1. **A bulletin arrives.** A coordinator pastes a tropical cyclone bulletin, or picks one from the feed.
-2. **The agent drafts.** Claude reads the free-text bulletin, works out which provinces and towns
+2. **The agent drafts.** An LLM agent (OpenAI or Claude) reads the free-text bulletin, works out which provinces and towns
    are under which wind signal, finds registered families there, and drafts a payout for each
    eligible family with a one-line reason.
 3. **Code enforces the limits.** Every draft goes through a policy engine: signal minimum, per-family
@@ -50,7 +50,7 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
 | **PayPal Payouts API** (`/v1/payments/payouts`) | Sends every approved run as one batch to families' PayPal emails. `sender_batch_id` is derived from the run ID, so a retried approval can never pay twice. |
 | **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`) | Push status updates. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
 | **PayPal OAuth 2.0** (client credentials) | Server-side only; the token is cached until shortly before it expires. |
-| **Claude** (Messages API, tool use, `claude-opus-5-5`) | The agent loop. Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. |
+| **LLM agent**: OpenAI (Chat Completions, function calling) or Anthropic Claude (Messages API, tool use) | The agent loop ([`agent.js`](server/src/agent.js), [`providers.js`](server/src/providers.js)). Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. One env var (`AI_PROVIDER`) switches vendors. |
 | **Policy engine** ([`server/src/policy.js`](server/src/policy.js)) | Deterministic eligibility and caps. The only thing that decides whether a draft is allowed. |
 | **Evidence log** ([`server/src/store.js`](server/src/store.js)) | Append-only, hash-chained. Editing or deleting any past entry breaks verification. |
 
@@ -70,7 +70,7 @@ system prompt says so, but the guarantee comes from the code, not the prompt.
             ┌───────────────────────── Render web service ──────────────────────────┐
  browser    │  Express (server/)                                                    │
  ─────────► │   /api/state, /api/public ── JSON store + hash-chained evidence log   │
- React SPA  │   /api/bulletins/:id/runs ── agent.js ──► Claude Messages API         │
+ React SPA  │   /api/bulletins/:id/runs ── agent.js ──► OpenAI or Claude API        │
  (served    │                                │  tool calls                          │
   from the  │                                ▼                                      │
   same      │                            policy.js  (eligibility, caps, no repeats) │
@@ -79,7 +79,7 @@ system prompt says so, but the guarantee comes from the code, not the prompt.
             └───────────────────────────────────────────────────────────────────────┘
 ```
 
-- **`server/`**: Node 24, Express 5, `@anthropic-ai/sdk`. PayPal is called with Node's built-in
+- **`server/`**: Node 24, Express 5, `openai` and `@anthropic-ai/sdk`. PayPal is called with Node's built-in
   `fetch` (no SDK). State is a single JSON file written atomically; the evidence log lives in it.
 - **`celerity-web/`**: React 18 + Vite. Coordinator console (Overview, Respond, Payouts,
   Families, Evidence log) and a public transparency page at `/#/public`.
@@ -91,7 +91,8 @@ server/
   src/
     index.js        boot: load store, serve API + built frontend
     app.js          HTTP routes, coordinator auth, rate limit
-    agent.js        Claude tool-use loop and tool implementations
+    agent.js        agent loop and tool implementations
+    providers.js    OpenAI and Claude adapters behind one interface
     policy.js       hard limits and eligibility
     payouts.js      approval → PayPal batch, webhook + poll status sync
     paypal.js       OAuth, Payouts, webhook verification
@@ -128,7 +129,8 @@ Requires **Node 22+** (24 recommended).
 cp server/.env.example server/.env
 ```
 
-Fill in `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `ANTHROPIC_API_KEY`, `COORDINATOR_KEY`, and set
+Fill in `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, an AI key (`OPENAI_API_KEY` with `AI_PROVIDER=openai`, or
+`ANTHROPIC_API_KEY`), `COORDINATOR_KEY`, and set
 `SEED_RECEIVER_EMAILS` and `SMOKE_RECEIVER_EMAIL` to your sandbox personal account email(s).
 
 ### 3. Smoke-test PayPal
@@ -162,13 +164,14 @@ cd server && npm test
 
 The suites cover policy caps and eligibility, hash-chain tamper detection, and a full
 end-to-end flow (bulletin → scripted agent run with policy refusals → approval → PayPal batch →
-webhooks → public view without PII), run against a fake Claude client and a fake PayPal.
+webhooks → public view without PII), run against scripted OpenAI and Claude clients and a fake PayPal.
 
 ## Deploy to Render
 
 The repo includes [`render.yaml`](render.yaml). In Render: **New → Blueprint**, pick this repo, then
 set the secret env vars (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`,
-`ANTHROPIC_API_KEY`, `COORDINATOR_KEY`, `SEED_RECEIVER_EMAILS`). Point the PayPal webhook at
+`AI_PROVIDER` plus `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, `COORDINATOR_KEY`, `SEED_RECEIVER_EMAILS`).
+Point the PayPal webhook at
 `https://<service>.onrender.com/api/webhooks/paypal`.
 
 On the free plan the disk is not persistent: a restart or redeploy reseeds the demo data and
@@ -181,8 +184,10 @@ clears the evidence log.
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | yes | PayPal REST app credentials |
 | `PAYPAL_ENV` | no | `sandbox` (default) or `live` |
 | `PAYPAL_WEBHOOK_ID` | for webhooks | Verifies webhook signatures; webhooks are rejected without it |
-| `ANTHROPIC_API_KEY` | yes | Claude API key for the agent |
-| `CLAUDE_MODEL`, `CLAUDE_EFFORT` | no | Default `claude-opus-5-5`, `medium` |
+| `AI_PROVIDER` | no | `openai` or `anthropic`; unset picks whichever key is present |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | one of them | Key for the agent's provider |
+| `OPENAI_MODEL`, `CLAUDE_MODEL` | no | Default `gpt-5.5`, `claude-opus-5-5` |
+| `AI_EFFORT` | no | Reasoning effort, default `medium` |
 | `COORDINATOR_KEY` | yes in prod | Passcode for running the agent and approving payouts |
 | `SEED_RECEIVER_EMAILS` | no | Sandbox emails assigned to demo families |
 | `PAYOUT_CURRENCY` | no | Default `USD` |
@@ -194,6 +199,7 @@ clears the evidence log.
 ## Tools used
 
 - **PayPal**: Payouts API, Webhooks + webhook signature verification, OAuth 2.0 client credentials (sandbox)
+- **OpenAI API**: Chat Completions with strict function calling (`openai`)
 - **Anthropic Claude API**: Messages API with strict tool use, adaptive thinking, server-side refusal fallback (`@anthropic-ai/sdk`)
 - **Node.js 24** and **Express 5** for the API server
 - **React 18** and **Vite 6** for the frontend
@@ -207,7 +213,7 @@ Celerity started as an earlier disaster-relief prototype
 ([github.com/thanreiz/Celerity](https://github.com/thanreiz/Celerity)). For this hackathon it was rebuilt
 after Oct 1, 2026, with a new backend, a new payment rail, and a new console:
 
-- **New:** an Express backend; a Claude tool-use agent that reads free-text bulletins and drafts
+- **New:** an Express backend; an LLM tool-use agent (OpenAI or Claude) that reads free-text bulletins and drafts
   payouts; a deterministic policy engine; human approval; PayPal Payouts with verified webhooks
   and a live status timeline; a hash-chained evidence log; and a public transparency page.
 - **Replaced:** the old payment and trigger layer and the recipient wallet app, which PayPal

@@ -36,7 +36,7 @@ function Trace({ run, familiesById }) {
   if (!run.steps.length && run.status === "running") {
     return (
       <p style={{ color: "var(--text-faint)", font: "var(--text-meta)" }}>
-        <span className="cel-spin" /> Claude is reading the bulletin…
+        <span className="cel-spin" /> The agent is reading the bulletin…
       </p>
     );
   }
@@ -311,7 +311,7 @@ export default function RespondPage({ data, config, act, busy, go }) {
     <main className="cel-page cel-page--wide">
       <PageHeader
         title="Respond to a bulletin"
-        lede="Pick a bulletin and run the agent. Claude drafts payouts for families in signal areas; you approve before anything is sent."
+        lede="Pick a bulletin and run the AI agent. It drafts payouts for families in signal areas; you approve before anything is sent."
       />
       <div className="cel-split">
         <div className="cel-stack" style={{ gap: 10 }}>
@@ -375,7 +375,7 @@ export default function RespondPage({ data, config, act, busy, go }) {
                 )}
                 {!config.aiConfigured && (
                   <p style={{ font: "var(--text-meta)", color: "var(--warn-text)", margin: "12px 0 0" }}>
-                    Set ANTHROPIC_API_KEY on the server to run the agent.
+                    Set {config.aiProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"} on the server to run the agent.
                   </p>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setShowText((s) => !s)} style={{ marginTop: 10, paddingLeft: 0 }}>
