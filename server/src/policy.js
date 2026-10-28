@@ -2,17 +2,39 @@
 // is checked here when the agent drafts it and again when a coordinator
 // approves, so neither a confused model nor a stale run can exceed policy.
 
+// Amounts per payout currency. PHP is roughly USD x 50, rounded to sums a
+// relief office would actually hand out.
+const AMOUNTS = {
+  USD: {
+    // Base grant by PAGASA tropical cyclone wind signal level.
+    signalBase: { 1: 0, 2: 20, 3: 40, 4: 60, 5: 80 },
+    perExtraMember: 5, // for each household member beyond 2
+    householdTopUpCap: 20,
+    vulnerabilityTopUp: 10, // per flag: senior, pwd, infant, pregnant
+    maxPerFamily: 120,
+    maxPerRun: 1500,
+  },
+  PHP: {
+    signalBase: { 1: 0, 2: 1000, 3: 2000, 4: 3000, 5: 4000 },
+    perExtraMember: 250,
+    householdTopUpCap: 1000,
+    vulnerabilityTopUp: 500,
+    maxPerFamily: 6000,
+    maxPerRun: 75000,
+  },
+};
+
+const currency = (process.env.PAYOUT_CURRENCY || "USD").toUpperCase();
+if (!AMOUNTS[currency]) {
+  throw new Error(`PAYOUT_CURRENCY "${currency}" has no policy amounts; use one of ${Object.keys(AMOUNTS).join(", ")}`);
+}
+
 export const POLICY = Object.freeze({
-  currency: process.env.PAYOUT_CURRENCY || "USD",
+  currency,
   minSignal: 2,
-  // Base grant by PAGASA tropical cyclone wind signal level.
-  signalBase: Object.freeze({ 1: 0, 2: 20, 3: 40, 4: 60, 5: 80 }),
-  perExtraMember: 5, // for each household member beyond 2
-  householdTopUpCap: 20,
-  vulnerabilityTopUp: 10, // per flag: senior, pwd, infant, pregnant
-  maxPerFamily: 120,
-  maxPerRun: 1500,
   maxRecipientsPerRun: 40,
+  ...AMOUNTS[currency],
+  signalBase: Object.freeze({ ...AMOUNTS[currency].signalBase }),
 });
 
 export const VULNERABILITY_FLAGS = ["senior", "pwd", "infant", "pregnant"];

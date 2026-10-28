@@ -190,7 +190,7 @@ clears the evidence log.
 | `AI_EFFORT` | no | Reasoning effort, default `medium` |
 | `COORDINATOR_KEY` | yes in prod | Passcode for running the agent and approving payouts |
 | `SEED_RECEIVER_EMAILS` | no | Sandbox emails assigned to demo families |
-| `PAYOUT_CURRENCY` | no | Default `USD` |
+| `PAYOUT_CURRENCY` | no | `USD` (default) or `PHP`; must match the sender account's balance currency. Policy limits are set per currency. |
 | `AGENT_RUNS_PER_HOUR` | no | Default `20`; protects a public demo |
 | `DATA_DIR`, `PORT` | no | Default `server/data`, `8787` |
 

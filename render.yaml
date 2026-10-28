@@ -29,5 +29,7 @@ services:
         sync: false
       - key: SEED_RECEIVER_EMAILS
         sync: false
+      - key: PAYOUT_CURRENCY
+        value: PHP
       - key: AGENT_RUNS_PER_HOUR
         value: "20"
