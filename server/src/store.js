@@ -3,7 +3,6 @@
 //
 // The evidence log is append-only and hash-chained: each entry commits to
 // the previous entry's hash, so any edit or deletion breaks verifyChain().
-// This replaces the on-chain audit trail of the original Celerity.
 
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync } from "node:fs";

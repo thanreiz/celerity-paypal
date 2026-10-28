@@ -203,16 +203,15 @@ clears the evidence log.
 
 ## What changed from the original Celerity
 
-Celerity began as a Stellar/Soroban disbursement rail
+Celerity started as an earlier disaster-relief prototype
 ([github.com/thanreiz/Celerity](https://github.com/thanreiz/Celerity)). For this hackathon it was rebuilt
-after Oct 1, 2026:
+after Oct 1, 2026, with a new backend, a new payment rail, and a new console:
 
-- **Removed:** the Soroban smart contract, the Ed25519 oracle signer, the Stellar SDK, the
-  anchor (SEP-24/31) cash-out, and the farmer wallet app.
-- **Added:** an Express backend; a Claude tool-use agent that reads free-text bulletins and drafts
+- **New:** an Express backend; a Claude tool-use agent that reads free-text bulletins and drafts
   payouts; a deterministic policy engine; human approval; PayPal Payouts with verified webhooks
-  and a live status timeline; a hash-chained evidence log in place of the on-chain ledger; and a
-  public transparency page.
+  and a live status timeline; a hash-chained evidence log; and a public transparency page.
+- **Replaced:** the old payment and trigger layer and the recipient wallet app, which PayPal
+  Payouts and the agent now cover.
 - **Kept:** the design system and the core rules from the original: objective triggers, no
   double payment for the same event, and the registry stays in human hands.
 

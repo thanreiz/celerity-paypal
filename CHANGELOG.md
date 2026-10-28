@@ -7,8 +7,8 @@ Newest first. History before the PayPal rebuild lives in the original repo,
 
 ## 2026-10-28 — v0.2.0 PayPal rebuild (Celerity Relief)
 
-- Removed the Stellar stack: Soroban contract, Ed25519 oracle, Stellar SDK,
-  SEP-24/31 anchor flow, farmer wallet app, Vercel functions.
+- Replaced the old payment and trigger layer, the recipient wallet app, and
+  the Vercel functions.
 - New `server/` (Node 24, Express 5): Claude tool-use agent that reads
   free-text typhoon bulletins and drafts payouts; deterministic policy engine
   (signal minimum, per-family / per-run / recipient caps, no repeat payment per
