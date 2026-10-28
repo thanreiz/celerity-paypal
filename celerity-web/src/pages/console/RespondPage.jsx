@@ -91,16 +91,13 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
   const familiesById = useMemo(() => Object.fromEntries(data.families.map((f) => [f.id, f])), [data.families]);
   const refused = run.steps.filter((s) => s.kind === "tool" && !s.ok).length;
 
-  const approve = () => {
-    const ok = window.confirm(
-      `Send ${money(run.totals.amount, currency)} to ${run.totals.recipients} families through PayPal ${config.paypalEnv}?\n\nThis cannot be undone from Celerity.`
-    );
-    if (ok) act("Approved. PayPal is processing the batch.", () => api.approveRun(run.id)).then(() => go("payouts"), () => {});
-  };
-  const reject = () => {
-    const reason = window.prompt("Why are you rejecting this run? (optional)", "");
-    if (reason !== null) act("Run rejected. Nothing was sent.", () => api.rejectRun(run.id, reason)).catch(() => {});
-  };
+  // In-page confirmation instead of window.confirm/prompt: embedded browsers
+  // and some judge setups block native dialogs, which silently cancels them.
+  const [confirming, setConfirming] = useState(null); // null | "approve" | "reject"
+  const [reason, setReason] = useState("");
+  const approve = () =>
+    act("Approved. PayPal is processing the batch.", () => api.approveRun(run.id)).then(() => go("payouts"), () => {});
+  const reject = () => act("Run rejected. Nothing was sent.", () => api.rejectRun(run.id, reason)).catch(() => {});
 
   return (
     <Card>
@@ -232,14 +229,51 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
                   ? "Nothing is sent until you approve. Policy is checked again at approval."
                   : "Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET on the server to send payouts."}
               </span>
-              <div className="cel-row-actions">
-                <Button variant="default" onClick={reject} disabled={busy}>
-                  Reject
-                </Button>
-                <Button variant="primary" onClick={approve} disabled={busy || !config.paypalConfigured}>
-                  Approve & send {money(run.totals.amount, currency)}
-                </Button>
-              </div>
+              {confirming === null && (
+                <div className="cel-row-actions">
+                  <Button variant="default" onClick={() => setConfirming("reject")} disabled={busy}>
+                    Reject
+                  </Button>
+                  <Button variant="primary" onClick={() => setConfirming("approve")} disabled={busy || !config.paypalConfigured}>
+                    Approve & send {money(run.totals.amount, currency)}
+                  </Button>
+                </div>
+              )}
+              {confirming === "approve" && (
+                <div className="cel-pop" style={{ width: "100%", background: "var(--ok-bg)", border: "1px solid var(--ok-line)", borderRadius: 12, padding: "14px 16px" }}>
+                  <strong style={{ display: "block" }}>
+                    Send {money(run.totals.amount, currency)} to {run.totals.recipients} families through PayPal {config.paypalEnv}?
+                  </strong>
+                  <span style={{ font: "var(--text-meta)", color: "var(--text-dim)" }}>This cannot be undone from Celerity.</span>
+                  <div className="cel-row-actions" style={{ marginTop: 12 }}>
+                    <Button variant="primary" onClick={approve} disabled={busy}>
+                      {busy ? "Sending…" : `Yes, send ${money(run.totals.amount, currency)}`}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setConfirming(null)} disabled={busy}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {confirming === "reject" && (
+                <div className="cel-pop" style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <Input
+                    label="Why reject this run? (optional)"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="e.g. bulletin superseded"
+                    maxLength={300}
+                  />
+                  <div className="cel-row-actions">
+                    <Button variant="default" onClick={reject} disabled={busy}>
+                      Reject run
+                    </Button>
+                    <Button variant="ghost" onClick={() => setConfirming(null)} disabled={busy}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {run.status === "approved" && (
