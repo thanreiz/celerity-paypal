@@ -1,5 +1,5 @@
-// The same agent loop driven through the OpenAI adapter with a scripted
-// chat.completions client.
+// The same agent loop driven through the OpenAI adapter (Responses API) with
+// a scripted client.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -13,45 +13,45 @@ const { seedState } = await import("../src/seed.js");
 
 let n = 0;
 const call = (name, args) => ({
-  id: `call_${++n}`,
-  type: "function",
-  function: { name, arguments: typeof args === "string" ? args : JSON.stringify(args) },
+  type: "function_call",
+  id: `fc_${++n}`,
+  call_id: `call_${n}`,
+  name,
+  arguments: typeof args === "string" ? args : JSON.stringify(args),
 });
-const reply = (message, finish_reason = "tool_calls") => ({
-  choices: [{ message: { role: "assistant", content: null, refusal: null, ...message }, finish_reason }],
-  usage: { prompt_tokens: 100, completion_tokens: 20 },
+const text = (t) => ({ type: "message", role: "assistant", content: [{ type: "output_text", text: t }] });
+const reply = (output, extra = {}) => ({
+  id: `resp_${++n}`,
+  output: [{ type: "reasoning", id: `rs_${n}`, summary: [] }, ...output],
+  usage: { input_tokens: 100, output_tokens: 20 },
+  incomplete_details: null,
+  ...extra,
 });
 
 const script = [
-  reply({
-    tool_calls: [
-      call("record_bulletin_facts", {
-        storm_name: "Typhoon Dalisay",
-        bulletin_number: "8",
-        areas: [{ province: "Catanduanes", municipality: null, signal_level: 4 }],
-      }),
-    ],
-  }),
-  reply({
-    content: "Drafting now.",
-    tool_calls: [
-      call("draft_payout", { family_id: "fam_002", amount: 70, rationale: "Signal 4, household of 4" }),
-      call("draft_payout", { family_id: "fam_001", amount: 999, rationale: "too much" }),
-      call("draft_payout", "{not json"),
-    ],
-  }),
-  reply({ content: "Drafted 1 family in Catanduanes." }, "stop"),
+  reply([
+    call("record_bulletin_facts", {
+      storm_name: "Typhoon Dalisay",
+      bulletin_number: "8",
+      areas: [{ province: "Catanduanes", municipality: null, signal_level: 4 }],
+    }),
+  ]),
+  reply([
+    text("Drafting now."),
+    call("draft_payout", { family_id: "fam_002", amount: 70, rationale: "Signal 4, household of 4" }),
+    call("draft_payout", { family_id: "fam_001", amount: 999, rationale: "too much" }),
+    call("draft_payout", "{not json"),
+  ]),
+  reply([text("Drafted 1 family in Catanduanes.")]),
 ];
 
-test("OpenAI adapter runs the agent loop and returns tool results", async () => {
+test("OpenAI adapter runs the agent loop on the Responses API", async () => {
   const requests = [];
   const client = {
-    chat: {
-      completions: {
-        create: async (params) => {
-          requests.push(structuredClone(params));
-          return script[requests.length - 1];
-        },
+    responses: {
+      create: async (params) => {
+        requests.push(structuredClone(params));
+        return script[requests.length - 1];
       },
     },
   };
@@ -68,18 +68,24 @@ test("OpenAI adapter runs the agent loop and returns tool results", async () => 
 
   const first = requests[0];
   assert.equal(first.model, "gpt-test");
-  assert.equal(first.messages[0].role, "system");
+  assert.match(first.instructions, /disbursement agent/);
+  assert.equal(first.previous_response_id, undefined);
   assert.equal(first.tools[0].type, "function");
-  assert.equal(first.tools[0].function.strict, true);
-  assert.equal(first.tools[0].function.parameters.additionalProperties, false);
+  assert.equal(first.tools[0].strict, true);
+  assert.equal(first.tools[0].parameters.additionalProperties, false);
+  assert.ok(first.reasoning.effort);
 
-  // Every tool call gets a tool message, including refused and malformed ones.
-  const toolMsgs = requests[2].messages.filter((m) => m.role === "tool");
-  assert.equal(toolMsgs.length, 4);
-  assert.match(toolMsgs[2].content, /exceeds this family's policy cap/);
-  assert.match(toolMsgs[3].content, /not valid JSON/);
-  const assistantTurn = requests[2].messages.find((m) => m.role === "assistant" && m.tool_calls?.length === 3);
-  assert.ok(assistantTurn, "assistant tool_calls are replayed before their results");
+  // Later turns chain on the previous response and send only tool outputs.
+  const third = requests[2];
+  assert.equal(third.previous_response_id, script[1].id);
+  assert.equal(third.input.length, 3);
+  assert.ok(third.input.every((i) => i.type === "function_call_output"));
+  assert.deepEqual(
+    third.input.map((i) => i.call_id),
+    script[1].output.filter((o) => o.type === "function_call").map((o) => o.call_id)
+  );
+  assert.match(third.input[1].output, /exceeds this family's policy cap/);
+  assert.match(third.input[2].output, /not valid JSON/);
 
   const failed = run.steps.filter((s) => s.kind === "tool" && !s.ok);
   assert.equal(failed.length, 2);
@@ -88,7 +94,10 @@ test("OpenAI adapter runs the agent loop and returns tool results", async () => 
 
 test("OpenAI refusal fails the run", async () => {
   const client = {
-    chat: { completions: { create: async () => reply({ refusal: "I can't help with that." }, "stop") } },
+    responses: {
+      create: async () =>
+        reply([{ type: "message", role: "assistant", content: [{ type: "refusal", refusal: "I can't help with that." }] }]),
+    },
   };
   const state = emptyState();
   seedState(state);

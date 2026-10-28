@@ -50,7 +50,7 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
 | **PayPal Payouts API** (`/v1/payments/payouts`) | Sends every approved run as one batch to families' PayPal emails. `sender_batch_id` is derived from the run ID, so a retried approval can never pay twice. |
 | **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`) | Push status updates. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
 | **PayPal OAuth 2.0** (client credentials) | Server-side only; the token is cached until shortly before it expires. |
-| **LLM agent**: OpenAI (Chat Completions, function calling) or Anthropic Claude (Messages API, tool use) | The agent loop ([`agent.js`](server/src/agent.js), [`providers.js`](server/src/providers.js)). Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. One env var (`AI_PROVIDER`) switches vendors. |
+| **LLM agent**: OpenAI (Responses API, function calling) or Anthropic Claude (Messages API, tool use) | The agent loop ([`agent.js`](server/src/agent.js), [`providers.js`](server/src/providers.js)). Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. One env var (`AI_PROVIDER`) switches vendors. |
 | **Policy engine** ([`server/src/policy.js`](server/src/policy.js)) | Deterministic eligibility and caps. The only thing that decides whether a draft is allowed. |
 | **Evidence log** ([`server/src/store.js`](server/src/store.js)) | Append-only, hash-chained. Editing or deleting any past entry breaks verification. |
 
@@ -199,7 +199,7 @@ clears the evidence log.
 ## Tools used
 
 - **PayPal**: Payouts API, Webhooks + webhook signature verification, OAuth 2.0 client credentials (sandbox)
-- **OpenAI API**: Chat Completions with strict function calling (`openai`)
+- **OpenAI API**: Responses API with strict function calling and reasoning (`openai`)
 - **Anthropic Claude API**: Messages API with strict tool use, adaptive thinking, server-side refusal fallback (`@anthropic-ai/sdk`)
 - **Node.js 24** and **Express 5** for the API server
 - **React 18** and **Vite 6** for the frontend

@@ -61,53 +61,65 @@ function anthropicSession({ client, system, tools, userText }) {
   };
 }
 
+// Responses API: reasoning models only accept function tools here, not on
+// Chat Completions. Turns chain through previous_response_id, so OpenAI keeps
+// the reasoning items between tool calls and we only send the new input.
 function openaiSession({ client, system, tools, userText }) {
   const openai = client || new OpenAI();
-  const messages = [
-    { role: "system", content: system },
-    { role: "user", content: userText },
-  ];
   const toolDefs = tools.map((t) => ({
     type: "function",
-    function: { name: t.name, description: t.description, parameters: t.parameters, strict: true },
+    name: t.name,
+    description: t.description,
+    parameters: t.parameters,
+    strict: true,
   }));
+  let input = [{ role: "user", content: userText }];
+  let previousId = null;
 
   return {
     async next() {
-      const res = await openai.chat.completions.create({
+      const res = await openai.responses.create({
         model: config.ai.model,
-        messages,
+        instructions: system,
+        input,
         tools: toolDefs,
-        reasoning_effort: config.ai.effort,
-        max_completion_tokens: MAX_OUTPUT_TOKENS,
+        reasoning: { effort: config.ai.effort },
+        max_output_tokens: MAX_OUTPUT_TOKENS,
+        ...(previousId ? { previous_response_id: previousId } : {}),
       });
-      const choice = res.choices[0];
-      const msg = choice.message;
-      if (msg.refusal || choice.finish_reason === "content_filter") {
-        throw new Error(`OpenAI declined this request${msg.refusal ? `: ${msg.refusal}` : ""}`);
-      }
-      const calls = (msg.tool_calls || []).filter((c) => c.type === "function");
-      messages.push({ role: "assistant", content: msg.content ?? null, ...(calls.length ? { tool_calls: calls } : {}) });
+      previousId = res.id;
+      input = [];
 
-      const toolCalls = calls.map((c) => {
-        try {
-          return { id: c.id, name: c.function.name, input: JSON.parse(c.function.arguments) };
-        } catch (e) {
-          return { id: c.id, name: c.function.name, input: null, parseError: e.message };
-        }
-      });
+      const output = res.output || [];
+      const parts = output.filter((o) => o.type === "message").flatMap((o) => o.content || []);
+      const refusal = parts.find((p) => p.type === "refusal");
+      if (refusal || res.incomplete_details?.reason === "content_filter") {
+        throw new Error(`OpenAI declined this request${refusal ? `: ${refusal.refusal}` : ""}`);
+      }
+
+      const toolCalls = output
+        .filter((o) => o.type === "function_call")
+        .map((c) => {
+          try {
+            return { id: c.call_id, name: c.name, input: JSON.parse(c.arguments) };
+          } catch (e) {
+            return { id: c.call_id, name: c.name, input: null, parseError: e.message };
+          }
+        });
       return {
-        text: (msg.content || "").trim(),
+        text: parts
+          .filter((p) => p.type === "output_text")
+          .map((p) => p.text)
+          .join("\n")
+          .trim(),
         toolCalls,
-        stop: choice.finish_reason === "length" ? "max_tokens" : toolCalls.length ? "tool" : "end",
-        usage: { input: res.usage?.prompt_tokens || 0, output: res.usage?.completion_tokens || 0 },
+        stop: res.incomplete_details?.reason === "max_output_tokens" ? "max_tokens" : toolCalls.length ? "tool" : "end",
+        usage: { input: res.usage?.input_tokens || 0, output: res.usage?.output_tokens || 0 },
       };
     },
     addToolResults(results) {
-      for (const r of results) {
-        // OpenAI has no is_error flag on tool messages; the error is in the JSON body.
-        messages.push({ role: "tool", tool_call_id: r.id, content: r.content });
-      }
+      // No is_error flag on function outputs; the error is in the JSON body.
+      input = results.map((r) => ({ type: "function_call_output", call_id: r.id, output: r.content }));
     },
   };
 }
