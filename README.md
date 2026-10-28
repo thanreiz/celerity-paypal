@@ -221,6 +221,8 @@ after Oct 1, 2026, with a new backend, a new payment rail, and a new console:
 - **Kept:** the design system and the core rules from the original: objective triggers, no
   double payment for the same event, and the registry stays in human hands.
 
+See [`docs/DEVLOG.md`](docs/DEVLOG.md) for a dated log of the build and its verification runs.
+
 ## Credits
 
 **Ethan Dreiz Baltazar**, solo developer. [github.com/thanreiz](https://github.com/thanreiz)
