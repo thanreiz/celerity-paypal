@@ -10,7 +10,7 @@ process.env.PAYPAL_WEBHOOK_ID = "";
 process.env.ALLOW_UNVERIFIED_WEBHOOKS = "1";
 process.env.AI_PROVIDER = "anthropic";
 
-const { createStore } = await import("../src/store.js");
+const { createMemoryStore, createPgStore } = await import("../src/store.js");
 const { seedState } = await import("../src/seed.js");
 const { createApp } = await import("../src/app.js");
 
@@ -81,7 +81,18 @@ const api = (path, { method = "GET", body, key = KEY } = {}) =>
   }).then(async (r) => ({ status: r.status, body: await r.json() }));
 
 before(async () => {
-  store = createStore({ seed: seedState });
+  // flow-pg.test.js reruns this whole file against Postgres (PGlite).
+  if (process.env.FLOW_STORE === "pg") {
+    const { PGlite } = await import("@electric-sql/pglite");
+    const pg = new PGlite();
+    const db = {
+      query: (sql, params) => pg.query(sql, params),
+      transaction: (fn) => pg.transaction((tx) => fn({ query: (sql, params) => tx.query(sql, params) })),
+    };
+    store = createPgStore({ db, seed: seedState });
+  } else {
+    store = createMemoryStore({ seed: seedState });
+  }
   const app = createApp({ store, aiClient: fakeClaude, coordinatorKey: KEY });
   await new Promise((resolve) => {
     server = app.listen(0, resolve);
@@ -176,7 +187,7 @@ test("bulletin -> agent -> approval -> PayPal payout -> webhook", async () => {
 });
 
 test("a second run for the same storm cannot re-draft paid families", async () => {
-  const { state } = store;
+  const state = await store.read();
   const run = { storm: "DALISAY", areas: [{ province: "Catanduanes", municipality: null, signal_level: 4 }], drafts: [] };
   const { eligibility } = await import("../src/policy.js");
   const el = eligibility(state, state.families.find((f) => f.id === "fam_001"), run);

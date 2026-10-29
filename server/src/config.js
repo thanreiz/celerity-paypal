@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 // All runtime configuration comes from the environment. Secrets never reach
 // the browser: the frontend only sees the public subset from publicConfig().
 
@@ -27,7 +29,7 @@ function aiConfig() {
 
 export const config = {
   port: num("PORT", 8787),
-  dataDir: env.DATA_DIR || new URL("../data/", import.meta.url).pathname,
+  dataDir: env.DATA_DIR || fileURLToPath(new URL("../data/", import.meta.url)),
 
   paypal: {
     env: env.PAYPAL_ENV === "live" ? "live" : "sandbox",

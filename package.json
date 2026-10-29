@@ -1,0 +1,10 @@
+{
+  "name": "celerity-relief",
+  "private": true,
+  "type": "module",
+  "description": "Root manifest for the Vercel deployment; the code lives in server/ and celerity-web/.",
+  "scripts": {
+    "build": "npm run build --prefix celerity-web",
+    "test": "npm test --prefix server"
+  }
+}

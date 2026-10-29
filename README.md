@@ -36,7 +36,7 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
    an append-only SHA-256 hash-chained evidence log. A public page shows totals and the chain,
    with no names or emails.
 
-> **Hosted demo:** _coming soon (Render)_ · **Demo video:** _coming soon_
+> **Hosted demo:** _coming soon (Vercel)_ · **Demo video:** _coming soon_
 >
 > The demo runs on the **PayPal sandbox** with **simulated bulletins** for a fictional
 > Typhoon Dalisay. No real money moves.
@@ -67,20 +67,22 @@ system prompt says so, but the guarantee comes from the code, not the prompt.
 ## Architecture
 
 ```
-            ┌───────────────────────── Render web service ──────────────────────────┐
+            ┌──────────────── Vercel: one serverless function (api/index.js) ───────┐
  browser    │  Express (server/)                                                    │
- ─────────► │   /api/state, /api/public ── JSON store + hash-chained evidence log   │
+ ─────────► │   /api/state, /api/public ── Neon Postgres: state + hash-chained log  │
  React SPA  │   /api/bulletins/:id/runs ── agent.js ──► OpenAI or Claude API        │
- (served    │                                │  tool calls                          │
-  from the  │                                ▼                                      │
-  same      │                            policy.js  (eligibility, caps, no repeats) │
-  server)   │   /api/runs/:id/approve ── payouts.js ──► PayPal Payouts API          │
+ (static,   │        (runs after the 202 │  tool calls                          │
+  served by │         via waitUntil)     ▼                                      │
+  Vercel)   │                            policy.js  (eligibility, caps, no repeats) │
+            │   /api/runs/:id/approve ── payouts.js ──► PayPal Payouts API          │
             │   /api/webhooks/paypal  ◄── verify signature ◄── PayPal Webhooks      │
             └───────────────────────────────────────────────────────────────────────┘
 ```
 
 - **`server/`**: Node 24, Express 5, `openai` and `@anthropic-ai/sdk`. PayPal is called with Node's built-in
-  `fetch` (no SDK). State is a single JSON file written atomically; the evidence log lives in it.
+  `fetch` (no SDK). App state is one JSON document. On Vercel it lives in Neon Postgres and every
+  change runs in a transaction holding a row lock, so concurrent requests on different serverless
+  instances apply one at a time (no double approvals). Locally it's a JSON file.
 - **`celerity-web/`**: React 18 + Vite. Coordinator console (Overview, Respond, Payouts,
   Families, Evidence log) and a public transparency page at `/#/public`.
 
@@ -89,22 +91,24 @@ system prompt says so, but the guarantee comes from the code, not the prompt.
 ```
 server/
   src/
-    index.js        boot: load store, serve API + built frontend
-    app.js          HTTP routes, coordinator auth, rate limit
+    index.js        local server: API + built frontend
+    app.js          HTTP routes, coordinator auth, rate limit, background agent jobs
     agent.js        agent loop and tool implementations
     providers.js    OpenAI and Claude adapters behind one interface
     policy.js       hard limits and eligibility
     payouts.js      approval → PayPal batch, webhook + poll status sync
     paypal.js       OAuth, Payouts, webhook verification
-    store.js        JSON store, hash-chained evidence log
+    store.js        transactional store (Postgres or file), hash-chained evidence log
+    storage.js      picks Postgres (DATABASE_URL) or the local file store
     seed.js         demo families and simulated bulletins
   scripts/paypal-smoke.mjs   sandbox smoke test (token → payout → poll)
-  test/             node:test suites (policy, store, end-to-end flow)
+  test/             node:test suites (policy, store incl. Postgres via PGlite, end-to-end flow)
 celerity-web/
   src/pages/console/  coordinator console
   src/pages/public/   public transparency page
   src/design/         design system (tokens, Card, Table, StatusPill, …)
-render.yaml          Render blueprint
+api/index.js         Vercel function entry (wraps the Express app)
+vercel.json          Vercel build, rewrites, headers, 300s function limit
 ```
 
 ---
@@ -162,20 +166,25 @@ Open the Vite URL (it proxies `/api` to the server on port 8787) and sign in wit
 cd server && npm test
 ```
 
-The suites cover policy caps and eligibility, hash-chain tamper detection, and a full
-end-to-end flow (bulletin → scripted agent run with policy refusals → approval → PayPal batch →
-webhooks → public view without PII), run against scripted OpenAI and Claude clients and a fake PayPal.
+The suites cover policy caps and eligibility, hash-chain tamper detection, transaction rollback and
+concurrent writes on Postgres (PGlite), and a full end-to-end flow (bulletin → scripted agent run with
+policy refusals → approval → PayPal batch → webhooks → public view without PII), run on both stores
+against scripted OpenAI and Claude clients and a fake PayPal.
 
-## Deploy to Render
+## Deploy to Vercel
 
-The repo includes [`render.yaml`](render.yaml). In Render: **New → Blueprint**, pick this repo, then
-set the secret env vars (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`,
-`AI_PROVIDER` plus `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, `COORDINATOR_KEY`, `SEED_RECEIVER_EMAILS`).
-Point the PayPal webhook at
-`https://<service>.onrender.com/api/webhooks/paypal`.
+1. **Import:** on [vercel.com](https://vercel.com) → **Add New → Project** → import this repo. Leave the
+   framework preset alone; [`vercel.json`](vercel.json) sets the install, build and output.
+2. **Database:** in the project → **Storage** → **Create Database** → **Neon** (free). It adds
+   `DATABASE_URL` to the project. The table is created and seeded on the first request.
+3. **Environment variables** (Settings → Environment Variables): `PAYPAL_CLIENT_ID`,
+   `PAYPAL_CLIENT_SECRET`, `AI_PROVIDER` + `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY`),
+   `COORDINATOR_KEY`, `SEED_RECEIVER_EMAILS`, `PAYOUT_CURRENCY=PHP`. Then redeploy.
+4. **Webhook:** point the PayPal sandbox webhook at `https://<project>.vercel.app/api/webhooks/paypal`
+   and add its ID as `PAYPAL_WEBHOOK_ID`.
 
-On the free plan the disk is not persistent: a restart or redeploy reseeds the demo data and
-clears the evidence log.
+Agent runs continue after the HTTP response through `waitUntil`, within Vercel's 300-second
+function limit (a typical run takes about 30 seconds).
 
 ## Environment
 
@@ -192,7 +201,8 @@ clears the evidence log.
 | `SEED_RECEIVER_EMAILS` | no | Sandbox emails assigned to demo families |
 | `PAYOUT_CURRENCY` | no | `USD` (default) or `PHP`; must match the sender account's balance currency. Policy limits are set per currency. |
 | `AGENT_RUNS_PER_HOUR` | no | Default `20`; protects a public demo |
-| `DATA_DIR`, `PORT` | no | Default `server/data`, `8787` |
+| `DATABASE_URL` | on Vercel | Postgres connection string (Neon sets it). Without it, state is a local JSON file. |
+| `DATA_DIR`, `PORT` | no | Local file store folder and port. Default `server/data`, `8787` |
 
 ---
 
@@ -203,7 +213,8 @@ clears the evidence log.
 - **Anthropic Claude API**: Messages API with strict tool use, adaptive thinking, server-side refusal fallback (`@anthropic-ai/sdk`)
 - **Node.js 24** and **Express 5** for the API server
 - **React 18** and **Vite 6** for the frontend
-- **Render** for hosting
+- **Vercel** for hosting (static frontend + one serverless function)
+- **Neon** serverless Postgres for state (`pg`), tested locally with **PGlite**
 - **GitHub Actions** for CI (server tests + frontend build)
 - **Claude Code** was used as a coding assistant during development
 

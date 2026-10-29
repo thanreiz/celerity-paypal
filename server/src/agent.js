@@ -233,7 +233,7 @@ export async function runAgent({ state, run, bulletin, client, provider = config
 
     if (!step.toolCalls.length) {
       run.summary = step.text || "Agent finished without a summary.";
-      onProgress();
+      await onProgress();
       return run;
     }
 
@@ -258,7 +258,7 @@ export async function runAgent({ state, run, bulletin, client, provider = config
       results.push({ id: call.id, content: JSON.stringify(result.content), isError: Boolean(result.isError) });
     }
     session.addToolResults(results);
-    onProgress();
+    await onProgress();
   }
   throw new Error(`agent did not finish within ${MAX_TURNS} turns`);
 }
