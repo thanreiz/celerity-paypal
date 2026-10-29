@@ -23,6 +23,22 @@ export function clock(iso) {
 
 export const short = (hash, n = 10) => (hash ? `${hash.slice(0, n)}…` : "");
 
+/** "Typhoon DALISAY" -> "Typhoon Dalisay": bulletins shout storm names. */
+export function stormName(name) {
+  if (!name) return "";
+  return String(name).replace(/\p{Lu}{2,}/gu, (w) => w[0] + w.slice(1).toLowerCase());
+}
+
+/** Rewrite "PHP 12,250" and "3250 PHP" in agent-written text as money
+ * ("₱12,250"), so the trace and summary match the rest of the console. */
+export function moneyText(text) {
+  if (!text) return text;
+  const fmt = (n, cur) => money(Number(n.replace(/,/g, "")), cur);
+  return String(text)
+    .replace(/\b(PHP|USD)\s?(\d[\d,]*(?:\.\d{1,2})?)/g, (_, cur, n) => fmt(n, cur))
+    .replace(/\b(\d[\d,]*(?:\.\d{1,2})?)\s?(PHP|USD)\b/g, (_, n, cur) => fmt(n, cur));
+}
+
 export const FLAG_LABELS = { senior: "Senior", pwd: "PWD", infant: "Infant", pregnant: "Pregnant" };
 
 export function flagList(vulnerability) {
@@ -37,10 +53,14 @@ const EVENT_LABELS = {
   "run.failed": "Agent run failed",
   "run.approved": "Coordinator approved",
   "run.rejected": "Coordinator rejected",
+  "run.draft_removed": "Draft removed",
   "payout.batch_created": "PayPal batch created",
   "payout.batch_status": "PayPal batch status",
   "payout.item_status": "Payout status",
   "payout.error": "PayPal error",
+  "payout.submitting": "Sending to PayPal",
+  "payout.resumed": "PayPal submission resumed",
+  "payout.unconfirmed": "PayPal unconfirmed",
   "webhook.received": "PayPal webhook",
   "webhook.rejected": "Webhook rejected",
   "family.registered": "Family registered",
@@ -50,31 +70,43 @@ const EVENT_LABELS = {
 
 export const eventLabel = (type) => EVENT_LABELS[type] || type;
 
-export function eventDetail(e) {
+/** One line describing an evidence entry. `names` (family id -> name) is
+ * passed on the coordinator console only; the public view has no names. */
+export function eventDetail(e, names = {}) {
   const d = e.detail || {};
+  const who = (id) => (id && names[id]) || id;
   switch (e.type) {
     case "run.drafted":
-      return d.recipients ? `${d.storm}: ${d.recipients} families, ${money(d.amount, d.currency)}` : `${d.storm || "No storm"}: nothing to pay`;
+      return d.recipients
+        ? `${stormName(d.storm)}: ${d.recipients} families, ${money(d.amount, d.currency)}`
+        : `${stormName(d.storm) || "No storm"}: nothing to pay`;
     case "run.approved":
       return `${d.recipients} payouts, ${money(d.amount, d.currency)}`;
     case "payout.batch_created":
     case "payout.batch_status":
       return `${d.payout_batch_id} → ${d.batch_status}`;
     case "payout.item_status":
-      return `${d.family_id} → ${d.status}${d.transaction_id ? ` (tx ${d.transaction_id})` : ""}`;
+      return `${d.family_id ? `${who(d.family_id)} → ` : ""}${d.status}${d.transaction_id ? ` (tx ${d.transaction_id})` : ""}`;
     case "webhook.received":
       return d.event_type;
     case "run.started":
       return d.bulletin;
     case "run.failed":
+      return d.message || "The agent run failed";
     case "payout.error":
-      return d.message;
+      return d.message || `PayPal refused the batch${d.name ? ` (${d.name})` : ""}`;
+    case "payout.submitting":
+      return `${d.recipients} payouts, ${money(d.amount, d.currency)} sent to PayPal`;
+    case "payout.unconfirmed":
+      return d.message || "PayPal did not confirm yet; approve again to resume";
+    case "run.draft_removed":
+      return d.recipients != null ? `${d.recipients} families left, ${money(d.amount, d.currency)}` : "";
     case "run.rejected":
       return d.reason || "";
     case "family.registered":
-      return `${d.municipality}, ${d.province}`;
+      return `${names[e.ref] ? `${names[e.ref]}, ` : ""}${d.municipality}, ${d.province}`;
     case "family.status":
-      return d.status;
+      return names[e.ref] ? `${names[e.ref]}: ${d.status}` : d.status;
     case "bulletin.received":
       return d.title;
     default:

@@ -74,9 +74,10 @@ export default function SideNav({ items, active, onNavigate, footer }) {
       }}
     >
       <div style={{ padding: "0 16px", marginBottom: 32 }}>
-        <h1 style={{ font: "var(--text-h1)", fontSize: 24, color: "var(--primary)", margin: 0, letterSpacing: "var(--tracking-tight)" }}>
+        {/* Not a heading: each page has its own h1. */}
+        <p style={{ font: "var(--text-h1)", fontSize: 24, color: "var(--primary)", margin: 0, letterSpacing: "var(--tracking-tight)" }}>
           Celerity Relief
-        </h1>
+        </p>
         <p style={{ font: "var(--text-fine)", color: "var(--text-faint)", margin: "4px 0 0" }}>Coordinator console</p>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
@@ -86,6 +87,7 @@ export default function SideNav({ items, active, onNavigate, footer }) {
             <button
               key={it.key}
               onClick={() => onNavigate && onNavigate(it.key)}
+              aria-current={isActive ? "page" : undefined}
               className={`cel-press cel-nav-side${isActive ? " is-active" : ""}`}
               style={{
                 display: "flex",
@@ -111,23 +113,20 @@ export default function SideNav({ items, active, onNavigate, footer }) {
                 </span>
               </span>
               {it.step && (
+                // Plain text, not a round badge: a number in a circle reads
+                // as an unread count.
                 <span
                   style={{
                     marginLeft: "auto",
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    background: isActive ? "var(--primary)" : "var(--container-high)",
-                    color: isActive ? "#fff" : "var(--text-faint)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    font: "var(--text-label)",
                     fontSize: 10,
-                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--tracking-label)",
+                    color: "var(--text-faint)",
                     flexShrink: 0,
                   }}
                 >
-                  {it.step}
+                  Step {it.step}
                 </span>
               )}
             </button>

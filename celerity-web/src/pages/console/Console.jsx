@@ -26,18 +26,21 @@ const PAGES = {
   evidence: EvidencePage,
 };
 
+const needsLoginTitle = (config, signedIn) => Boolean(config?.coordinatorKeyRequired && !signedIn);
+
 // Poll fast while something is moving (agent run, PayPal batch in flight).
 function pollDelay(data) {
   if (!data) return 3000;
   const busy =
     data.runs.some((r) => r.status === "running") ||
-    data.batches.some((b) => ["PENDING", "PROCESSING"].includes(b.status));
+    data.batches.some((b) => ["SUBMITTING", "PENDING", "PROCESSING"].includes(b.status));
   return busy ? 1500 : 8000;
 }
 
 export default function Console({ route }) {
   const [config, setConfig] = useState(null);
   const [signedIn, setSignedIn] = useState(Boolean(session.key));
+  const [loginError, setLoginError] = useState("");
   const [data, setData] = useState(null);
   const [toast, setToast] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -45,6 +48,10 @@ export default function Console({ route }) {
   const dataRef = useRef(null);
 
   const page = PAGES[route.split("/")[0]] ? route.split("/")[0] : "overview";
+  useEffect(() => {
+    const label = needsLoginTitle(config, signedIn) ? "Sign in" : NAV.find((n) => n.key === page).label;
+    document.title = `${label} · Celerity Relief`;
+  }, [page, config, signedIn]);
   const go = useCallback((key) => {
     window.location.hash = `#/${key}`;
     window.scrollTo(0, 0);
@@ -71,10 +78,10 @@ export default function Console({ route }) {
       dataRef.current = next;
       setData(next);
     } catch (e) {
-      if (e.status === 401) {
+      if (e.status === 401 || e.status === 429) {
         session.signOut();
         setSignedIn(false);
-        notify("Your coordinator key was not accepted. Sign in again.", true);
+        setLoginError(e.status === 429 ? e.message : "Your coordinator key is no longer accepted. Sign in again.");
       } else {
         throw e;
       }
@@ -133,9 +140,23 @@ export default function Console({ route }) {
   if (needsLogin) {
     return (
       <LoginScreen
-        onSignIn={(key, name) => {
+        initialError={loginError}
+        onSignIn={async (key, name) => {
           session.signIn(key, name);
+          try {
+            const next = await api.state();
+            dataRef.current = next;
+            setData(next);
+          } catch (e) {
+            session.signOut();
+            if (e.status === 401) return "That key wasn't accepted. Check it with your relief office.";
+            return e.message;
+          }
+          clearTimeout(toastTimer.current);
+          setToast(null);
+          setLoginError("");
           setSignedIn(true);
+          return "";
         }}
       />
     );
@@ -180,7 +201,7 @@ export default function Console({ route }) {
       <div className="cel-console-main">
         <nav className="cel-console-tabs" aria-label="Sections">
           {navItems.map((n) => (
-            <button key={n.key} className={n.key === page ? "is-active" : ""} onClick={() => go(n.key)}>
+            <button key={n.key} className={n.key === page ? "is-active" : ""} aria-current={n.key === page ? "page" : undefined} onClick={() => go(n.key)}>
               {n.label}
               {n.key === "respond" && pendingApprovals ? ` (${pendingApprovals})` : ""}
             </button>

@@ -4,7 +4,7 @@ import Button from "../../design/Button";
 import Table from "../../design/Table";
 import StatusPill from "../../design/StatusPill";
 import { api } from "../../lib/api";
-import { money, when, clock } from "../../lib/format";
+import { money, when, clock, stormName } from "../../lib/format";
 import { PageHeader } from "./parts";
 
 const SOURCE_LABELS = { "paypal-webhook": "webhook", "paypal-poll": "PayPal lookup" };
@@ -43,7 +43,7 @@ export default function PayoutsPage({ data, config, act, busy, go }) {
         lede={
           config.webhooksVerified
             ? "Each approved run is one PayPal Payouts batch. Verified webhooks update status as PayPal reports it."
-            : "Each approved run is one PayPal Payouts batch. Webhooks are not configured, so use Refresh to ask PayPal for the latest status."
+            : "Each approved run is one PayPal Payouts batch. Webhooks are not configured, so use “Refresh from PayPal” on a batch to get its latest status."
         }
       />
       {data.batches.length === 0 && (
@@ -61,7 +61,7 @@ export default function PayoutsPage({ data, config, act, busy, go }) {
           <Card key={b.id}>
             <div className="cel-row-actions" style={{ justifyContent: "space-between" }}>
               <div style={{ minWidth: 0 }}>
-                <strong style={{ font: "var(--text-h2)" }}>{b.storm}</strong>
+                <strong style={{ font: "var(--text-h2)" }}>{stormName(b.storm)}</strong>
                 <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
                   Approved by {b.approved_by} {when(b.created_at)} · {delivered.length}/{b.items.length} delivered ·{" "}
                   {money(delivered.reduce((s, i) => s + i.amount, 0), b.items[0]?.currency)} of {money(total, b.items[0]?.currency)}

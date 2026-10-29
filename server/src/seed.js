@@ -108,6 +108,9 @@ export function seedState(state) {
     paypal_email: emails.length
       ? emails[i % emails.length]
       : `${name.toLowerCase().replace(/[^a-z]+/g, ".")}@relief-demo.example`,
+    // Demo families share a couple of sandbox accounts on purpose; that is
+    // not the duplicate-receiver case the console warns about.
+    demo_receiver: emails.length > 0,
     registered_at: now,
   }));
   state.bulletins = BULLETINS.map((b) => ({ ...b, source: "PAGASA (simulated)", received_at: now }));

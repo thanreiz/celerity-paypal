@@ -237,6 +237,42 @@ a:focus-visible {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
+.cel-table td { overflow-wrap: anywhere; }
+
+/* Thumb-sized targets on phones, including small buttons. */
+@media (max-width: 639px) {
+  button.cel-press { min-height: 44px !important; }
+}
+.cel-table td > * { max-width: 100%; }
+
+/* Phones: every table becomes a stack of cards, one labelled line per
+   column, so no control hides behind a sideways scroll. */
+@media (max-width: 639px) {
+  .cel-table { min-width: 0 !important; }
+  .cel-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cel-table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--container-highest); }
+  .cel-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 4px 2px !important;
+    border-bottom: none !important;
+    text-align: right;
+  }
+  .cel-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--text-faint);
+    text-align: left;
+    padding-top: 2px;
+  }
+  .cel-table td.cel-td-empty { display: block; text-align: center; }
+  .cel-table td.cel-td-empty::before { content: none; }
+}
 
 /* ============================================================
    Layout utilities — token-backed page shells & surfaces
@@ -303,6 +339,7 @@ a:focus-visible {
   flex-shrink: 0;
   border: none;
   border-radius: var(--radius-chip);
+  min-height: 44px;
   padding: 8px 14px;
   font: var(--text-fine);
   font-weight: 700;

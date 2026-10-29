@@ -75,6 +75,7 @@ export const api = {
   addBulletin: (title, text) => request("/api/bulletins", { method: "POST", body: { title, text } }),
   startRun: (bulletinId) => request(`/api/bulletins/${bulletinId}/runs`, { method: "POST" }),
   approveRun: (runId) => request(`/api/runs/${runId}/approve`, { method: "POST" }),
+  removeDraft: (runId, familyId) => request(`/api/runs/${runId}/drafts/${familyId}`, { method: "DELETE" }),
   rejectRun: (runId, reason) => request(`/api/runs/${runId}/reject`, { method: "POST", body: { reason } }),
   refreshBatch: (batchId) => request(`/api/batches/${batchId}/refresh`, { method: "POST" }),
 };

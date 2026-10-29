@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import Card from "../../design/Card";
 import Table from "../../design/Table";
 import { eventLabel, eventDetail, short, when } from "../../lib/format";
@@ -40,6 +40,7 @@ export function ChainStatus({ chain }) {
 }
 
 export default function EvidencePage({ data }) {
+  const names = useMemo(() => Object.fromEntries(data.families.map((f) => [f.id, f.name])), [data.families]);
   return (
     <main className="cel-page cel-page--wide">
       <PageHeader
@@ -60,7 +61,7 @@ export default function EvidencePage({ data }) {
                 <span>
                   <strong>{eventLabel(e.type)}</strong>
                   <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-dim)", overflowWrap: "anywhere" }}>
-                    {eventDetail(e)}
+                    {eventDetail(e, names)}
                   </span>
                 </span>
               ),

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Console from "./pages/console/Console";
 import TransparencyPage from "./pages/public/TransparencyPage";
+import { session } from "./lib/api";
 
 function useHash() {
   const [hash, setHash] = useState(() => window.location.hash);
@@ -14,6 +15,9 @@ function useHash() {
 
 export default function App() {
   const hash = useHash();
-  if (hash.startsWith("#/public")) return <TransparencyPage />;
+  // Visitors without a coordinator key land on the public page; the console
+  // is one link away.
+  const bare = hash === "" || hash === "#" || hash === "#/";
+  if (hash.startsWith("#/public") || (bare && !session.key)) return <TransparencyPage />;
   return <Console route={hash.replace(/^#\/?/, "")} />;
 }

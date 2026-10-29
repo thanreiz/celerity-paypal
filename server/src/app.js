@@ -4,7 +4,7 @@
 // serverless function (Vercel).
 
 import express from "express";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { config, publicConfig } from "./config.js";
@@ -12,19 +12,99 @@ import { POLICY, VULNERABILITY_FLAGS, runTotals } from "./policy.js";
 import { runAgent } from "./agent.js";
 import { approveRun, rejectRun, refreshBatch, applyWebhookEvent, HttpError } from "./payouts.js";
 import { waitUntil } from "@vercel/functions";
-import { verifyWebhookSignature } from "./paypal.js";
+import { PayPalError, verifyWebhookSignature } from "./paypal.js";
 import { newId, verifyChain } from "./store.js";
 
 const SUCCESS_STATES = new Set(["SUCCESS"]);
 
+// What the public transparency page may show of each evidence entry. Anything
+// not listed (receiver emails, error payloads, free text typed by
+// coordinators, family ids) stays coordinator-only.
+const PUBLIC_DETAIL = {
+  "family.registered": ["municipality", "province"],
+  "family.status": ["status"],
+  "bulletin.received": ["title"],
+  "run.started": ["bulletin", "model"],
+  "run.drafted": ["storm", "areas", "recipients", "amount", "currency"],
+  "run.failed": [],
+  "run.rejected": [],
+  "run.draft_removed": ["recipients", "amount", "currency"],
+  "run.approved": ["recipients", "amount", "currency"],
+  "payout.submitting": ["recipients", "amount", "currency"],
+  "payout.resumed": [],
+  "payout.unconfirmed": [],
+  "payout.error": ["name", "debugId"],
+  "payout.batch_created": ["payout_batch_id", "batch_status"],
+  "payout.batch_status": ["payout_batch_id", "batch_status"],
+  "payout.item_status": ["status"],
+  "webhook.received": ["event_type"],
+};
+const SYSTEM_ACTORS = new Set(["agent", "paypal", "paypal-webhook", "paypal-poll"]);
+const FAMILY_EVENTS = new Set(["family.registered", "family.status"]);
+
+function publicEvent({ detail, actor, ref, ...e }) {
+  const keys = PUBLIC_DETAIL[e.type] || [];
+  return {
+    ...e,
+    actor: SYSTEM_ACTORS.has(actor) ? actor : "coordinator",
+    ref: FAMILY_EVENTS.has(e.type) ? null : ref,
+    detail: Object.fromEntries(keys.filter((k) => detail?.[k] !== undefined).map((k) => [k, detail[k]])),
+  };
+}
+
+/** A required, trimmed string of at most `max` characters, or a 400. */
+function text(value, field, max) {
+  if (typeof value !== "string" || !value.trim()) throw new HttpError(400, `${field} is required`);
+  const v = value.trim();
+  if (v.length > max) throw new HttpError(400, `${field} must be at most ${max} characters`);
+  return v;
+}
+
 // A run still "running" after this long died with its function instance
 // (Vercel caps a function at 300s).
 const STALE_RUN_MS = 6 * 60_000;
+// The agent itself gives up before Vercel's 300s limit can kill it silently.
+const RUN_DEADLINE_MS = Number(process.env.RUN_DEADLINE_MS) || 240_000;
 
+// Compare digests so the comparison takes the same time whatever the length.
+const digest = (v) => createHash("sha256").update(String(v)).digest();
 function sameSecret(a, b) {
-  const x = Buffer.from(String(a));
-  const y = Buffer.from(String(b));
-  return x.length === y.length && timingSafeEqual(x, y);
+  return timingSafeEqual(digest(a), digest(b));
+}
+
+// Wrong-key attempts per client, per warm instance. Serverless instances
+// don't share memory, so this slows guessing rather than stopping it; the
+// key itself is the real control.
+const FAILED_AUTH_LIMIT = 10;
+const FAILED_AUTH_WINDOW_MS = 10 * 60_000;
+const failedAuth = new Map();
+function tooManyFailures(ip, now = Date.now()) {
+  const recent = (failedAuth.get(ip) || []).filter((t) => now - t < FAILED_AUTH_WINDOW_MS);
+  failedAuth.set(ip, recent);
+  return recent.length >= FAILED_AUTH_LIMIT;
+}
+function noteFailure(ip) {
+  failedAuth.get(ip).push(Date.now());
+  if (failedAuth.size > 10_000) failedAuth.delete(failedAuth.keys().next().value);
+}
+
+// The name a coordinator signs in with is shown in approvals and the trace.
+const actorName = (raw) =>
+  String(raw || "")
+    .replace(/[^\p{L}\p{N} .,'-]/gu, "")
+    .trim()
+    .slice(0, 40) || "coordinator";
+
+// PayPal webhook deliveries older than this are refused even with a valid
+// signature, so an old event can't be replayed after it leaves the dedupe list.
+const WEBHOOK_MAX_AGE_MS = 60 * 60_000;
+
+// verifyChain re-hashes every entry; reuse the answer while the log is unchanged.
+let chainCache = { key: null, result: null };
+function verifiedChain(events) {
+  const key = `${events.length}:${events.at(-1)?.hash || ""}`;
+  if (chainCache.key !== key) chainCache = { key, result: verifyChain(events) };
+  return chainCache.result;
 }
 
 export function createApp({ store, aiClient, staticDir, coordinatorKey = config.coordinatorKey } = {}) {
@@ -34,16 +114,25 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "no-referrer");
+    // API answers are per-request and may be coordinator-only; /api/public
+    // opts back in to short CDN caching below.
+    if (req.path.startsWith("/api/")) res.setHeader("Cache-Control", "no-store");
     next();
   });
 
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
   function coordinator(req, res, next) {
-    if (coordinatorKey && !sameSecret(req.get("x-coordinator-key") || "", coordinatorKey)) {
-      return res.status(401).json({ error: "coordinator key required" });
+    if (coordinatorKey) {
+      const ip = req.get("x-forwarded-for")?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+      if (tooManyFailures(ip)) return res.status(429).json({ error: "too many wrong keys; try again in a few minutes" });
+      const given = req.get("x-coordinator-key") || "";
+      if (!sameSecret(given, coordinatorKey)) {
+        noteFailure(ip);
+        return res.status(401).json({ error: given ? "that coordinator key is not valid" : "coordinator key required" });
+      }
     }
-    req.actor = (req.get("x-coordinator-name") || "coordinator").slice(0, 60);
+    req.actor = actorName(req.get("x-coordinator-name"));
     next();
   }
 
@@ -61,17 +150,21 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       runs: [...state.runs].reverse().map((r) => ({ ...r, totals: runTotals(r) })),
       batches: [...state.batches].reverse(),
       events: state.events.slice(-300).reverse(),
-      chain: verifyChain(state.events),
+      chain: verifiedChain(state.events),
     });
   }));
 
   // Public transparency view: aggregates and the evidence chain, no PII.
   app.get("/api/public", wrap(async (req, res) => {
     const state = await store.read();
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=10, stale-while-revalidate=30");
     const items = state.batches.flatMap((b) => b.items.map((i) => ({ ...i, storm: b.storm })));
-    const byStorm = {};
+    // A Map, not an object: storm names come from the model, and a storm
+    // called "__proto__" must not reach Object.prototype.
+    const byStorm = new Map();
     for (const i of items) {
-      const s = (byStorm[i.storm] ||= { storm: i.storm, families: 0, sent: 0, pending: 0 });
+      if (!byStorm.has(i.storm)) byStorm.set(i.storm, { storm: i.storm, families: 0, sent: 0, pending: 0 });
+      const s = byStorm.get(i.storm);
       s.families += 1;
       if (SUCCESS_STATES.has(i.status)) s.sent += i.amount;
       else s.pending += i.amount;
@@ -80,7 +173,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       currency: POLICY.currency,
       paypalEnv: config.paypal.env,
       registered: state.families.filter((f) => f.status === "active").length,
-      storms: Object.values(byStorm),
+      storms: [...byStorm.values()],
       batches: state.batches.map((b) => ({
         id: b.id,
         storm: b.storm,
@@ -91,11 +184,8 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         amount: b.items.reduce((s, i) => s + i.amount, 0),
         delivered: b.items.filter((i) => SUCCESS_STATES.has(i.status)).length,
       })),
-      events: state.events.slice(-100).reverse().map(({ detail, ...e }) => ({
-        ...e,
-        detail: { ...detail, receiver: undefined },
-      })),
-      chain: verifyChain(state.events),
+      events: state.events.slice(-100).reverse().map(publicEvent),
+      chain: verifiedChain(state.events),
     });
   }));
 
@@ -105,27 +195,35 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     wrap(async (req, res) => {
       const b = req.body || {};
       const required = ["name", "municipality", "province", "paypal_email"];
-      const missing = required.filter((k) => !String(b[k] || "").trim());
+      const missing = required.filter((k) => typeof b[k] !== "string" || !b[k].trim());
       if (missing.length) throw new HttpError(400, `missing ${missing.join(", ")}`);
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.paypal_email)) throw new HttpError(400, "paypal_email is not an email");
+      const name = text(b.name, "name", 100);
+      const municipality = text(b.municipality, "municipality", 60);
+      const province = text(b.province, "province", 60);
+      const email = text(b.paypal_email, "paypal_email", 254);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new HttpError(400, "paypal_email is not an email");
       const size = Number(b.household_size);
       if (!Number.isInteger(size) || size < 1 || size > 30) throw new HttpError(400, "household_size must be 1-30");
       const family = {
         id: newId("fam"),
-        name: b.name.trim(),
-        municipality: b.municipality.trim(),
-        province: b.province.trim(),
+        name,
+        municipality,
+        province,
         household_size: size,
-        vulnerability: Object.fromEntries(VULNERABILITY_FLAGS.map((k) => [k, Boolean(b.vulnerability?.[k])])),
+        vulnerability: Object.fromEntries(VULNERABILITY_FLAGS.map((k) => [k, b.vulnerability?.[k] === true])),
         status: "active",
-        paypal_email: b.paypal_email.trim(),
+        paypal_email: email,
         registered_at: new Date().toISOString(),
       };
-      await store.mutate((state, log) => {
+      const shared = await store.mutate((state, log) => {
+        const same = state.families.filter((f) => !f.demo_receiver && f.paypal_email.toLowerCase() === email.toLowerCase()).length;
         state.families.push(family);
         log("family.registered", req.actor, { municipality: family.municipality, province: family.province }, family.id);
+        return same;
       });
-      res.status(201).json(family);
+      // Not blocked (households can share one PayPal account), but a coordinator
+      // should see it: each family is paid separately.
+      res.status(201).json(shared ? { ...family, warning: `this PayPal email is already used by ${shared} other famil${shared === 1 ? "y" : "ies"}` } : family);
     })
   );
 
@@ -152,15 +250,17 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     "/api/bulletins",
     coordinator,
     wrap(async (req, res) => {
-      const text = String(req.body?.text || "").trim();
-      if (text.length < 40) throw new HttpError(400, "bulletin text is too short");
-      if (text.length > 20000) throw new HttpError(400, "bulletin text is too long");
+      if (typeof req.body?.text !== "string") throw new HttpError(400, "bulletin text must be a string");
+      const body = req.body.text.trim();
+      if (body.length < 40) throw new HttpError(400, "bulletin text is too short");
+      if (body.length > 20000) throw new HttpError(400, "bulletin text is too long");
+      const title = typeof req.body.title === "string" ? req.body.title.trim().slice(0, 120) : "";
       const bulletin = {
         id: newId("blt"),
-        title: String(req.body?.title || "").trim().slice(0, 120) || "Pasted bulletin",
+        title: title || "Pasted bulletin",
         kind: "custom",
         source: "Pasted by coordinator",
-        text,
+        text: body,
         received_at: new Date().toISOString(),
       };
       await store.mutate((state, log) => {
@@ -176,14 +276,21 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   async function runJob(runId, bulletin) {
     const snapshot = await store.read();
     const run = snapshot.runs.find((r) => r.id === runId);
+    // Only a run that is still "running" in storage is ours to update: if the
+    // stale-run check (or anything else) already closed it, leave it closed.
     const save = (extra) =>
       store.mutate((state, log) => {
         const i = state.runs.findIndex((r) => r.id === runId);
+        if (i === -1 || state.runs[i].status !== "running") return;
         state.runs[i] = structuredClone(run);
         extra?.(log);
       });
+    let timer;
+    const deadline = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`the agent did not finish within ${RUN_DEADLINE_MS / 1000} seconds`)), RUN_DEADLINE_MS);
+    });
     try {
-      await runAgent({ state: snapshot, run, bulletin, client: aiClient, onProgress: () => save() });
+      await Promise.race([runAgent({ state: snapshot, run, bulletin, client: aiClient, onProgress: () => save() }), deadline]);
       run.status = run.drafts.length ? "awaiting_approval" : "no_action";
       run.finished_at = new Date().toISOString();
       const totals = runTotals(run);
@@ -191,10 +298,18 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         log("run.drafted", "agent", { storm: run.storm, areas: run.areas?.length || 0, ...totals, currency: POLICY.currency }, run.id)
       );
     } catch (e) {
+      // Freeze what the agent did so far; a late step from the abandoned
+      // loop must not change the failed run.
+      const failed = { ...structuredClone(run), status: "failed", error: e.message, finished_at: new Date().toISOString() };
+      await store.mutate((state, log) => {
+        const i = state.runs.findIndex((r) => r.id === runId);
+        if (i === -1 || state.runs[i].status !== "running") return;
+        state.runs[i] = failed;
+        log("run.failed", "agent", { message: e.message }, runId);
+      });
       run.status = "failed";
-      run.error = e.message;
-      run.finished_at = new Date().toISOString();
-      await save((log) => log("run.failed", "agent", { message: e.message }, run.id));
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -260,6 +375,27 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     })
   );
 
+  // Drop one draft (e.g. a family suspended since the agent ran) instead of
+  // rejecting the whole run.
+  app.delete(
+    "/api/runs/:id/drafts/:familyId",
+    coordinator,
+    wrap(async (req, res) => {
+      const run = await store.mutate((state, log) => {
+        const r = state.runs.find((x) => x.id === req.params.id);
+        if (!r) throw new HttpError(404, "run not found");
+        if (r.status !== "awaiting_approval") throw new HttpError(409, `run is ${r.status}, not awaiting approval`);
+        const before = r.drafts.length;
+        r.drafts = r.drafts.filter((d) => d.family_id !== req.params.familyId);
+        if (r.drafts.length === before) throw new HttpError(404, "no draft for that family");
+        if (!r.drafts.length) r.status = "no_action";
+        log("run.draft_removed", req.actor, { ...runTotals(r), currency: POLICY.currency }, r.id);
+        return r;
+      });
+      res.json({ ...run, totals: runTotals(run) });
+    })
+  );
+
   app.post(
     "/api/runs/:id/reject",
     coordinator,
@@ -282,6 +418,8 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       const event = req.body;
       if (!event?.id || !event?.event_type) throw new HttpError(400, "not a PayPal webhook event");
       if (config.paypal.webhookId) {
+        const sent = Date.parse(req.get("paypal-transmission-time") || "");
+        if (Number.isFinite(sent) && Date.now() - sent > WEBHOOK_MAX_AGE_MS) throw new HttpError(400, "webhook delivery is too old");
         const ok = await verifyWebhookSignature(req.headers, event);
         if (!ok) {
           // Not written to the evidence log: anyone can post here, and the
@@ -310,14 +448,23 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   }
 
   // eslint-disable-next-line no-unused-vars
+  // Only HttpErrors carry a message meant for the caller. Everything else
+  // (database, SDK, PayPal internals) is logged and answered generically.
   app.use((err, req, res, next) => {
-    const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 500;
-    if (status >= 500 && !(err instanceof HttpError)) console.error(err);
-    res.status(status).json({
-      error: err.message || "internal error",
-      ...(err.violations ? { violations: err.violations } : {}),
-      ...(err.debugId ? { debugId: err.debugId } : {}),
-    });
+    if (err instanceof HttpError) {
+      return res.status(err.status).json({
+        error: err.message,
+        ...(err.violations ? { violations: err.violations } : {}),
+        ...(err.debugId ? { debugId: err.debugId } : {}),
+      });
+    }
+    if (err.type === "entity.parse.failed") return res.status(400).json({ error: "request body is not valid JSON" });
+    if (err.type === "entity.too.large") return res.status(413).json({ error: "request body is too large" });
+    console.error(err);
+    if (err instanceof PayPalError) {
+      return res.status(502).json({ error: "PayPal request failed", ...(err.debugId ? { debugId: err.debugId } : {}) });
+    }
+    res.status(500).json({ error: "internal error" });
   });
 
   return app;
