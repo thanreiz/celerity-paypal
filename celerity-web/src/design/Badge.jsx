@@ -2,9 +2,10 @@ import React from "react";
 
 /** Amber "stub" badge — marks every simulated/demo boundary (simulated
  * bulletins, sandbox money) so it's never mistaken for working infrastructure. */
-export default function Badge({ stub = false, children, style }) {
+export default function Badge({ stub = false, children, style, ...rest }) {
   return (
     <span
+      {...rest}
       style={{
         fontFamily: "var(--font-sans)",
         font: "var(--text-fine)",

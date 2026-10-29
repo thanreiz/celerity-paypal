@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 
 /** White input, 12px radius, outline border, 44px min-height. Border turns
  * green on hover/focus, plus a 2px green focus ring. Label sits above,
  * uppercase 12px/700. */
-export default function Input({ label, type = "text", value, onChange, placeholder, prefix, suffix, ...rest }) {
+export default function Input({ label, type = "text", value, onChange, placeholder, prefix, suffix, error, hint, ...rest }) {
   const [focused, setFocused] = useState(false);
+  const noteId = useId();
+  const note = error || hint;
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 5, fontFamily: "var(--font-sans)" }}>
       {label && (
@@ -32,10 +34,12 @@ export default function Input({ label, type = "text", value, onChange, placehold
           placeholder={placeholder}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={note ? noteId : undefined}
           {...rest}
           style={{
             background: "var(--surface)",
-            border: `1px solid ${focused ? "var(--primary)" : "var(--outline)"}`,
+            border: `1px solid ${error ? "var(--bad-line)" : focused ? "var(--primary)" : "var(--outline)"}`,
             color: "var(--text)",
             borderRadius: "var(--radius-input)",
             padding: `10px 14px 10px ${prefix ? 26 : 14}px`,
@@ -53,6 +57,11 @@ export default function Input({ label, type = "text", value, onChange, placehold
           </span>
         )}
       </div>
+      {note && (
+        <span id={noteId} role={error ? "alert" : undefined} style={{ font: "var(--text-fine)", color: error ? "var(--bad-text)" : "var(--text-faint)" }}>
+          {note}
+        </span>
+      )}
     </label>
   );
 }

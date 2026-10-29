@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Card from "../../design/Card";
 import Button from "../../design/Button";
 import Input from "../../design/Input";
@@ -6,7 +6,7 @@ import Table from "../../design/Table";
 import StatusPill from "../../design/StatusPill";
 import Badge from "../../design/Badge";
 import { api } from "../../lib/api";
-import { money, when, clock, flagList } from "../../lib/format";
+import { money, when, clock, flagList, stormName, moneyText } from "../../lib/format";
 import { PageHeader, Label } from "./parts";
 
 const TOOL_LABELS = {
@@ -48,7 +48,7 @@ function Trace({ run, familiesById }) {
             <span className="cel-trace-dot" style={{ background: "var(--surface-low)", color: "var(--text-faint)" }}>
               …
             </span>
-            <span style={{ color: "var(--text-dim)", fontStyle: "italic" }}>{s.text}</span>
+            <span style={{ color: "var(--text-dim)", fontStyle: "italic" }}>{moneyText(s.text)}</span>
           </li>
         ) : (
           <li key={i}>
@@ -67,7 +67,7 @@ function Trace({ run, familiesById }) {
               {describeInput(s, familiesById) && <span style={{ color: "var(--text-dim)" }}> · {describeInput(s, familiesById)}</span>}
               <span style={{ display: "block", color: s.ok ? "var(--text-faint)" : "var(--bad-text)", overflowWrap: "anywhere" }}>
                 {!s.ok && "Refused by policy: "}
-                {s.result}
+                {moneyText(s.result)}
               </span>
             </span>
           </li>
@@ -95,6 +95,28 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
   // and some judge setups block native dialogs, which silently cancels them.
   const [confirming, setConfirming] = useState(null); // null | "approve" | "reject"
   const [reason, setReason] = useState("");
+  const rejectButton = useRef(null);
+  const approveButton = useRef(null);
+  const cancelConfirm = () => {
+    const back = confirming === "reject" ? rejectButton : approveButton;
+    setConfirming(null);
+    requestAnimationFrame(() => back.current?.focus());
+  };
+  useEffect(() => {
+    if (!confirming) return undefined;
+    const onKey = (e) => e.key === "Escape" && cancelConfirm();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+  // Drafts paying into one PayPal account: allowed, but worth a second look.
+  const sharedReceivers = useMemo(() => {
+    const byEmail = {};
+    for (const d of run.drafts) {
+      const f = familiesById[d.family_id];
+      if (f && !f.demo_receiver) (byEmail[f.paypal_email.toLowerCase()] ||= []).push(d.family_id);
+    }
+    return new Set(Object.values(byEmail).filter((ids) => ids.length > 1).flat());
+  }, [run.drafts, familiesById]);
   const approve = () =>
     act("Approved. PayPal is processing the batch.", () => api.approveRun(run.id)).then(() => go("payouts"), () => {});
   const reject = () => act("Run rejected. Nothing was sent.", () => api.rejectRun(run.id, reason)).catch(() => {});
@@ -103,7 +125,7 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
     <Card>
       <div className="cel-row-actions" style={{ justifyContent: "space-between" }}>
         <div style={{ minWidth: 0 }}>
-          <strong style={{ font: "var(--text-h2)" }}>{run.storm || "Agent run"}</strong>
+          <strong style={{ font: "var(--text-h2)" }}>{stormName(run.storm) || "Agent run"}</strong>
           <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
             Started {when(run.started_at)} by {run.started_by} · {run.model}
             {run.usage?.output_tokens ? ` · ${(run.usage.input_tokens + run.usage.output_tokens).toLocaleString()} tokens` : ""}
@@ -176,6 +198,11 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
                       return (
                         <span>
                           <strong>{f?.name || d.family_id}</strong>
+                          {sharedReceivers.has(d.family_id) && (
+                            <Badge style={{ padding: "1px 8px", marginLeft: 6 }} title="Another drafted family uses the same PayPal email">
+                              Shared PayPal
+                            </Badge>
+                          )}
                           <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
                             {f ? `${f.municipality}, ${f.province} · ${f.household_size} people` : ""}
                             {f && flagList(f.vulnerability).length ? ` · ${flagList(f.vulnerability).join(", ")}` : ""}
@@ -234,7 +261,7 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
           {run.summary && (
             <div>
               <Label>Agent summary</Label>
-              <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", whiteSpace: "pre-wrap", margin: "6px 0 0" }}>{run.summary}</p>
+              <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", whiteSpace: "pre-wrap", margin: "6px 0 0" }}>{moneyText(run.summary)}</p>
             </div>
           )}
 
@@ -250,10 +277,10 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
               </span>
               {confirming === null && (
                 <div className="cel-row-actions">
-                  <Button variant="default" onClick={() => setConfirming("reject")} disabled={busy}>
+                  <Button ref={rejectButton} variant="default" onClick={() => setConfirming("reject")} disabled={busy}>
                     Reject
                   </Button>
-                  <Button variant="primary" onClick={() => setConfirming("approve")} disabled={busy || !config.paypalConfigured}>
+                  <Button ref={approveButton} variant="primary" onClick={() => setConfirming("approve")} disabled={busy || !config.paypalConfigured}>
                     Approve & send {money(run.totals.amount, currency)}
                   </Button>
                 </div>
@@ -268,7 +295,7 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
                     <Button variant="primary" onClick={approve} disabled={busy}>
                       {busy ? "Sending…" : `Yes, send ${money(run.totals.amount, currency)}`}
                     </Button>
-                    <Button variant="ghost" onClick={() => setConfirming(null)} disabled={busy}>
+                    <Button variant="ghost" onClick={cancelConfirm} disabled={busy}>
                       Cancel
                     </Button>
                   </div>
@@ -282,12 +309,13 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g. bulletin superseded"
                     maxLength={300}
+                    autoFocus
                   />
                   <div className="cel-row-actions">
                     <Button variant="default" onClick={reject} disabled={busy}>
                       Reject run
                     </Button>
-                    <Button variant="ghost" onClick={() => setConfirming(null)} disabled={busy}>
+                    <Button variant="ghost" onClick={cancelConfirm} disabled={busy}>
                       Cancel
                     </Button>
                   </div>
@@ -342,7 +370,16 @@ function PasteBulletin({ act, onAdded, onCancel }) {
           <span className="cel-section-label" style={{ color: "var(--text-dim)" }}>
             Bulletin text
           </span>
-          <textarea className="cel-textarea" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the full tropical cyclone bulletin…" />
+          <textarea
+            className="cel-textarea"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste the full tropical cyclone bulletin…"
+            aria-describedby="bulletin-hint"
+          />
+          <span id="bulletin-hint" style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>
+            {text.trim().length < 40 ? `At least 40 characters (${text.trim().length}/40)` : `${text.trim().length.toLocaleString()} characters`}
+          </span>
         </label>
         <div className="cel-row-actions">
           <Button type="submit" variant="outline" disabled={text.trim().length < 40}>
@@ -383,6 +420,7 @@ export default function RespondPage({ data, config, act, busy, go }) {
             <button
               key={b.id}
               className={`cel-bulletin-pick cel-press${b.id === selectedId ? " is-active" : ""}`}
+              aria-pressed={b.id === selectedId}
               onClick={() => {
                 setSelectedId(b.id);
                 setPasting(false);
@@ -419,7 +457,7 @@ export default function RespondPage({ data, config, act, busy, go }) {
                   <div style={{ minWidth: 0 }}>
                     <strong style={{ font: "var(--text-h2)" }}>{bulletin.title}</strong>
                     <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
-                      {bulletin.source} · received {when(bulletin.received_at)} {clock(bulletin.received_at)}
+                      {bulletin.source} · received {when(bulletin.received_at)} ({clock(bulletin.received_at)})
                     </span>
                   </div>
                   <Button

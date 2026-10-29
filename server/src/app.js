@@ -216,7 +216,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         registered_at: new Date().toISOString(),
       };
       const shared = await store.mutate((state, log) => {
-        const same = state.families.filter((f) => f.paypal_email.toLowerCase() === email.toLowerCase()).length;
+        const same = state.families.filter((f) => !f.demo_receiver && f.paypal_email.toLowerCase() === email.toLowerCase()).length;
         state.families.push(family);
         log("family.registered", req.actor, { municipality: family.municipality, province: family.province }, family.id);
         return same;

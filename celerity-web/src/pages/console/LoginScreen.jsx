@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import Button from "../../design/Button";
 import Input from "../../design/Input";
 
-export default function LoginScreen({ onSignIn }) {
+/** `onSignIn(key, name)` checks the key with the server and resolves to an
+ * error message, or nothing when it was accepted. */
+export default function LoginScreen({ onSignIn, initialError = "" }) {
   const [name, setName] = useState(() => {
     try {
       return localStorage.getItem("celerity.coordinatorName") || "";
@@ -11,6 +13,8 @@ export default function LoginScreen({ onSignIn }) {
     }
   });
   const [key, setKey] = useState("");
+  const [error, setError] = useState(initialError);
+  const [checking, setChecking] = useState(false);
 
   return (
     <div
@@ -24,9 +28,16 @@ export default function LoginScreen({ onSignIn }) {
     >
       <form
         className="cel-pop"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          if (key.trim()) onSignIn(key.trim(), name.trim() || "Coordinator");
+          if (!key.trim() || checking) return;
+          setChecking(true);
+          const problem = await onSignIn(key.trim(), name.trim() || "Coordinator");
+          setChecking(false);
+          if (problem) {
+            setError(problem);
+            setKey("");
+          }
         }}
         style={{
           width: "min(100%, 400px)",
@@ -48,9 +59,19 @@ export default function LoginScreen({ onSignIn }) {
           </p>
         </div>
         <Input label="Your name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ana, MDRRMO Virac" autoComplete="name" />
-        <Input label="Coordinator key" type="password" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="current-password" />
-        <Button type="submit" variant="outline" disabled={!key.trim()}>
-          Sign in
+        <Input
+          label="Coordinator key"
+          type="password"
+          value={key}
+          onChange={(e) => {
+            setKey(e.target.value);
+            setError("");
+          }}
+          autoComplete="current-password"
+          error={error}
+        />
+        <Button type="submit" variant="outline" disabled={!key.trim() || checking}>
+          {checking ? "Checking…" : "Sign in"}
         </Button>
         <a href="#/public" style={{ font: "var(--text-fine)", color: "var(--primary)", textAlign: "center" }}>
           See the public transparency page instead

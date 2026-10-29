@@ -35,7 +35,7 @@ export function SystemStatus({ config }) {
   const items = [
     [config.paypalConfigured, `PayPal ${config.paypalEnv}`, "PayPal keys missing"],
     [config.aiConfigured, `${PROVIDER_NAMES[config.aiProvider] || "AI"} agent (${config.model})`, "AI key missing"],
-    [config.webhooksVerified, "Webhooks verified", "Webhooks off: use Refresh"],
+    [config.webhooksVerified, "Webhooks verified", "Webhooks off: refresh each batch"],
   ];
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>

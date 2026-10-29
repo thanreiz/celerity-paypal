@@ -2,12 +2,13 @@ import React from "react";
 
 /** Restrained data-table: uppercase 12px headers, hairline row rules, row
  * hover tint, bold tabular amounts, "mine" mint highlight for the current
- * user's rows, and an emptyText state that says what will appear there. This
- * is the ONE table style in Celerity — do not create a second. */
+ * user's rows, and an emptyText state that says what will appear there. On
+ * phones each row turns into a labelled card (styles.css). This is the ONE
+ * table style in Celerity — do not create a second. */
 export default function Table({ columns, rows, emptyText = "Nothing here yet.", rowKey = (r, i) => i, mineKey }) {
   return (
     <div className="cel-table-scroll">
-    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480, fontFamily: "var(--font-sans)" }}>
+    <table className="cel-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: 480, fontFamily: "var(--font-sans)" }}>
       <thead>
         <tr>
           {columns.map((c) => (
@@ -31,7 +32,7 @@ export default function Table({ columns, rows, emptyText = "Nothing here yet.", 
       <tbody>
         {rows.length === 0 && (
           <tr>
-            <td colSpan={columns.length} style={{ color: "var(--text-faint)", textAlign: "center", padding: "20px 12px" }}>
+            <td colSpan={columns.length} className="cel-td-empty" style={{ color: "var(--text-faint)", textAlign: "center", padding: "20px 12px" }}>
               {emptyText}
             </td>
           </tr>
@@ -49,6 +50,7 @@ export default function Table({ columns, rows, emptyText = "Nothing here yet.", 
             {columns.map((c) => (
               <td
                 key={c.key}
+                data-label={c.label || undefined}
                 style={{
                   padding: 12,
                   borderBottom: "1px solid var(--surface-low)",

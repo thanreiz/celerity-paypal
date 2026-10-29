@@ -5,7 +5,7 @@ import StatusPill from "../../design/StatusPill";
 import Badge from "../../design/Badge";
 import CountUp from "../../design/CountUp";
 import { api } from "../../lib/api";
-import { money, when, eventLabel, short } from "../../lib/format";
+import { money, when, eventLabel, eventDetail, short, stormName } from "../../lib/format";
 import { ChainStatus } from "../console/EvidencePage";
 
 /** Public, no-login page: how much relief went out, for which storm, and
@@ -13,6 +13,10 @@ import { ChainStatus } from "../console/EvidencePage";
 export default function TransparencyPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    document.title = "Where the relief went · Celerity Relief";
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,7 +91,7 @@ export default function TransparencyPage() {
                 rowKey={(r) => r.id}
                 emptyText="No relief has been sent yet."
                 columns={[
-                  { key: "storm", label: "Storm", render: (b) => <strong>{b.storm}</strong> },
+                  { key: "storm", label: "Storm", render: (b) => <strong>{stormName(b.storm)}</strong> },
                   { key: "created_at", label: "Sent", render: (b) => when(b.created_at) },
                   { key: "recipients", label: "Delivered", num: true, render: (b) => `${b.delivered}/${b.recipients}` },
                   { key: "amount", label: "Amount", num: true, render: (b) => money(b.amount, data.currency) },
@@ -102,11 +106,21 @@ export default function TransparencyPage() {
             <Card title="Latest record entries">
               <Table
                 rowKey={(r) => r.id}
+                emptyText="Nothing recorded yet."
                 columns={[
                   { key: "seq", label: "#", num: true },
-                  { key: "type", label: "Event", render: (e) => eventLabel(e.type) },
+                  { key: "at", label: "When", render: (e) => <span style={{ whiteSpace: "nowrap" }}>{when(e.at)}</span> },
+                  {
+                    key: "type",
+                    label: "Event",
+                    render: (e) => (
+                      <span>
+                        <strong>{eventLabel(e.type)}</strong>
+                        <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-dim)" }}>{eventDetail(e)}</span>
+                      </span>
+                    ),
+                  },
                   { key: "actor", label: "Actor" },
-                  { key: "at", label: "When", render: (e) => when(e.at) },
                   {
                     key: "hash",
                     label: "Hash",

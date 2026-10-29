@@ -3,7 +3,7 @@ import Card from "../../design/Card";
 import Button from "../../design/Button";
 import CountUp from "../../design/CountUp";
 import StatusPill from "../../design/StatusPill";
-import { money, when, eventLabel, eventDetail } from "../../lib/format";
+import { money, when, eventLabel, eventDetail, stormName } from "../../lib/format";
 import { PageHeader, SystemStatus, Label } from "./parts";
 
 const STEPS = [
@@ -15,6 +15,7 @@ const STEPS = [
 
 export default function OverviewPage({ data, config, go }) {
   const currency = config.policy.currency;
+  const names = Object.fromEntries(data.families.map((f) => [f.id, f.name]));
   const items = data.batches.flatMap((b) => b.items);
   const delivered = items.filter((i) => i.status === "SUCCESS");
   const inFlight = items.filter((i) => ["PENDING", "UNCLAIMED", "ONHOLD"].includes(i.status));
@@ -41,7 +42,7 @@ export default function OverviewPage({ data, config, go }) {
               <strong>{waiting.length === 1 ? "1 agent run needs" : `${waiting.length} agent runs need`} your approval</strong>
               <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", margin: "2px 0 0" }}>
                 {waiting
-                  .map((r) => `${r.storm}: ${r.totals.recipients} families, ${money(r.totals.amount, currency)}`)
+                  .map((r) => `${stormName(r.storm)}: ${r.totals.recipients} families, ${money(r.totals.amount, currency)}`)
                   .join(" · ")}
               </p>
             </div>
@@ -116,7 +117,7 @@ export default function OverviewPage({ data, config, go }) {
                   style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}
                 >
                   <span>
-                    <strong>{b.storm}</strong>
+                    <strong>{stormName(b.storm)}</strong>
                     <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
                       {ok}/{b.items.length} delivered · {money(b.items.reduce((s, i) => s + i.amount, 0), currency)} · {when(b.created_at)}
                     </span>
@@ -135,7 +136,7 @@ export default function OverviewPage({ data, config, go }) {
             <li key={e.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, font: "var(--text-meta)" }}>
               <span style={{ minWidth: 0 }}>
                 <strong>{eventLabel(e.type)}</strong>{" "}
-                <span style={{ color: "var(--text-dim)", overflowWrap: "anywhere" }}>{eventDetail(e)}</span>
+                <span style={{ color: "var(--text-dim)", overflowWrap: "anywhere" }}>{eventDetail(e, names)}</span>
               </span>
               <span style={{ color: "var(--text-faint)", whiteSpace: "nowrap" }}>{when(e.at)}</span>
             </li>

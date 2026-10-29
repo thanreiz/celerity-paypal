@@ -6,7 +6,7 @@ import React from "react";
  * sign & settle) — forest green, soft green shadow. Never use primary for
  * anything that doesn't move money.
  */
-export default function Button({
+const Button = React.forwardRef(function Button({
   variant = "default",
   size = "md",
   disabled = false,
@@ -17,7 +17,7 @@ export default function Button({
   style,
   className = "",
   ...rest
-}) {
+}, ref) {
   const base = {
     fontFamily: "var(--font-sans)",
     fontWeight: 700,
@@ -64,6 +64,7 @@ export default function Button({
 
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -75,4 +76,6 @@ export default function Button({
       {children}
     </button>
   );
-}
+});
+
+export default Button;
