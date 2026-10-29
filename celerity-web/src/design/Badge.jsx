@@ -1,7 +1,7 @@
 import React from "react";
 
-/** Amber "stub" badge — marks every simulated/demo boundary (oracle signer,
- * SEP-31 anchor rate) so it's never mistaken for working infrastructure. */
+/** Amber "stub" badge — marks every simulated/demo boundary (simulated
+ * bulletins, sandbox money) so it's never mistaken for working infrastructure. */
 export default function Badge({ stub = false, children, style }) {
   return (
     <span

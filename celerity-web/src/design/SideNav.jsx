@@ -1,15 +1,26 @@
 import React from "react";
 
 const ICONS = {
-  pools: (
-    // landmark/bank — escrowed funds
+  overview: (
+    // gauge — the at-a-glance view
     <>
-      <path d="M3 9.5 12 4l9 5.5" />
-      <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
-      <path d="M3 20h18" />
+      <path d="M4 17a8 8 0 1 1 16 0" />
+      <path d="M12 17l4-5" />
     </>
   ),
-  farmers: (
+  respond: (
+    // bolt — a bulletin arrives, the agent responds
+    <path d="M13 2 4.5 13.5H11l-1 8.5L18.5 10.5H12l1-8.5Z" />
+  ),
+  payouts: (
+    // banknote — money sent through PayPal
+    <>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.6" />
+      <path d="M6.5 9.5v5M17.5 9.5v5" />
+    </>
+  ),
+  families: (
     // two people — registry
     <>
       <circle cx="9" cy="8" r="3.2" />
@@ -17,23 +28,10 @@ const ICONS = {
       <path d="M16 5.5a3 3 0 0 1 0 5.8M17.5 15.2c2 .7 3.5 2.2 3.5 4.8" />
     </>
   ),
-  oracle: (
-    // bolt — the trigger
-    <path d="M13 2 4.5 13.5H11l-1 8.5L18.5 10.5H12l1-8.5Z" />
-  ),
-  ledger: (
-    // rows — the record
+  evidence: (
+    // linked rows — the hash-chained record
     <>
       <path d="M4 5h16M4 10h16M4 15h10M4 20h7" />
-    </>
-  ),
-  settings: (
-    // sliders
-    <>
-      <path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h9M17 17h3" />
-      <circle cx="15" cy="7" r="1.8" />
-      <circle cx="9" cy="12" r="1.8" />
-      <circle cx="15" cy="17" r="1.8" />
     </>
   ),
 };
@@ -57,17 +55,10 @@ function Icon({ name }) {
   );
 }
 
-/** Desktop side navigation — ordered by the demo flow, each item carries a
- * step number, icon, and a one-line "what this is" so a first-time user can
- * navigate without a tour. */
-export default function SideNav({ active, onNavigate, userName, onCreatePool }) {
-  const items = [
-    { key: "pools", label: "Pools", desc: "Earmarked relief escrow", step: 1 },
-    { key: "farmers", label: "Farmers", desc: "LGU-maintained registry", step: 2 },
-    { key: "oracle", label: "Trigger typhoon", desc: "Simulated signed event", step: 3 },
-    { key: "ledger", label: "Ledger", desc: "Every release, accounted", step: 4 },
-    { key: "settings", label: "Settings", desc: "Identities & contract" },
-  ];
+/** Desktop side navigation. Items run in the order of the relief flow;
+ * each carries an icon and a one-line "what this is" so a first-time user
+ * can navigate without a tour. */
+export default function SideNav({ items, active, onNavigate, footer }) {
   return (
     <nav
       style={{
@@ -84,9 +75,9 @@ export default function SideNav({ active, onNavigate, userName, onCreatePool }) 
     >
       <div style={{ padding: "0 16px", marginBottom: 32 }}>
         <h1 style={{ font: "var(--text-h1)", fontSize: 24, color: "var(--primary)", margin: 0, letterSpacing: "var(--tracking-tight)" }}>
-          Celerity Funder
+          Celerity Relief
         </h1>
-        <p style={{ font: "var(--text-fine)", color: "var(--text-faint)", margin: "4px 0 0" }}>Institutional Portal</p>
+        <p style={{ font: "var(--text-fine)", color: "var(--text-faint)", margin: "4px 0 0" }}>Coordinator console</p>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
         {items.map((it) => {
@@ -143,30 +134,9 @@ export default function SideNav({ active, onNavigate, userName, onCreatePool }) 
           );
         })}
       </div>
-      <button
-        onClick={onCreatePool}
-        className="cel-press"
-        style={{
-          width: "100%",
-          background: "var(--primary)",
-          color: "var(--on-primary)",
-          border: "none",
-          borderRadius: "var(--radius-input)",
-          padding: "12px 16px",
-          fontWeight: 700,
-          fontSize: 14,
-          cursor: "pointer",
-          marginTop: 12,
-          fontFamily: "var(--font-sans)",
-          boxShadow: "var(--shadow-raised)",
-        }}
-      >
-        + New Escrow Pool
-      </button>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 16, padding: "12px 4px 0", borderTop: "1px solid var(--container-highest)" }}>
-        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--container-high)", flexShrink: 0 }} />
-        <span style={{ font: "var(--text-meta)", fontWeight: 700, color: "var(--text)" }}>{userName}</span>
-      </div>
+      {footer && (
+        <div style={{ marginTop: 16, padding: "12px 4px 0", borderTop: "1px solid var(--container-highest)" }}>{footer}</div>
+      )}
     </nav>
   );
 }

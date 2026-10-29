@@ -1,146 +1,20 @@
 # Changelog
 
-Human-readable log of changes, newest first. Contract redeploys are also tracked
-in `deployments.json` (`previous_contract_ids`).
+Newest first. History before the PayPal rebuild lives in the original repo,
+[github.com/thanreiz/Celerity](https://github.com/thanreiz/Celerity).
 
 ---
 
-## 2026-07-28 — v1.0.0 Championship Submission · Top 10 Finalist · 57/57 tests
+## 2026-10-28 — v0.2.0 PayPal rebuild (Celerity Relief)
 
-**Live contract:** `CDBLJQOTCGQREBJFLRIS73AZECOX7HINQMA22ZDBSLFE7LWMU2ONC5Z3`
-**Demo:** [stellar-celerity.me](https://stellar-celerity.me/)
-
-### Contract — Phases 11–13 (final)
-
-- **Phase 11 — Multi-sig oracle (report_event):** `report_event` now accepts
-  `Vec<OracleSig>` and a `nonce: u64`. The contract enforces a configurable
-  k-of-n Ed25519 threshold (demo: 2-of-3) against constructor-pinned keys.
-  `OracleSig { key_index, signature }` bounds each sig to a specific key so the
-  verifier never attempts a spurious verify against a non-signing key.
-  `UsedNonce(u64)` in persistent storage blocks replays at the contract level —
-  no nonce can be accepted twice.  
-  Duplicate pubkeys rejected at constructor; duplicate `key_index` values within
-  one call count at most once toward the threshold.
-
-- **Phase 12 — Farmer source tag:** `register_farmer` now records
-  `source: Symbol` (e.g. `RSBSA`, `COOP`, `NGO`) per farmer. `oracle_config()`
-  returns the constructor-pinned keys and threshold for on-chain inspection.
-
-- **Phase 13 — Claim region guard:** `claim()` now validates that the farmer's
-  *current* registered region matches the pool's region. Remove → re-register
-  elsewhere cannot drain an old installment schedule from a different region's
-  pool. Added `set_admin` for registry authority rotation.
-
-### Test suite — 57 tests (was 46 at phase 4/5)
-
-Added tests covering: 2-of-3 oracle threshold, nonce replay rejection, tampered
-event rejection, unauthorized key rejection, 1-of-3 insufficient threshold,
-source-tag storage, oracle_config view, farmer-region claim guard
-(RegionMismatch), re-register-in-new-region blocks old pool, ghost-entry guard
-(corrupted RegionFarmers does not pay wrong-region farmer), second-event deferral
-while recurring schedule is active, expiry blocks early withdraw + allows after,
-admin rotation, three-funders-three-receipts escrow invariant, midlist exhaustion
-with partial recovery after top-up.
-
-### Frontend — Farmer app polish (post-redesign)
-
-- **Farmer splash / connect** — brand-first: dove lockup + *Relief that moves*,
-  farmer name, full region label (Region V — Bicol), optional account reveal, and
-  a quiet multi-farmer switch for the demo slate.
-- **Overlays** — Quick Help / Cash Out / tx detail are isolated overlays that
-  never bleed under the tab bar; Home nav stays visible and does not bleed through.
-- **Dove favicon** in the browser tab; splash and Connect share the same mark and
-  tagline as the live site.
-- **Recurring installments** — on-chain schedule shown on Home; claim button
-  respects the pool's cadence and hard-stops at the installment count.
-- **SEP-31 cash-out flow** — 5-step overlay (destination → recipient → amount →
-  confirm → success) with labeled PDAX UAT status chips and an explicit honest
-  label on the stub leg.
-
-### Frontend — Oracle / bulletin UX
-
-- **Coach tour** — step-by-step funder onboarding tour with skip and replay-via-
-  profile; deferred on stage if pre-dismissed.
-- **Multi-region bulletin idempotency** — `reportAndSettleMany()` signs one event
-  per region with unique nonces; a `NonceAlreadyUsed` error on one region never
-  aborts the rest (flag-not-fail mirroring the contract).
-
-### Demo slate
-
-- `tools/seed-demo.mjs` updated for current contract API (2-of-3 oracle keys,
-  source tags). Seeds ADB + PCIC pools across islands, 4 registered farmers,
-  ledger empty — typhoon is triggered live on stage.
-- `DEMO-SCRIPT.md` updated to championship format (8–9 min, fail-safes,
-  pre-flight checklist, Q&A cards for all anticipated judge questions).
-- `screenshots/` refreshed — 28 screens covering full farmer app, funder
-  console, and public transparency ledger.
-
----
-
-## 2026-07-10 — Funder-console redesign shipped, fresh demo slate, docs
-
-### Frontend — funder console redesign (login-first, GCash-style)
-Ported the approved HTML mockups into the React app. The dev/funder side went from
-a sidebar console to a login-first, isolation-safe product.
-
-- **New** `src/pages/funder/LoginScreen.jsx` — pick-your-institution gate (ADB APDRF
-  / PCIC); sets the acting identity before the portal renders.
-- **New** `src/pages/funder/FunderHome.jsx` — GCash-style home: escrow hero (one peso
-  figure), circular quick-actions, state-aware demo guide, and a release feed grouped
-  by signed event with per-row on-chain links.
-- **Rewrote** `src/pages/funder/FunderPortal.jsx` — login gate, corner-cluster header
-  (Farmer App / Public Ledger / switch-institution), page router; removed the old
-  SideNav/TopBar chrome.
-- **Rewrote** `src/pages/funder/PoolsPage.jsx` — strict per-funder isolation, island
-  groups (Luzon/Visayas/Mindanao) with status-mix pills, typhoon-context banner
-  (calm/alert), Released-to-date stat (flips to an Exhausted alert only when real),
-  per-pool release history, paused-card treatment with a green Resume.
-- **Rewrote** `src/pages/funder/OraclePage.jsx` — PAGASA-bulletin drop-zone: drop a
-  signed JSON bulletin (or load the sample), see region-by-region "will settle / will
-  skip", then sign + settle one event per region. Manual single-region fallback kept.
-  DEMO SIGNER badge retained.
-- **Updated** `src/pages/funder/LedgerPage.jsx`, `CreatePoolModal.jsx`,
-  `FarmersPage.jsx`, `SettingsPage.jsx`, `DemoGuide.jsx` — pesos-primary, pool names +
-  region names throughout, region dropdowns, LGU registrar wording.
-- **Updated** `src/App.jsx` — removed the white dev top strip; funder console owns its
-  chrome; keep the portal mounted during a Public-Ledger round trip so the logged-in
-  identity survives; added a first-load gate so the hero doesn't flash ₱0 before the
-  pool scan finishes.
-
-### Frontend — supporting libs
-- **New** `src/lib/funders.js` — one source of truth for the two demo funders (drives
-  login, header, switcher, settings), so anything ADB gets, PCIC gets.
-- **New** `src/lib/regions.js` — PH region display map (UI-only; contract stores bare
-  `u32`). All 18 regions: the 13 numbered + NCR, CAR, BARMM, MIMAROPA, NIR. Island
-  groupings, short-name helper, ordered dropdown options.
-- **New** `src/lib/poolNames.js` — pool names/purposes as an app-level label
-  (localStorage); region-derived fallback when unnamed.
-- **Updated** `src/lib/celerity.js` — added `reportAndSettleMany()` (multi-region: one
-  signed event per region, unique nonces to avoid `NonceAlreadyUsed`, flag-not-fail so
-  one region's error never aborts the rest); `reportAndSettle()` now takes a role +
-  nonce so either funder can trigger.
-
-### On-chain — fresh demo slate
-- Redeployed a clean contract (same wasm; oracle key + XLM SAC token reused). Old id
-  preserved in `deployments.json` under `phase_4_5_pre_reset`.
-  - New: `CBSXZ6TKWW5Y726ZBWC4BXSKTLW77VBXUNS4LBJA3SDDWPDXINGNESDG`
-  - Old: `CBOC7QW3EZUABZST4KO2FHYNRUZPN3KF6QTLJSZ4H77VZKOHTJFKI2Q2`
-- **Updated** `celerity-web/.env` — `VITE_CONTRACT_ID` repointed (gitignored; only that
-  line changed).
-- **Updated** `deployments.json` — rotated contract id + phase note + history.
-- **New** `tools/seed-demo.mjs` — repeatable seed of the demo money-shot: 4 farmers
-  (farmer1 + 3 generated), ADB pools (Bicol, N. Mindanao) + PCIC pools (Bicol,
-  E. Visayas — paused). Leaves every pool Armed and the ledger empty (no typhoon fired)
-  so the trigger is live on stage.
-
-### QA
-- Full-stack gate (2026-07-10): contract `cargo test` 46/46 (at phase 4/5; current suite is 57/57 — see entry above), frontend build clean,
-  18-check headless sweep of the live stack (both identities, funder isolation,
-  oracle bulletin analysis, no console errors, 390px no-overflow). Verdict PASS.
-
-### Docs / submission
-- **Updated** `Celerity_Hackathon_Doc.md` §7 (demo stage script → real UI: login-first,
-  PCIC not NGO, in-app bulletin drop, multi-region) and §8 (build timeline →
-  actual-progress record with the redesign, multi-region oracle, all-18-regions, and
-  fresh slate; "win condition — met").
-- **New** `CHANGELOG.md` — this file.
+- Replaced the old payment and trigger layer, the recipient wallet app, and
+  the Vercel functions.
+- New `server/` (Node 24, Express 5): Claude tool-use agent that reads
+  free-text typhoon bulletins and drafts payouts; deterministic policy engine
+  (signal minimum, per-family / per-run / recipient caps, no repeat payment per
+  storm); coordinator approval; PayPal Payouts with idempotent batch IDs;
+  verified, de-duplicated PayPal webhooks plus a poll fallback; JSON store with
+  a SHA-256 hash-chained evidence log.
+- New coordinator console (Overview, Respond, Payouts, Families, Evidence log)
+  and a public transparency page, on the existing design system.
+- PayPal sandbox smoke script, node:test suites, CI, Render blueprint, MIT license.
