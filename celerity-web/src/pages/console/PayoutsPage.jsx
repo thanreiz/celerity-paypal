@@ -33,6 +33,15 @@ function maskEmail(email) {
   return `${user.slice(0, 2)}${"•".repeat(Math.max(1, user.length - 2))}@${domain}`;
 }
 
+// Total per funding pool across a batch's items, largest first.
+function splitOf(batch) {
+  const t = {};
+  for (const i of batch.items) for (const f of i.funding || []) t[f.pool_id] = (t[f.pool_id] || 0) + Math.round(f.amount * 100);
+  return Object.entries(t)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, c]) => [id, c / 100]);
+}
+
 export default function PayoutsPage({ data, config, act, busy, go }) {
   const familiesById = useMemo(() => Object.fromEntries(data.families.map((f) => [f.id, f])), [data.families]);
 
@@ -67,8 +76,16 @@ export default function PayoutsPage({ data, config, act, busy, go }) {
                   {money(delivered.reduce((s, i) => s + i.amount, 0), b.items[0]?.currency)} of {money(total, b.items[0]?.currency)}
                 </span>
                 <span className="cel-mono" style={{ color: "var(--text-faint)" }}>
-                  PayPal batch {b.payout_batch_id}
+                  {b.payout_batch_id ? `PayPal batch ${b.payout_batch_id}` : "Sending to PayPal…"}
                 </span>
+                {splitOf(b).length > 0 && (
+                  <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-dim)", marginTop: 2 }}>
+                    Funded by{" "}
+                    {splitOf(b)
+                      .map(([id, amount]) => `${data.pools.find((p) => p.id === id)?.name || id} ${money(amount, b.items[0]?.currency)}`)
+                      .join(" · ")}
+                  </span>
+                )}
               </div>
               <div className="cel-row-actions">
                 <StatusPill status={b.status} />

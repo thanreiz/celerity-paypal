@@ -9,17 +9,20 @@ import RespondPage from "./RespondPage";
 import PayoutsPage from "./PayoutsPage";
 import FamiliesPage from "./FamiliesPage";
 import EvidencePage from "./EvidencePage";
+import FundsPage from "./FundsPage";
 
 const NAV = [
   { key: "overview", label: "Overview", desc: "Where relief stands" },
-  { key: "respond", label: "Respond", desc: "Bulletin in, agent drafts", step: 1 },
-  { key: "payouts", label: "Payouts", desc: "PayPal status, live", step: 2 },
+  { key: "funds", label: "Funds", desc: "Pools from funders", step: 1 },
+  { key: "respond", label: "Respond", desc: "Bulletin in, agent drafts", step: 2 },
+  { key: "payouts", label: "Payouts", desc: "PayPal status, live", step: 3 },
   { key: "families", label: "Families", desc: "Registered households" },
   { key: "evidence", label: "Evidence log", desc: "Hash-chained record" },
 ];
 
 const PAGES = {
   overview: OverviewPage,
+  funds: FundsPage,
   respond: RespondPage,
   payouts: PayoutsPage,
   families: FamiliesPage,

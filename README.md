@@ -5,10 +5,11 @@
 <h1 align="center">Celerity Relief</h1>
 
 <p align="center">
-  <strong>Typhoon cash aid, drafted by an AI agent, approved by a person, sent by PayPal.</strong>
+  <strong>Typhoon cash aid, pooled from many funders through PayPal, drafted by an AI agent, approved by a person, sent by PayPal.</strong>
 </p>
 
 <p align="center">
+  <img alt="PayPal Checkout" src="https://img.shields.io/badge/PayPal-Checkout_(Orders_v2)-003087?style=flat-square&logo=paypal&logoColor=white" />
   <img alt="PayPal Payouts" src="https://img.shields.io/badge/PayPal-Payouts_API-003087?style=flat-square&logo=paypal&logoColor=white" />
   <img alt="AI agent" src="https://img.shields.io/badge/AI-OpenAI_or_Claude_tool_use-d97757?style=flat-square" />
   <img alt="Node" src="https://img.shields.io/badge/Server-Node_24_+_Express-16452d?style=flat-square" />
@@ -21,6 +22,9 @@
 When a typhoon hits the Philippines, relief money usually already exists. What's slow is
 deciding who gets it and getting it into their hands. Celerity Relief cuts that to minutes:
 
+0. **Funders pool money.** An insurer, a foundation or anyone else puts money into a pool earmarked
+   for an area (say, Bicol typhoon relief) through **PayPal Checkout**. Many funders can cover the same
+   area; each one's money stays traceable to them.
 1. **A bulletin arrives.** A coordinator pastes a tropical cyclone bulletin, or picks one from the feed.
 2. **The agent drafts.** An LLM agent (OpenAI or Claude) reads the free-text bulletin, works out which provinces and towns
    are under which wind signal, finds registered families there, and drafts a payout for each
@@ -30,11 +34,12 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
    decides. If the agent asks for too much, the draft is refused and it has to adjust.
 4. **A person approves.** Nothing moves until a coordinator reviews the drafts and approves the run.
    Policy is checked again at approval.
-5. **PayPal pays.** One Payouts batch per run. Verified PayPal webhooks update each family's status
+5. **PayPal pays.** Each payout is split across the pools that cover the family, pro-rata by what
+   each has left, and recorded per funder. One Payouts batch per run. Verified PayPal webhooks update each family's status
    (Pending → Delivered, or Unclaimed) on a live timeline.
 6. **Everything is on the record.** Every agent run, approval, PayPal batch and webhook goes into
-   an append-only SHA-256 hash-chained evidence log. A public page shows totals and the chain,
-   with no names or emails.
+   an append-only SHA-256 hash-chained evidence log. A public page shows each funder's pool (what it
+   put in, which storms and towns it paid for, what's left) and the chain, with no names or emails.
 
 > **Hosted demo:** https://celerity-relief.vercel.app (PayPal sandbox; coordinator key shared with judges in the submission) · **Demo video:** _coming soon_
 >
@@ -47,11 +52,13 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
 
 | Piece | What it does |
 | --- | --- |
+| **PayPal Checkout** (Orders v2: `/v2/checkout/orders`, `/capture`) | How funders put money into a pool, from the public page. The pool is credited only when PayPal reports a completed capture of the chosen amount, from the return redirect or the `PAYMENT.CAPTURE.COMPLETED` webhook, once. |
 | **PayPal Payouts API** (`/v1/payments/payouts`) | Sends every approved run as one batch to families' PayPal emails. `sender_batch_id` is derived from the run ID, so a retried approval can never pay twice. |
-| **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`) | Push status updates. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
+| **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`, `PAYMENT.CAPTURE.COMPLETED`) | Push status updates. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
 | **PayPal OAuth 2.0** (client credentials) | Server-side only; the token is cached until shortly before it expires. |
 | **LLM agent**: OpenAI (Responses API, function calling) or Anthropic Claude (Messages API, tool use) | The agent loop ([`agent.js`](server/src/agent.js), [`providers.js`](server/src/providers.js)). Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. One env var (`AI_PROVIDER`) switches vendors. |
 | **Policy engine** ([`server/src/policy.js`](server/src/policy.js)) | Deterministic eligibility and caps. The only thing that decides whether a draft is allowed. |
+| **Funding pools** ([`server/src/funding.js`](server/src/funding.js)) | Earmarked pools over the one PayPal balance. Splits every payout pro-rata across the pools that cover the family; refuses drafts the pools can't cover. Balances are computed from the record, never stored. |
 | **Evidence log** ([`server/src/store.js`](server/src/store.js)) | Append-only, hash-chained. Editing or deleting any past entry breaks verification. |
 
 ### Guardrails, not vibes
@@ -136,8 +143,8 @@ Requires **Node 22+** (24 recommended).
    **Create App** (type: Merchant). Copy the **Client ID** and **Secret**.
 2. Under **Sandbox accounts**, note the email of a **Personal** account. Demo payouts will land there.
 3. (Optional, for webhooks) In the app's **Webhooks** section, add
-   `https://<your-public-host>/api/webhooks/paypal` and subscribe to `PAYMENT.PAYOUTSBATCH.*` and
-   `PAYMENT.PAYOUTS-ITEM.*`. Copy the **Webhook ID**. Without it, use **Refresh from PayPal** on the
+   `https://<your-public-host>/api/webhooks/paypal` and subscribe to `PAYMENT.PAYOUTSBATCH.*`,
+   `PAYMENT.PAYOUTS-ITEM.*` and `PAYMENT.CAPTURE.COMPLETED`. Copy the **Webhook ID**. Without it, use **Refresh from PayPal** on the
    Payouts page to pull status instead.
 
 ### 2. Configure
@@ -218,6 +225,7 @@ function limit (a typical run takes about 30 seconds).
 | `AGENT_RUNS_PER_HOUR` | no | Default `20`; protects a public demo |
 | `DATABASE_URL` | on Vercel | Postgres connection string (Neon sets it). Without it, state is a local JSON file. |
 | `DATA_DIR`, `PORT` | no | Local file store folder and port. Default `server/data`, `8787` |
+| `PUBLIC_URL` | no | Where PayPal Checkout sends funders back, e.g. `https://celerity-relief.vercel.app`. Default: the request's host |
 
 ---
 
