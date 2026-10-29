@@ -62,6 +62,19 @@ the agent can only pay family IDs from the registry, to the email on file, up to
 and a human still has to approve. The bulletin is passed to the model as data, and the
 system prompt says so, but the guarantee comes from the code, not the prompt.
 
+More of what the code enforces, whatever the model says:
+
+- Every area the agent records must name a province that appears in the bulletin text.
+- A family paid in the last 7 days can't be drafted again under any storm name.
+- Approval never holds a database lock while PayPal is called. If PayPal's answer is lost, the batch
+  stays "sending" and Approve resumes it with the same PayPal-Request-Id, so nothing is paid twice.
+- The public page shows an allow-list of fields per event: no emails, names, family IDs or error payloads.
+
+**Limits.** The evidence chain proves the log wasn't edited after the fact by anyone who doesn't
+also control the database; anchoring its head hash outside the app is future work. Wrong-key
+throttling is per serverless instance. `/api/config` is public on purpose, so anyone can read the
+payout policy.
+
 ---
 
 ## Architecture
@@ -169,7 +182,9 @@ cd server && npm test
 The suites cover policy caps and eligibility, hash-chain tamper detection, transaction rollback and
 concurrent writes on Postgres (PGlite), and a full end-to-end flow (bulletin → scripted agent run with
 policy refusals → approval → PayPal batch → webhooks → public view without PII), run on both stores
-against scripted OpenAI and Claude clients and a fake PayPal.
+against scripted OpenAI and Claude clients and a fake PayPal. Others cover lost PayPal answers and
+resumed approvals, out-of-order payout statuses, run deadlines, webhook signatures and age, input
+validation, and the public allow-list.
 
 ## Deploy to Vercel
 
