@@ -36,7 +36,7 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
    an append-only SHA-256 hash-chained evidence log. A public page shows totals and the chain,
    with no names or emails.
 
-> **Hosted demo:** _coming soon (Vercel)_ · **Demo video:** _coming soon_
+> **Hosted demo:** https://celerity-relief.vercel.app (PayPal sandbox; coordinator key shared with judges in the submission) · **Demo video:** _coming soon_
 >
 > The demo runs on the **PayPal sandbox** with **simulated bulletins** for a fictional
 > Typhoon Dalisay. No real money moves.
