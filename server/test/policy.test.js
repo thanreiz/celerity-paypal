@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { POLICY, signalFor, maxAmountFor, eligibility, checkDraft, stormKey } from "../src/policy.js";
+import { POLICY, signalFor, maxAmountFor, eligibility, checkDraft, stormKey, runTotals } from "../src/policy.js";
 import { emptyState } from "../src/store.js";
 import { seedState } from "../src/seed.js";
 
@@ -77,4 +77,39 @@ test("checkDraft rejects over-cap, unknown, and over-budget drafts", () => {
 
   run.drafts = [{ family_id: "fam_002", amount: POLICY.maxPerRun - 10 }];
   assert.match(checkDraft(state, run, { family_id: "fam_001", amount: 20 }).join(), /per-run cap/);
+});
+
+test("storm names match across categories, brackets and punctuation", () => {
+  assert.equal(stormKey("Super Typhoon Dalisay (Haikui)"), stormKey("DALISAY"));
+  assert.equal(stormKey("Typhoon Dalisay."), "dalisay");
+  assert.equal(stormKey("(Haikui)"), "");
+});
+
+test("no storm name means nobody is eligible yet", () => {
+  const { state, run, fam } = setup();
+  run.storm = "  ";
+  const el = eligibility(state, fam("fam_001"), run);
+  assert.equal(el.eligible, false);
+  assert.match(el.reasons.join(), /no storm name/);
+});
+
+test("a family paid in the last 7 days is blocked under any storm name; canceled payouts don't count", () => {
+  const { state, run, fam } = setup();
+  const now = new Date().toISOString();
+  state.batches.push({ storm: "Typhoon Haikui", created_at: now, items: [{ family_id: "fam_001", status: "SUCCESS" }] });
+  assert.match(eligibility(state, fam("fam_001"), run).reasons.join(), /last 7 days/);
+  state.batches[0].items[0].status = "CANCELED";
+  assert.equal(eligibility(state, fam("fam_001"), run).eligible, true);
+  state.batches[0].items[0].status = "SUCCESS";
+  state.batches[0].created_at = new Date(Date.now() - 8 * 86_400_000).toISOString();
+  assert.equal(eligibility(state, fam("fam_001"), run).eligible, true);
+});
+
+test("two-decimal amounts are exact and totals add up in centavos", () => {
+  const { state, run } = setup();
+  for (const amount of [19.99, 0.07, 0.29, 1.1]) {
+    assert.deepEqual(checkDraft(state, run, { family_id: "fam_001", amount }), [], String(amount));
+  }
+  run.drafts = [{ family_id: "fam_002", amount: 0.1 }, { family_id: "fam_003", amount: 0.2 }];
+  assert.equal(runTotals(run).amount, 0.3);
 });

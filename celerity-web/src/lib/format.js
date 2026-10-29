@@ -37,6 +37,7 @@ const EVENT_LABELS = {
   "run.failed": "Agent run failed",
   "run.approved": "Coordinator approved",
   "run.rejected": "Coordinator rejected",
+  "run.draft_removed": "Draft removed",
   "payout.batch_created": "PayPal batch created",
   "payout.batch_status": "PayPal batch status",
   "payout.item_status": "Payout status",
@@ -77,6 +78,8 @@ export function eventDetail(e) {
       return `${d.recipients} payouts, ${money(d.amount, d.currency)} sent to PayPal`;
     case "payout.unconfirmed":
       return d.message || "PayPal did not confirm yet; approve again to resume";
+    case "run.draft_removed":
+      return d.recipients != null ? `${d.recipients} families left, ${money(d.amount, d.currency)}` : "";
     case "run.rejected":
       return d.reason || "";
     case "family.registered":

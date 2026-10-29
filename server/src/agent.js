@@ -132,17 +132,49 @@ function publicFamily(f) {
 }
 
 const norm = (s) => String(s || "").trim().toLowerCase();
+const escapeTags = (s) => String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const isText = (v, max) => typeof v === "string" && v.trim().length > 0 && v.length <= max;
+
+/** Why these bulletin facts can't be recorded, or null. Areas must name a
+ * province the bulletin text actually mentions, so text smuggled into the
+ * bulletin can't add a province by asking. */
+function factsProblem(input, bulletinText) {
+  if (!isText(input?.storm_name, 60)) return "storm_name must be a non-empty string of at most 60 characters";
+  if (input.bulletin_number != null && !isText(String(input.bulletin_number), 20)) return "bulletin_number is too long";
+  if (!Array.isArray(input.areas) || input.areas.length > 100) return "areas must be a list of at most 100 entries";
+  const haystack = norm(bulletinText);
+  for (const a of input.areas) {
+    if (!a || !isText(a.province, 60)) return "every area needs a province name";
+    if (a.municipality != null && a.municipality.trim?.() !== "" && !isText(a.municipality, 60)) {
+      return `municipality for ${a.province} is not a short name`;
+    }
+    if (!Number.isInteger(a.signal_level) || a.signal_level < 1 || a.signal_level > 5) {
+      return `signal_level for ${a.province} must be a whole number from 1 to 5`;
+    }
+    if (bulletinText != null && !haystack.includes(norm(a.province))) {
+      return `${a.province} does not appear in the bulletin text; record only areas the bulletin names`;
+    }
+  }
+  return null;
+}
 
 /** Execute one tool call against the run. Returns { content, isError }. */
-export function executeTool(state, run, name, input) {
+export function executeTool(state, run, name, input, bulletinText = null) {
   switch (name) {
     case "record_bulletin_facts": {
-      run.storm = input.storm_name;
-      run.bulletin_number = input.bulletin_number;
-      run.areas = input.areas;
+      const problem = factsProblem(input, bulletinText);
+      if (problem) return { isError: true, content: { error: problem } };
+      run.storm = input.storm_name.trim();
+      run.bulletin_number = input.bulletin_number == null ? null : String(input.bulletin_number);
+      run.areas = input.areas.map((a) => ({
+        province: a.province.trim(),
+        municipality: a.municipality?.trim() || null,
+        signal_level: a.signal_level,
+      }));
       // Drafts made under old facts may no longer be valid.
       run.drafts = run.drafts.filter((d) => checkDraft(state, run, d).length === 0);
-      return { content: { recorded_areas: input.areas.length, storm: input.storm_name } };
+      return { content: { recorded_areas: run.areas.length, storm: run.storm } };
     }
     case "search_families": {
       const matches = state.families.filter(
@@ -160,11 +192,12 @@ export function executeTool(state, run, name, input) {
       return { content: { results } };
     }
     case "draft_payout": {
-      if (!run.areas) return { isError: true, content: { error: "call record_bulletin_facts first" } };
+      if (!run.areas || !run.storm) return { isError: true, content: { error: "call record_bulletin_facts first" } };
+      if (typeof input?.family_id !== "string") return { isError: true, content: { error: "family_id must be a string" } };
       const draft = {
         family_id: input.family_id,
         amount: Math.round(Number(input.amount) * 100) / 100,
-        rationale: input.rationale,
+        rationale: String(input.rationale ?? "").slice(0, 300),
       };
       const violations = checkDraft(state, run, draft);
       if (violations.length) return { isError: true, content: { rejected: true, violations } };
@@ -218,7 +251,8 @@ export async function runAgent({ state, run, bulletin, client, provider = config
     client,
     system: SYSTEM_PROMPT,
     tools: TOOLS,
-    userText: `Bulletin received ${bulletin.received_at} from ${bulletin.source}.\n\n<bulletin>\n${bulletin.text}\n</bulletin>`,
+    // Escaped so a "</bulletin>" inside the text can't end the data block.
+    userText: `Bulletin received ${bulletin.received_at} from ${bulletin.source}.\n\n<bulletin>\n${escapeTags(bulletin.text)}\n</bulletin>`,
   });
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
@@ -245,7 +279,7 @@ export async function runAgent({ state, run, bulletin, client, provider = config
       try {
         result = call.parseError
           ? { isError: true, content: { error: `arguments were not valid JSON: ${call.parseError}` } }
-          : executeTool(state, run, call.name, call.input);
+          : executeTool(state, run, call.name, call.input, bulletin.text);
       } catch (e) {
         result = { isError: true, content: { error: e.message } };
       }

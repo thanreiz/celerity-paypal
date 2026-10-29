@@ -28,6 +28,7 @@ const PUBLIC_DETAIL = {
   "run.drafted": ["storm", "areas", "recipients", "amount", "currency"],
   "run.failed": [],
   "run.rejected": [],
+  "run.draft_removed": ["recipients", "amount", "currency"],
   "run.approved": ["recipients", "amount", "currency"],
   "payout.submitting": ["recipients", "amount", "currency"],
   "payout.resumed": [],
@@ -62,6 +63,8 @@ function text(value, field, max) {
 // A run still "running" after this long died with its function instance
 // (Vercel caps a function at 300s).
 const STALE_RUN_MS = 6 * 60_000;
+// The agent itself gives up before Vercel's 300s limit can kill it silently.
+const RUN_DEADLINE_MS = Number(process.env.RUN_DEADLINE_MS) || 240_000;
 
 function sameSecret(a, b) {
   const x = Buffer.from(String(a));
@@ -111,9 +114,12 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   app.get("/api/public", wrap(async (req, res) => {
     const state = await store.read();
     const items = state.batches.flatMap((b) => b.items.map((i) => ({ ...i, storm: b.storm })));
-    const byStorm = {};
+    // A Map, not an object: storm names come from the model, and a storm
+    // called "__proto__" must not reach Object.prototype.
+    const byStorm = new Map();
     for (const i of items) {
-      const s = (byStorm[i.storm] ||= { storm: i.storm, families: 0, sent: 0, pending: 0 });
+      if (!byStorm.has(i.storm)) byStorm.set(i.storm, { storm: i.storm, families: 0, sent: 0, pending: 0 });
+      const s = byStorm.get(i.storm);
       s.families += 1;
       if (SUCCESS_STATES.has(i.status)) s.sent += i.amount;
       else s.pending += i.amount;
@@ -122,7 +128,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       currency: POLICY.currency,
       paypalEnv: config.paypal.env,
       registered: state.families.filter((f) => f.status === "active").length,
-      storms: Object.values(byStorm),
+      storms: [...byStorm.values()],
       batches: state.batches.map((b) => ({
         id: b.id,
         storm: b.storm,
@@ -221,14 +227,21 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   async function runJob(runId, bulletin) {
     const snapshot = await store.read();
     const run = snapshot.runs.find((r) => r.id === runId);
+    // Only a run that is still "running" in storage is ours to update: if the
+    // stale-run check (or anything else) already closed it, leave it closed.
     const save = (extra) =>
       store.mutate((state, log) => {
         const i = state.runs.findIndex((r) => r.id === runId);
+        if (i === -1 || state.runs[i].status !== "running") return;
         state.runs[i] = structuredClone(run);
         extra?.(log);
       });
+    let timer;
+    const deadline = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`the agent did not finish within ${RUN_DEADLINE_MS / 1000} seconds`)), RUN_DEADLINE_MS);
+    });
     try {
-      await runAgent({ state: snapshot, run, bulletin, client: aiClient, onProgress: () => save() });
+      await Promise.race([runAgent({ state: snapshot, run, bulletin, client: aiClient, onProgress: () => save() }), deadline]);
       run.status = run.drafts.length ? "awaiting_approval" : "no_action";
       run.finished_at = new Date().toISOString();
       const totals = runTotals(run);
@@ -236,10 +249,18 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         log("run.drafted", "agent", { storm: run.storm, areas: run.areas?.length || 0, ...totals, currency: POLICY.currency }, run.id)
       );
     } catch (e) {
+      // Freeze what the agent did so far; a late step from the abandoned
+      // loop must not change the failed run.
+      const failed = { ...structuredClone(run), status: "failed", error: e.message, finished_at: new Date().toISOString() };
+      await store.mutate((state, log) => {
+        const i = state.runs.findIndex((r) => r.id === runId);
+        if (i === -1 || state.runs[i].status !== "running") return;
+        state.runs[i] = failed;
+        log("run.failed", "agent", { message: e.message }, runId);
+      });
       run.status = "failed";
-      run.error = e.message;
-      run.finished_at = new Date().toISOString();
-      await save((log) => log("run.failed", "agent", { message: e.message }, run.id));
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -302,6 +323,27 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     wrap(async (req, res) => {
       const batch = await approveRun(store, req.params.id, req.actor);
       res.json(batch);
+    })
+  );
+
+  // Drop one draft (e.g. a family suspended since the agent ran) instead of
+  // rejecting the whole run.
+  app.delete(
+    "/api/runs/:id/drafts/:familyId",
+    coordinator,
+    wrap(async (req, res) => {
+      const run = await store.mutate((state, log) => {
+        const r = state.runs.find((x) => x.id === req.params.id);
+        if (!r) throw new HttpError(404, "run not found");
+        if (r.status !== "awaiting_approval") throw new HttpError(409, `run is ${r.status}, not awaiting approval`);
+        const before = r.drafts.length;
+        r.drafts = r.drafts.filter((d) => d.family_id !== req.params.familyId);
+        if (r.drafts.length === before) throw new HttpError(404, "no draft for that family");
+        if (!r.drafts.length) r.status = "no_action";
+        log("run.draft_removed", req.actor, { ...runTotals(r), currency: POLICY.currency }, r.id);
+        return r;
+      });
+      res.json({ ...run, totals: runTotals(run) });
     })
   );
 

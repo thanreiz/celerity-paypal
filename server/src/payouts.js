@@ -175,11 +175,26 @@ export function rejectRun(store, runId, actor, reason) {
   });
 }
 
+// Webhooks and polls arrive in any order, so a status only moves forward:
+// a stale PENDING snapshot must not undo a SUCCESS. The one way out of a
+// final state is money coming back after it was delivered.
+const ITEM_RANK = { PENDING: 0, UNCLAIMED: 1, ONHOLD: 1 };
+const BATCH_RANK = { SUBMITTING: 0, PENDING: 1, PROCESSING: 2 };
+const FINAL_RANK = 9;
+const CLAWBACK = new Set(["RETURNED", "REFUNDED", "REVERSED"]);
+
+function moves(ranks, from, to) {
+  const a = ranks[from] ?? FINAL_RANK;
+  const b = ranks[to] ?? FINAL_RANK;
+  if (a < FINAL_RANK) return b >= a;
+  return from === "SUCCESS" && CLAWBACK.has(to);
+}
+
 function setItemStatus(log, batch, item, status, source, extra = {}) {
   if (extra.payout_item_id) item.payout_item_id = extra.payout_item_id;
   if (extra.transaction_id) item.transaction_id = extra.transaction_id;
   if (extra.error) item.error = extra.error;
-  if (!status || item.status === status) return false;
+  if (!status || item.status === status || !moves(ITEM_RANK, item.status, status)) return false;
   item.status = status;
   item.history.push({ at: new Date().toISOString(), status, source });
   log(
@@ -192,7 +207,7 @@ function setItemStatus(log, batch, item, status, source, extra = {}) {
 }
 
 function setBatchStatus(log, batch, status, source) {
-  if (!status || batch.status === status) return false;
+  if (!status || batch.status === status || !moves(BATCH_RANK, batch.status, status)) return false;
   batch.status = status;
   batch.updated_at = new Date().toISOString();
   log("payout.batch_status", source, { payout_batch_id: batch.payout_batch_id, batch_status: status }, batch.id);

@@ -41,9 +41,18 @@ export const VULNERABILITY_FLAGS = ["senior", "pwd", "infant", "pregnant"];
 
 const norm = (s) => String(s || "").trim().toLowerCase();
 
+// "Typhoon Dalisay", "DALISAY" and "Super Typhoon Dalisay (Haikui)" are one
+// storm: drop the category, any bracketed international name, and anything
+// that isn't a letter.
 export function stormKey(name) {
-  return norm(name).replace(/^(super\s+)?(typhoon|tropical storm|severe tropical storm|tropical depression)\s+/, "");
+  return norm(name)
+    .replace(/[([{].*?[)\]}]/g, " ")
+    .replace(/^\s*(super\s+)?(typhoon|tropical storm|severe tropical storm|tropical depression)\s+/, "")
+    .replace(/[^\p{L}]+/gu, "");
 }
+
+/** Whole centavos, so money adds up exactly. */
+export const cents = (amount) => Math.round(Number(amount) * 100);
 
 /** Highest signal that covers the family's location, or 0. A province-wide
  * area (municipality null) covers every municipality in that province. */
@@ -66,6 +75,10 @@ export function maxAmountFor(family, signal, policy = POLICY) {
   return Math.min(policy.maxPerFamily, base + household + flags * policy.vulnerabilityTopUp);
 }
 
+// Item states where no money reached the family, so a retry is allowed.
+const NOT_PAID = new Set(["FAILED", "RETURNED", "BLOCKED", "REFUNDED", "REVERSED", "DENIED", "CANCELED"]);
+const COOLDOWN_DAYS = 7;
+
 /** Families already paid (or in flight) for this storm. Failed or returned
  * items don't count, so a coordinator can retry them. */
 export function paidFamilyIds(state, storm) {
@@ -74,11 +87,19 @@ export function paidFamilyIds(state, storm) {
   if (!key) return ids;
   for (const b of state.batches) {
     if (stormKey(b.storm) !== key) continue;
-    for (const it of b.items) {
-      if (!["FAILED", "RETURNED", "BLOCKED", "REFUNDED", "REVERSED", "DENIED"].includes(it.status)) {
-        ids.add(it.family_id);
-      }
-    }
+    for (const it of b.items) if (!NOT_PAID.has(it.status)) ids.add(it.family_id);
+  }
+  return ids;
+}
+
+/** Families paid (or in flight) in the last COOLDOWN_DAYS for any storm. A
+ * second guard behind the storm-name match, which depends on how the model
+ * wrote the name. */
+export function recentlyPaidIds(state, now = Date.now()) {
+  const ids = new Set();
+  for (const b of state.batches) {
+    if (now - Date.parse(b.created_at) > COOLDOWN_DAYS * 86_400_000) continue;
+    for (const it of b.items) if (!NOT_PAID.has(it.status)) ids.add(it.family_id);
   }
   return ids;
 }
@@ -96,9 +117,9 @@ export function eligibility(state, family, run, policy = POLICY) {
         : `signal ${signal} is below the minimum of ${policy.minSignal}`
     );
   }
-  if (run.storm && paidFamilyIds(state, run.storm).has(family.id)) {
-    reasons.push(`already paid for ${run.storm}`);
-  }
+  if (!stormKey(run.storm)) reasons.push("the run has no storm name yet");
+  else if (paidFamilyIds(state, run.storm).has(family.id)) reasons.push(`already paid for ${run.storm}`);
+  else if (recentlyPaidIds(state).has(family.id)) reasons.push(`already paid in the last ${COOLDOWN_DAYS} days`);
   const max = reasons.length ? 0 : maxAmountFor(family, signal, policy);
   return { eligible: reasons.length === 0, max_amount: max, signal, reasons };
 }
@@ -111,7 +132,7 @@ export function checkDraft(state, run, draft, policy = POLICY) {
   const errors = [...el.reasons];
   const amount = Number(draft.amount);
   if (!Number.isFinite(amount) || amount <= 0) errors.push("amount must be a positive number");
-  else if (Math.round(amount * 100) !== amount * 100) errors.push("amount has more than 2 decimals");
+  else if (Math.abs(amount * 100 - cents(amount)) > 1e-6) errors.push("amount has more than 2 decimals");
   else if (el.eligible && amount > el.max_amount) {
     errors.push(`amount ${amount} exceeds this family's policy cap of ${el.max_amount}`);
   }
@@ -119,7 +140,7 @@ export function checkDraft(state, run, draft, policy = POLICY) {
   if (others.length + 1 > policy.maxRecipientsPerRun) {
     errors.push(`run would exceed ${policy.maxRecipientsPerRun} recipients`);
   }
-  const total = others.reduce((s, d) => s + d.amount, 0) + (Number.isFinite(amount) ? amount : 0);
+  const total = (others.reduce((s, d) => s + cents(d.amount), 0) + (Number.isFinite(amount) ? cents(amount) : 0)) / 100;
   if (total > policy.maxPerRun) errors.push(`run total ${total} would exceed the per-run cap of ${policy.maxPerRun}`);
   return errors;
 }
@@ -127,6 +148,6 @@ export function checkDraft(state, run, draft, policy = POLICY) {
 export function runTotals(run) {
   return {
     recipients: run.drafts.length,
-    amount: Math.round(run.drafts.reduce((s, d) => s + d.amount, 0) * 100) / 100,
+    amount: run.drafts.reduce((s, d) => s + cents(d.amount), 0) / 100,
   };
 }

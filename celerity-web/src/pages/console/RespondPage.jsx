@@ -197,6 +197,25 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
                     ),
                   },
                   { key: "rationale", label: "Agent's reason", render: (d) => <span style={{ font: "var(--text-meta)" }}>{d.rationale}</span> },
+                  ...(run.status === "awaiting_approval"
+                    ? [
+                        {
+                          key: "remove",
+                          label: "",
+                          render: (d) => (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={busy}
+                              aria-label={`Remove the draft for ${familiesById[d.family_id]?.name || d.family_id}`}
+                              onClick={() => act("Draft removed.", () => api.removeDraft(run.id, d.family_id)).catch(() => {})}
+                            >
+                              Remove
+                            </Button>
+                          ),
+                        },
+                      ]
+                    : []),
                 ]}
                 rows={run.drafts}
               />
