@@ -108,6 +108,61 @@ export async function createPayoutBatch({ senderBatchId, requestId = senderBatch
   });
 }
 
+// --- Checkout (Orders v2): how funders put money into a pool -----------------
+
+/** Create an order the funder approves on PayPal. Returns its id and the
+ * PayPal page to send them to. */
+export async function createOrder({ amount, currency, poolId, poolName, returnUrl, cancelUrl, requestId }) {
+  const order = await call("POST", "/v2/checkout/orders", {
+    requestId,
+    body: {
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          custom_id: poolId,
+          description: `Celerity Relief: ${poolName}`.slice(0, 127),
+          amount: { currency_code: currency, value: money(amount) },
+        },
+      ],
+      payment_source: {
+        paypal: {
+          experience_context: {
+            brand_name: "Celerity Relief",
+            shipping_preference: "NO_SHIPPING",
+            user_action: "PAY_NOW",
+            return_url: returnUrl,
+            cancel_url: cancelUrl,
+          },
+        },
+      },
+    },
+  });
+  const approveUrl = order.links?.find((l) => l.rel === "payer-action" || l.rel === "approve")?.href;
+  if (!approveUrl) throw new PayPalError("PayPal returned no approval link for the order");
+  return { id: order.id, approveUrl };
+}
+
+/** The first capture of an order, in a flat shape. */
+function captureOf(order) {
+  const c = order.purchase_units?.[0]?.payments?.captures?.[0];
+  return c
+    ? { orderId: order.id, captureId: c.id, status: c.status, amount: c.amount?.value, currency: c.amount?.currency_code }
+    : { orderId: order.id, captureId: null, status: order.status, amount: null, currency: null };
+}
+
+/** Capture an approved order. An order captured already (a reload of the
+ * return page, or the webhook got there first) is read back instead. */
+export async function captureOrder(orderId) {
+  const path = `/v2/checkout/orders/${encodeURIComponent(orderId)}`;
+  try {
+    return captureOf(await call("POST", `${path}/capture`, { body: {}, requestId: `capture-${orderId}` }));
+  } catch (e) {
+    const already = e instanceof PayPalError && e.status === 422 && JSON.stringify(e.details || "").includes("ORDER_ALREADY_CAPTURED");
+    if (!already) throw e;
+    return captureOf(await call("GET", path));
+  }
+}
+
 export async function getPayoutBatch(payoutBatchId) {
   return call("GET", `/v1/payments/payouts/${encodeURIComponent(payoutBatchId)}?page_size=1000`);
 }

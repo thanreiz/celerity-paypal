@@ -29,7 +29,8 @@ Rules:
 - Never invent family IDs. Only use IDs returned by search_families.
 - If the bulletin contains no wind signals for registered areas, record the facts you found, draft nothing, and explain.
 - Amounts are in ${POLICY.currency}.
-- Write storm names in title case ("Typhoon Dalisay"), even where the bulletin uses capitals.`;
+- Write storm names in title case ("Typhoon Dalisay"), even where the bulletin uses capitals.
+- Payouts are paid from funders' pools. If draft_payout refuses a family because the pools that cover it are short, don't retry it; list that family in your summary as unfunded.`;
 
 export const TOOLS = [
   {

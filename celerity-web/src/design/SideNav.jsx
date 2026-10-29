@@ -8,6 +8,15 @@ const ICONS = {
       <path d="M12 17l4-5" />
     </>
   ),
+  funds: (
+    // stacked coins — pooled money from many funders
+    <>
+      <ellipse cx="12" cy="6" rx="7" ry="2.6" />
+      <path d="M5 6v4c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6" />
+      <path d="M5 10v4c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-4" />
+      <path d="M5 14v4c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-4" />
+    </>
+  ),
   respond: (
     // bolt — a bulletin arrives, the agent responds
     <path d="M13 2 4.5 13.5H11l-1 8.5L18.5 10.5H12l1-8.5Z" />

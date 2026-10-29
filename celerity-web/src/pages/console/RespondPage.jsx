@@ -85,6 +85,32 @@ function Trace({ run, familiesById }) {
   );
 }
 
+/** Which funders' pools pay for this run if it is approved now. */
+function FundingSplit({ funding, pools, currency, familiesById }) {
+  const name = (id) => pools.find((p) => p.id === id)?.name || id;
+  return (
+    <div style={{ marginTop: 10 }}>
+      {funding.pools.length > 0 && (
+        <p style={{ font: "var(--text-meta)", margin: 0 }}>
+          <span style={{ color: "var(--text-faint)" }}>Paid from </span>
+          {funding.pools.map((p, i) => (
+            <span key={p.pool_id}>
+              {i > 0 && " · "}
+              <strong>{name(p.pool_id)}</strong> {money(p.amount, currency)}
+            </span>
+          ))}
+        </p>
+      )}
+      {funding.shortfalls.map((s) => (
+        <p key={s.family_id} style={{ font: "var(--text-meta)", color: "var(--bad-text)", margin: "4px 0 0" }}>
+          {familiesById[s.family_id]?.name || s.family_id}: the pools for {s.province} are short by {money(s.short, currency)}. Remove this draft
+          or add funds before approving.
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function RunCard({ run, data, config, act, busy, go, latest }) {
   const [open, setOpen] = useState(latest);
   const currency = config.policy.currency;
@@ -255,6 +281,7 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
                   of the {money(config.policy.maxPerRun, currency)} per-run cap
                 </span>
               </p>
+              {run.funding && <FundingSplit funding={run.funding} pools={data.pools} currency={currency} familiesById={familiesById} />}
             </div>
           )}
 
@@ -280,7 +307,7 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
                   <Button ref={rejectButton} variant="default" onClick={() => setConfirming("reject")} disabled={busy}>
                     Reject
                   </Button>
-                  <Button ref={approveButton} variant="primary" onClick={() => setConfirming("approve")} disabled={busy || !config.paypalConfigured}>
+                  <Button ref={approveButton} variant="primary" onClick={() => setConfirming("approve")} disabled={busy || !config.paypalConfigured || run.funding?.shortfalls?.length > 0}>
                     Approve & send {money(run.totals.amount, currency)}
                   </Button>
                 </div>

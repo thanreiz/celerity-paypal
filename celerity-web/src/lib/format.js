@@ -59,6 +59,9 @@ const EVENT_LABELS = {
   "payout.item_status": "Payout status",
   "payout.error": "PayPal error",
   "payout.submitting": "Sending to PayPal",
+  "pool.created": "Funding pool opened",
+  "pool.funded": "Pool funded",
+  "pool.funding_mismatch": "Funding amount mismatch",
   "payout.resumed": "PayPal submission resumed",
   "payout.unconfirmed": "PayPal unconfirmed",
   "webhook.received": "PayPal webhook",
@@ -96,7 +99,11 @@ export function eventDetail(e, names = {}) {
     case "payout.error":
       return d.message || `PayPal refused the batch${d.name ? ` (${d.name})` : ""}`;
     case "payout.submitting":
-      return `${d.recipients} payouts, ${money(d.amount, d.currency)} sent to PayPal`;
+      return `${d.recipients} payouts, ${money(d.amount, d.currency)} sent to PayPal${d.pools?.length ? ` from ${d.pools.length} pool${d.pools.length === 1 ? "" : "s"}` : ""}`;
+    case "pool.created":
+      return `${d.name} (${d.funder})${d.provinces?.length ? `: ${d.provinces.join(", ")}` : ": nationwide"}`;
+    case "pool.funded":
+      return `${d.funder_name} → ${d.pool}, ${money(d.amount, d.currency)}`;
     case "payout.unconfirmed":
       return d.message || "PayPal did not confirm yet; approve again to resume";
     case "run.draft_removed":

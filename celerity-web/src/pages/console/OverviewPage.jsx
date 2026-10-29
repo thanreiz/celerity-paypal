@@ -6,11 +6,13 @@ import StatusPill from "../../design/StatusPill";
 import { money, when, eventLabel, eventDetail, stormName } from "../../lib/format";
 import { PageHeader, SystemStatus, Label } from "./parts";
 
+// The five steps of the Celerity rail.
 const STEPS = [
-  ["Bulletin arrives", "A typhoon bulletin is pasted in or picked from the feed."],
-  ["Agent drafts", "An AI agent reads it, finds families in signal areas, and drafts payouts. Code enforces every cap."],
-  ["Human approves", "A coordinator reviews each draft and its reason, then approves or rejects the run."],
-  ["PayPal pays", "Payouts sends the money. Webhooks update each family's status here."],
+  ["Fund", "Funders put money into pools earmarked for an area, through PayPal Checkout."],
+  ["Trigger", "A typhoon bulletin arrives. An AI agent reads it and drafts payouts for families in signal areas; code enforces every cap."],
+  ["Settle", "A coordinator approves the run. Each payout is split across the pools that cover the family, and never paid twice."],
+  ["Cash out", "PayPal Payouts sends the money. Webhooks update each family's status here."],
+  ["Proof", "Every step lands on a hash-chained record, and the public page shows each funder where its money went."],
 ];
 
 export default function OverviewPage({ data, config, go }) {

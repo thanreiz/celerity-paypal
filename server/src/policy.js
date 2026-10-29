@@ -1,3 +1,5 @@
+import { fundingProblem } from "./funding.js";
+
 // Hard payout limits. The agent proposes; this module decides. Every draft
 // is checked here when the agent drafts it and again when a coordinator
 // approves, so neither a confused model nor a stale run can exceed policy.
@@ -39,7 +41,7 @@ export const POLICY = Object.freeze({
 
 export const VULNERABILITY_FLAGS = ["senior", "pwd", "infant", "pregnant"];
 
-const norm = (s) => String(s || "").trim().toLowerCase();
+export const norm = (s) => String(s || "").trim().toLowerCase();
 
 // "Typhoon Dalisay", "DALISAY" and "Super Typhoon Dalisay (Haikui)" are one
 // storm: drop the category, any bracketed international name, and anything
@@ -76,7 +78,7 @@ export function maxAmountFor(family, signal, policy = POLICY) {
 }
 
 // Item states where no money reached the family, so a retry is allowed.
-const NOT_PAID = new Set(["FAILED", "RETURNED", "BLOCKED", "REFUNDED", "REVERSED", "DENIED", "CANCELED"]);
+export const NOT_PAID = new Set(["FAILED", "RETURNED", "BLOCKED", "REFUNDED", "REVERSED", "DENIED", "CANCELED"]);
 const COOLDOWN_DAYS = 7;
 
 /** Families already paid (or in flight) for this storm. Failed or returned
@@ -142,6 +144,11 @@ export function checkDraft(state, run, draft, policy = POLICY) {
   }
   const total = (others.reduce((s, d) => s + cents(d.amount), 0) + (Number.isFinite(amount) ? cents(amount) : 0)) / 100;
   if (total > policy.maxPerRun) errors.push(`run total ${total} would exceed the per-run cap of ${policy.maxPerRun}`);
+  // Only once the draft is otherwise valid: then the pools must cover it.
+  if (!errors.length) {
+    const unfunded = fundingProblem(state, run, { ...draft, amount });
+    if (unfunded) errors.push(unfunded);
+  }
   return errors;
 }
 

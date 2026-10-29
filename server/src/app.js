@@ -12,7 +12,8 @@ import { POLICY, VULNERABILITY_FLAGS, runTotals } from "./policy.js";
 import { runAgent } from "./agent.js";
 import { approveRun, rejectRun, refreshBatch, applyWebhookEvent, HttpError } from "./payouts.js";
 import { waitUntil } from "@vercel/functions";
-import { PayPalError, verifyWebhookSignature } from "./paypal.js";
+import { PayPalError, captureOrder, createOrder, verifyWebhookSignature } from "./paypal.js";
+import { FUND_LIMITS, addPendingContribution, allocateRun, completeContribution, poolLedger, poolTotals } from "./funding.js";
 import { newId, verifyChain } from "./store.js";
 
 const SUCCESS_STATES = new Set(["SUCCESS"]);
@@ -30,7 +31,9 @@ const PUBLIC_DETAIL = {
   "run.rejected": [],
   "run.draft_removed": ["recipients", "amount", "currency"],
   "run.approved": ["recipients", "amount", "currency"],
-  "payout.submitting": ["recipients", "amount", "currency"],
+  "payout.submitting": ["recipients", "amount", "currency", "pools"],
+  "pool.created": ["name", "funder", "provinces"],
+  "pool.funded": ["pool", "funder_name", "amount", "currency"],
   "payout.resumed": [],
   "payout.unconfirmed": [],
   "payout.error": ["name", "debugId"],
@@ -75,18 +78,28 @@ function sameSecret(a, b) {
 // Wrong-key attempts per client, per warm instance. Serverless instances
 // don't share memory, so this slows guessing rather than stopping it; the
 // key itself is the real control.
-const FAILED_AUTH_LIMIT = 10;
-const FAILED_AUTH_WINDOW_MS = 10 * 60_000;
-const failedAuth = new Map();
-function tooManyFailures(ip, now = Date.now()) {
-  const recent = (failedAuth.get(ip) || []).filter((t) => now - t < FAILED_AUTH_WINDOW_MS);
-  failedAuth.set(ip, recent);
-  return recent.length >= FAILED_AUTH_LIMIT;
+function limiter(limit, windowMs) {
+  const hits = new Map();
+  return {
+    over(ip, now = Date.now()) {
+      const recent = (hits.get(ip) || []).filter((t) => now - t < windowMs);
+      hits.set(ip, recent);
+      return recent.length >= limit;
+    },
+    note(ip) {
+      hits.get(ip).push(Date.now());
+      if (hits.size > 10_000) hits.delete(hits.keys().next().value);
+    },
+  };
 }
-function noteFailure(ip) {
-  failedAuth.get(ip).push(Date.now());
-  if (failedAuth.size > 10_000) failedAuth.delete(failedAuth.keys().next().value);
-}
+const failedAuth = limiter(10, 10 * 60_000);
+// Checkout orders anyone can start from the public page.
+const fundStarts = limiter(10, 10 * 60_000);
+const clientIp = (req) => req.get("x-forwarded-for")?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+
+// Where PayPal sends a funder back after Checkout.
+const baseUrl = (req) =>
+  (process.env.PUBLIC_URL || `${req.get("x-forwarded-proto") || req.protocol}://${req.get("x-forwarded-host") || req.get("host")}`).replace(/\/$/, "");
 
 // The name a coordinator signs in with is shown in approvals and the trace.
 const actorName = (raw) =>
@@ -124,11 +137,11 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
 
   function coordinator(req, res, next) {
     if (coordinatorKey) {
-      const ip = req.get("x-forwarded-for")?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
-      if (tooManyFailures(ip)) return res.status(429).json({ error: "too many wrong keys; try again in a few minutes" });
+      const ip = clientIp(req);
+      if (failedAuth.over(ip)) return res.status(429).json({ error: "too many wrong keys; try again in a few minutes" });
       const given = req.get("x-coordinator-key") || "";
       if (!sameSecret(given, coordinatorKey)) {
-        noteFailure(ip);
+        failedAuth.note(ip);
         return res.status(401).json({ error: given ? "that coordinator key is not valid" : "coordinator key required" });
       }
     }
@@ -147,12 +160,19 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       config: publicConfig(POLICY),
       families: state.families,
       bulletins: state.bulletins,
-      runs: [...state.runs].reverse().map((r) => ({ ...r, totals: runTotals(r) })),
+      runs: [...state.runs].reverse().map((r) => ({ ...r, totals: runTotals(r), funding: r.status === "awaiting_approval" ? fundingPreview(state, r) : undefined })),
       batches: [...state.batches].reverse(),
+      pools: poolLedger(state),
       events: state.events.slice(-300).reverse(),
       chain: verifiedChain(state.events),
     });
   }));
+
+  // Which funders would pay for a run if it were approved now.
+  function fundingPreview(state, run) {
+    const { allocations, shortfalls } = allocateRun(state, run);
+    return { pools: poolTotals(allocations), shortfalls };
+  }
 
   // Public transparency view: aggregates and the evidence chain, no PII.
   app.get("/api/public", wrap(async (req, res) => {
@@ -184,10 +204,103 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         amount: b.items.reduce((s, i) => s + i.amount, 0),
         delivered: b.items.filter((i) => SUCCESS_STATES.has(i.status)).length,
       })),
+      pools: poolLedger(state),
       events: state.events.slice(-100).reverse().map(publicEvent),
       chain: verifiedChain(state.events),
     });
   }));
+
+  // --- Step 1: funders and pools ------------------------------------------------
+
+  app.get("/api/pools", wrap(async (req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=10, stale-while-revalidate=30");
+    res.json({ currency: POLICY.currency, limits: FUND_LIMITS, pools: poolLedger(await store.read()) });
+  }));
+
+  app.post(
+    "/api/pools",
+    coordinator,
+    wrap(async (req, res) => {
+      const b = req.body || {};
+      const name = text(b.name, "name", 80);
+      const funder = text(b.funder, "funder", 80);
+      if (b.provinces != null && !Array.isArray(b.provinces)) throw new HttpError(400, "provinces must be a list");
+      const provinces = (b.provinces || []).map((p) => text(p, "province", 60));
+      if (provinces.length > 30) throw new HttpError(400, "at most 30 provinces");
+      const pool = { id: newId("pool"), name, funder, provinces, hazard: "typhoon", created_at: new Date().toISOString() };
+      await store.mutate((state, log) => {
+        state.pools.push(pool);
+        log("pool.created", req.actor, { name, funder, provinces }, pool.id);
+      });
+      res.status(201).json(pool);
+    })
+  );
+
+  // Anyone can fund a pool: this starts a PayPal Checkout and returns the
+  // PayPal page to send the funder to. Nothing is credited until PayPal
+  // reports the capture (return redirect or webhook).
+  app.post(
+    "/api/pools/:id/fund",
+    wrap(async (req, res) => {
+      const ip = clientIp(req);
+      if (fundStarts.over(ip)) throw new HttpError(429, "too many checkouts started; try again in a few minutes");
+      const funderName = text(req.body?.funder_name, "funder_name", 80);
+      const amount = Number(req.body?.amount);
+      if (!Number.isFinite(amount) || amount < FUND_LIMITS.min || amount > FUND_LIMITS.max) {
+        throw new HttpError(400, `amount must be between ${FUND_LIMITS.min} and ${FUND_LIMITS.max} ${POLICY.currency}`);
+      }
+      if (Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-6) throw new HttpError(400, "amount has more than 2 decimals");
+      const pool = (await store.read()).pools.find((p) => p.id === req.params.id);
+      if (!pool) throw new HttpError(404, "pool not found");
+      fundStarts.note(ip);
+
+      const base = baseUrl(req);
+      const order = await createOrder({
+        amount,
+        currency: POLICY.currency,
+        poolId: pool.id,
+        poolName: pool.name,
+        returnUrl: `${base}/api/fund/return`,
+        cancelUrl: `${base}/api/fund/cancel`,
+        requestId: newId("fund"),
+      });
+      await store.mutate((state) => addPendingContribution(state, { pool, funderName, amount, orderId: order.id }));
+      res.status(201).json({ approveUrl: order.approveUrl, order_id: order.id });
+    })
+  );
+
+  // PayPal sends the funder here after they approve (with ?token=ORDER_ID).
+  app.get(
+    "/api/fund/return",
+    wrap(async (req, res) => {
+      const back = (q) => res.redirect(302, `${baseUrl(req)}/#/public?${q}`);
+      const orderId = String(req.query.token || "");
+      const pending = (await store.read()).contributions.find((k) => k.order_id === orderId);
+      if (!orderId || !pending) return back("funded=unknown");
+      let capture;
+      try {
+        capture = await captureOrder(orderId);
+      } catch (e) {
+        console.error("capture failed", e);
+        return back("funded=failed");
+      }
+      const outcome = await store.mutate((state, log) => completeContribution(state, log, { ...capture, source: "paypal" }));
+      if (outcome.funded || outcome.duplicate) return back(`funded=${encodeURIComponent(pending.pool_id)}&amount=${pending.amount}`);
+      return back("funded=failed");
+    })
+  );
+
+  app.get(
+    "/api/fund/cancel",
+    wrap(async (req, res) => {
+      const orderId = String(req.query.token || "");
+      await store.mutate((state) => {
+        const k = state.contributions.find((x) => x.order_id === orderId && x.status === "pending");
+        if (k) k.status = "cancelled";
+      });
+      res.redirect(302, `${baseUrl(req)}/#/public?funded=cancelled`);
+    })
+  );
 
   app.post(
     "/api/families",
@@ -434,7 +547,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         const outcome = applyWebhookEvent(state, log, event);
         // Events for batches this app didn't send (e.g. the smoke test) are
         // acknowledged but kept out of the log.
-        if (outcome.batch) log("webhook.received", "paypal", { event_type: event.event_type, id: event.id, ...outcome });
+        if (outcome.batch || outcome.funded) log("webhook.received", "paypal", { event_type: event.event_type, id: event.id, ...outcome });
       });
       res.json({ ok: true });
     })

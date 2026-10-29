@@ -4,15 +4,37 @@ import Table from "../../design/Table";
 import StatusPill from "../../design/StatusPill";
 import Badge from "../../design/Badge";
 import CountUp from "../../design/CountUp";
+import Toast from "../../design/Toast";
+import { PoolList } from "./Pools";
 import { api } from "../../lib/api";
 import { money, when, eventLabel, eventDetail, short, stormName } from "../../lib/format";
 import { ChainStatus } from "../console/EvidencePage";
 
 /** Public, no-login page: how much relief went out, for which storm, and
  * the hash-chained record behind it. No names or emails. */
+// After PayPal Checkout the server sends the funder back to
+// #/public?funded=<pool id>&amount=... (or cancelled / failed).
+function fundedNotice() {
+  const q = new URLSearchParams(window.location.hash.split("?")[1] || "");
+  const funded = q.get("funded");
+  if (!funded) return null;
+  if (funded === "cancelled") return { msg: "Payment cancelled. Nothing was charged." };
+  if (funded === "failed" || funded === "unknown") return { msg: "PayPal didn't confirm that payment, so nothing was added.", error: true };
+  return { poolId: funded, amount: Number(q.get("amount")) || 0 };
+}
+
 export default function TransparencyPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(fundedNotice);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    // Drop the query so a reload doesn't show it again.
+    window.history.replaceState(null, "", "#/public");
+    const t = setTimeout(() => setNotice(null), 9000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   useEffect(() => {
     document.title = "Where the relief went · Celerity Relief";
@@ -86,6 +108,17 @@ export default function TransparencyPage() {
               ))}
             </div>
 
+            <section className="cel-stack" style={{ gap: 12 }}>
+              <div>
+                <h2 style={{ font: "var(--text-h2)", margin: 0 }}>Who funds this</h2>
+                <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", margin: "4px 0 0", maxWidth: 680 }}>
+                  Funders put money into pools earmarked for an area. When a storm hits, each payout is split across the pools that cover
+                  that family, so every peso can be traced back to whoever gave it. Anyone can add to a pool through PayPal.
+                </p>
+              </div>
+              <PoolList pools={data.pools} currency={data.currency} />
+            </section>
+
             <Card title="Payout batches">
               <Table
                 rowKey={(r) => r.id}
@@ -137,6 +170,17 @@ export default function TransparencyPage() {
           </>
         )}
       </main>
+      {notice && (
+        <Toast
+          error={notice.error}
+          message={
+            notice.msg ||
+            `Thank you. ${money(notice.amount, data?.currency || "PHP")} was added to ${
+              data?.pools?.find((p) => p.id === notice.poolId)?.name || "the pool"
+            } through PayPal.`
+          }
+        />
+      )}
     </div>
   );
 }
