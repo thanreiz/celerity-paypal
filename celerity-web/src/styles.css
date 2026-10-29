@@ -10,10 +10,12 @@ html {
   text-size-adjust: 100%;
 }
 
+/* clip, not hidden: hidden turns body into a scroll container, which breaks
+   position: sticky for everything inside it (the phone tab strip). */
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -349,8 +351,12 @@ a:focus-visible {
   cursor: pointer;
 }
 .cel-console-tabs button.is-active { background: var(--primary); color: var(--on-primary); }
+/* Desktop: the side nav is pinned full-height on the left and only the page
+   content scrolls. Fixed, not sticky, so it can't be scrolled away. */
 @media (min-width: 900px) {
-  .cel-console-side { display: flex; position: sticky; top: 0; height: 100dvh; align-self: flex-start; }
+  .cel-console-side { display: flex; position: fixed; top: 0; left: 0; bottom: 0; width: 256px; z-index: 6; }
+  .cel-console-side > nav { height: 100%; overflow-y: auto; }
+  .cel-console-main { margin-left: 256px; }
   .cel-console-tabs { display: none; }
 }
 
