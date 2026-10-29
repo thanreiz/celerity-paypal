@@ -43,7 +43,7 @@ const signedHeaders = {
   "paypal-cert-url": "https://api.sandbox.paypal.com/cert",
   "paypal-transmission-id": "t-1",
   "paypal-transmission-sig": "sig",
-  "paypal-transmission-time": "2026-10-29T00:00:00Z",
+  "paypal-transmission-time": new Date().toISOString(),
 };
 const post = (id, headers = {}) =>
   fetch(`${base}/api/webhooks/paypal`, {

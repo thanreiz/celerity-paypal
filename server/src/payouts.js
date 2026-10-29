@@ -260,7 +260,7 @@ const ITEM_EVENT_STATUS = {
 export function applyWebhookEvent(state, log, event) {
   if (state.webhookIds.includes(event.id)) return { duplicate: true };
   state.webhookIds.push(event.id);
-  if (state.webhookIds.length > 1000) state.webhookIds.splice(0, state.webhookIds.length - 1000);
+  if (state.webhookIds.length > 5000) state.webhookIds.splice(0, state.webhookIds.length - 5000);
 
   const type = event.event_type || "";
   const r = event.resource || {};

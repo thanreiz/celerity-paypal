@@ -41,6 +41,13 @@ function stableStringify(v) {
   return JSON.stringify(v);
 }
 
+// Postgres jsonb rejects NUL characters and unpaired UTF-16 surrogates, which
+// model output or pasted text can contain. Strip them before anything is
+// hashed or saved, so every backend stores the same thing.
+export function storable(value) {
+  return JSON.stringify(value, (k, v) => (typeof v === "string" ? v.replace(/\u0000/g, "").toWellFormed() : v));
+}
+
 export function verifyChain(events) {
   let prev = GENESIS;
   for (let i = 0; i < events.length; i++) {
@@ -63,8 +70,8 @@ export function eventLogger(state) {
       type,
       actor,
       ref,
-      // Round-trip through JSON so the hash matches what storage gives back.
-      detail: JSON.parse(JSON.stringify(detail)),
+      // Round-trip through storable JSON so the hash matches what storage gives back.
+      detail: JSON.parse(storable(detail)),
       prevHash,
     };
     entry.hash = hashEntry(entry);
@@ -161,7 +168,7 @@ export function createPgStore({ db, seed, table = "celerity_state" }) {
         const { rows } = await tx.query(`SELECT doc FROM ${table} WHERE id = 1 FOR UPDATE`);
         const draft = { ...emptyState(), ...rows[0].doc };
         const out = await fn(draft, eventLogger(draft));
-        await tx.query(`UPDATE ${table} SET doc = $1, updated_at = now() WHERE id = 1`, [JSON.stringify(draft)]);
+        await tx.query(`UPDATE ${table} SET doc = $1, updated_at = now() WHERE id = 1`, [storable(draft)]);
         return out;
       });
     },

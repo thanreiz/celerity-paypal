@@ -4,7 +4,7 @@
 // serverless function (Vercel).
 
 import express from "express";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { config, publicConfig } from "./config.js";
@@ -12,7 +12,7 @@ import { POLICY, VULNERABILITY_FLAGS, runTotals } from "./policy.js";
 import { runAgent } from "./agent.js";
 import { approveRun, rejectRun, refreshBatch, applyWebhookEvent, HttpError } from "./payouts.js";
 import { waitUntil } from "@vercel/functions";
-import { verifyWebhookSignature } from "./paypal.js";
+import { PayPalError, verifyWebhookSignature } from "./paypal.js";
 import { newId, verifyChain } from "./store.js";
 
 const SUCCESS_STATES = new Set(["SUCCESS"]);
@@ -66,10 +66,45 @@ const STALE_RUN_MS = 6 * 60_000;
 // The agent itself gives up before Vercel's 300s limit can kill it silently.
 const RUN_DEADLINE_MS = Number(process.env.RUN_DEADLINE_MS) || 240_000;
 
+// Compare digests so the comparison takes the same time whatever the length.
+const digest = (v) => createHash("sha256").update(String(v)).digest();
 function sameSecret(a, b) {
-  const x = Buffer.from(String(a));
-  const y = Buffer.from(String(b));
-  return x.length === y.length && timingSafeEqual(x, y);
+  return timingSafeEqual(digest(a), digest(b));
+}
+
+// Wrong-key attempts per client, per warm instance. Serverless instances
+// don't share memory, so this slows guessing rather than stopping it; the
+// key itself is the real control.
+const FAILED_AUTH_LIMIT = 10;
+const FAILED_AUTH_WINDOW_MS = 10 * 60_000;
+const failedAuth = new Map();
+function tooManyFailures(ip, now = Date.now()) {
+  const recent = (failedAuth.get(ip) || []).filter((t) => now - t < FAILED_AUTH_WINDOW_MS);
+  failedAuth.set(ip, recent);
+  return recent.length >= FAILED_AUTH_LIMIT;
+}
+function noteFailure(ip) {
+  failedAuth.get(ip).push(Date.now());
+  if (failedAuth.size > 10_000) failedAuth.delete(failedAuth.keys().next().value);
+}
+
+// The name a coordinator signs in with is shown in approvals and the trace.
+const actorName = (raw) =>
+  String(raw || "")
+    .replace(/[^\p{L}\p{N} .,'-]/gu, "")
+    .trim()
+    .slice(0, 40) || "coordinator";
+
+// PayPal webhook deliveries older than this are refused even with a valid
+// signature, so an old event can't be replayed after it leaves the dedupe list.
+const WEBHOOK_MAX_AGE_MS = 60 * 60_000;
+
+// verifyChain re-hashes every entry; reuse the answer while the log is unchanged.
+let chainCache = { key: null, result: null };
+function verifiedChain(events) {
+  const key = `${events.length}:${events.at(-1)?.hash || ""}`;
+  if (chainCache.key !== key) chainCache = { key, result: verifyChain(events) };
+  return chainCache.result;
 }
 
 export function createApp({ store, aiClient, staticDir, coordinatorKey = config.coordinatorKey } = {}) {
@@ -79,16 +114,25 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "no-referrer");
+    // API answers are per-request and may be coordinator-only; /api/public
+    // opts back in to short CDN caching below.
+    if (req.path.startsWith("/api/")) res.setHeader("Cache-Control", "no-store");
     next();
   });
 
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
   function coordinator(req, res, next) {
-    if (coordinatorKey && !sameSecret(req.get("x-coordinator-key") || "", coordinatorKey)) {
-      return res.status(401).json({ error: "coordinator key required" });
+    if (coordinatorKey) {
+      const ip = req.get("x-forwarded-for")?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+      if (tooManyFailures(ip)) return res.status(429).json({ error: "too many wrong keys; try again in a few minutes" });
+      const given = req.get("x-coordinator-key") || "";
+      if (!sameSecret(given, coordinatorKey)) {
+        noteFailure(ip);
+        return res.status(401).json({ error: given ? "that coordinator key is not valid" : "coordinator key required" });
+      }
     }
-    req.actor = (req.get("x-coordinator-name") || "coordinator").slice(0, 60);
+    req.actor = actorName(req.get("x-coordinator-name"));
     next();
   }
 
@@ -106,13 +150,14 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       runs: [...state.runs].reverse().map((r) => ({ ...r, totals: runTotals(r) })),
       batches: [...state.batches].reverse(),
       events: state.events.slice(-300).reverse(),
-      chain: verifyChain(state.events),
+      chain: verifiedChain(state.events),
     });
   }));
 
   // Public transparency view: aggregates and the evidence chain, no PII.
   app.get("/api/public", wrap(async (req, res) => {
     const state = await store.read();
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=10, stale-while-revalidate=30");
     const items = state.batches.flatMap((b) => b.items.map((i) => ({ ...i, storm: b.storm })));
     // A Map, not an object: storm names come from the model, and a storm
     // called "__proto__" must not reach Object.prototype.
@@ -140,7 +185,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         delivered: b.items.filter((i) => SUCCESS_STATES.has(i.status)).length,
       })),
       events: state.events.slice(-100).reverse().map(publicEvent),
-      chain: verifyChain(state.events),
+      chain: verifiedChain(state.events),
     });
   }));
 
@@ -170,11 +215,15 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         paypal_email: email,
         registered_at: new Date().toISOString(),
       };
-      await store.mutate((state, log) => {
+      const shared = await store.mutate((state, log) => {
+        const same = state.families.filter((f) => f.paypal_email.toLowerCase() === email.toLowerCase()).length;
         state.families.push(family);
         log("family.registered", req.actor, { municipality: family.municipality, province: family.province }, family.id);
+        return same;
       });
-      res.status(201).json(family);
+      // Not blocked (households can share one PayPal account), but a coordinator
+      // should see it: each family is paid separately.
+      res.status(201).json(shared ? { ...family, warning: `this PayPal email is already used by ${shared} other famil${shared === 1 ? "y" : "ies"}` } : family);
     })
   );
 
@@ -369,6 +418,8 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       const event = req.body;
       if (!event?.id || !event?.event_type) throw new HttpError(400, "not a PayPal webhook event");
       if (config.paypal.webhookId) {
+        const sent = Date.parse(req.get("paypal-transmission-time") || "");
+        if (Number.isFinite(sent) && Date.now() - sent > WEBHOOK_MAX_AGE_MS) throw new HttpError(400, "webhook delivery is too old");
         const ok = await verifyWebhookSignature(req.headers, event);
         if (!ok) {
           // Not written to the evidence log: anyone can post here, and the
@@ -397,14 +448,23 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   }
 
   // eslint-disable-next-line no-unused-vars
+  // Only HttpErrors carry a message meant for the caller. Everything else
+  // (database, SDK, PayPal internals) is logged and answered generically.
   app.use((err, req, res, next) => {
-    const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 500;
-    if (status >= 500 && !(err instanceof HttpError)) console.error(err);
-    res.status(status).json({
-      error: err.message || "internal error",
-      ...(err.violations ? { violations: err.violations } : {}),
-      ...(err.debugId ? { debugId: err.debugId } : {}),
-    });
+    if (err instanceof HttpError) {
+      return res.status(err.status).json({
+        error: err.message,
+        ...(err.violations ? { violations: err.violations } : {}),
+        ...(err.debugId ? { debugId: err.debugId } : {}),
+      });
+    }
+    if (err.type === "entity.parse.failed") return res.status(400).json({ error: "request body is not valid JSON" });
+    if (err.type === "entity.too.large") return res.status(413).json({ error: "request body is too large" });
+    console.error(err);
+    if (err instanceof PayPalError) {
+      return res.status(502).json({ error: "PayPal request failed", ...(err.debugId ? { debugId: err.debugId } : {}) });
+    }
+    res.status(500).json({ error: "internal error" });
   });
 
   return app;
