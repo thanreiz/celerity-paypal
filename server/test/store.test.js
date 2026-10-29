@@ -93,4 +93,13 @@ test("Postgres store: seeds once, serializes writes, keeps the chain valid throu
   // A thrown error rolls the transaction back.
   await assert.rejects(store.mutate((st) => ((st.counter = 999), Promise.reject(new Error("nope")))), /nope/);
   assert.equal((await store.read()).counter, 20);
+
+  // Deleting the row resets to the seed, even on an instance that already initialized.
+  await pg.query("DELETE FROM celerity_state WHERE id = 1");
+  const reset = await store.read();
+  assert.equal(reset.counter, undefined);
+  assert.deepEqual(reset.families.map((f) => f.id), ["fam_1"]);
+  await pg.query("DELETE FROM celerity_state WHERE id = 1");
+  await store.mutate((st) => (st.counter = 1));
+  assert.equal((await again.read()).counter, 1);
 });

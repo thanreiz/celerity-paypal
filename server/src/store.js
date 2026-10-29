@@ -137,15 +137,26 @@ export function createPgStore({ db, seed, table = "celerity_state" }) {
     return ready;
   }
 
+  // A warm instance remembers init() succeeded; if the row was deleted since
+  // (a manual reset), run init again so it re-seeds.
+  async function load() {
+    await init();
+    let { rows } = await db.query(`SELECT doc FROM ${table} WHERE id = 1`);
+    if (!rows.length) {
+      ready = null;
+      await init();
+      ({ rows } = await db.query(`SELECT doc FROM ${table} WHERE id = 1`));
+    }
+    return rows[0].doc;
+  }
+
   return {
     kind: "postgres",
     async read() {
-      await init();
-      const { rows } = await db.query(`SELECT doc FROM ${table} WHERE id = 1`);
-      return { ...emptyState(), ...rows[0].doc };
+      return { ...emptyState(), ...(await load()) };
     },
     async mutate(fn) {
-      await init();
+      await load();
       return db.transaction(async (tx) => {
         const { rows } = await tx.query(`SELECT doc FROM ${table} WHERE id = 1 FOR UPDATE`);
         const draft = { ...emptyState(), ...rows[0].doc };
