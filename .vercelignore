@@ -1,0 +1,20 @@
+# Keep secrets, local state and tooling out of Vercel uploads
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+node_modules
+dist
+server/data/
+.claude/
+.gstack/
+.worktrees/
+.context/
+.agents/
+.cursor/
+.vscode/
+docs/
+reference/
+tools/

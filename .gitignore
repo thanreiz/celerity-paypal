@@ -33,3 +33,6 @@ DEMO-VIDEO-MOTION.pdf
 
 # VS Code MCP config carries the Stitch API key — never commit
 .vscode/
+
+# Vercel CLI project link
+.vercel
