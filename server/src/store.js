@@ -19,7 +19,7 @@ import path from "node:path";
 const GENESIS = "0".repeat(64);
 
 export function emptyState() {
-  return { families: [], bulletins: [], runs: [], batches: [], events: [], webhookIds: [] };
+  return { families: [], bulletins: [], runs: [], batches: [], events: [], webhookIds: [], pools: [], contributions: [] };
 }
 
 export function hashEntry(entry) {

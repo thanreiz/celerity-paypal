@@ -6,6 +6,7 @@
 import { POLICY, checkDraft } from "./policy.js";
 import { PayPalError, createPayoutBatch, getPayoutBatch } from "./paypal.js";
 import { newId } from "./store.js";
+import { allocateRun, completeContribution, poolTotals } from "./funding.js";
 
 export class HttpError extends Error {
   constructor(status, message, extra = {}) {
@@ -60,6 +61,18 @@ export async function approveRun(store, runId, approver) {
     }
     if (violations.length) throw new HttpError(409, "drafts no longer pass policy", { violations });
 
+    // Split every payout across the funders' pools that cover the family. A
+    // pool another run drained since drafting stops the approval here.
+    const { allocations, shortfalls } = allocateRun(state, run);
+    if (shortfalls.length) {
+      throw new HttpError(409, "drafts no longer pass policy", {
+        violations: shortfalls.map((x) => ({
+          family_id: x.family_id,
+          errors: [`funding pools for ${x.province} are short by ${x.short} ${POLICY.currency}`],
+        })),
+      });
+    }
+
     const now = new Date().toISOString();
     run.payout_attempts = (run.payout_attempts || 0) + 1;
     const batch = {
@@ -84,6 +97,7 @@ export async function approveRun(store, runId, approver) {
         status: "PENDING",
         payout_item_id: null,
         transaction_id: null,
+        funding: allocations[d.family_id],
         history: [{ at: now, status: "APPROVED", source: approver }],
       })),
     };
@@ -91,7 +105,12 @@ export async function approveRun(store, runId, approver) {
     run.status = "submitting";
     run.batch_id = batch.id;
     const amount = batch.items.reduce((s, i) => s + i.amount, 0);
-    log("payout.submitting", approver, { recipients: batch.items.length, amount, currency: POLICY.currency }, batch.id);
+    log(
+      "payout.submitting",
+      approver,
+      { recipients: batch.items.length, amount, currency: POLICY.currency, pools: poolTotals(allocations) },
+      batch.id
+    );
     return { batch: structuredClone(batch), run: structuredClone(run) };
   });
 
@@ -264,6 +283,18 @@ export function applyWebhookEvent(state, log, event) {
 
   const type = event.event_type || "";
   const r = event.resource || {};
+
+  // A funder's checkout, in case their browser never came back to the app.
+  if (type === "PAYMENT.CAPTURE.COMPLETED") {
+    return completeContribution(state, log, {
+      orderId: r.supplementary_data?.related_ids?.order_id,
+      captureId: r.id,
+      status: r.status,
+      amount: r.amount?.value,
+      currency: r.amount?.currency_code,
+      source: "paypal-webhook",
+    });
+  }
 
   if (type.startsWith("PAYMENT.PAYOUTSBATCH.")) {
     const batch = state.batches.find((b) => b.payout_batch_id === r.batch_header?.payout_batch_id);

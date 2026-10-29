@@ -4,6 +4,7 @@
 // free text to read.
 
 import { config } from "./config.js";
+import { POLICY } from "./policy.js";
 
 const FAMILIES = [
   ["Maria Santos", "Virac", "Catanduanes", 6, { senior: true }],
@@ -114,4 +115,38 @@ export function seedState(state) {
     registered_at: now,
   }));
   state.bulletins = BULLETINS.map((b) => ({ ...b, source: "PAGASA (simulated)", received_at: now }));
+
+  // Two funders already pledged, so a run can be approved out of the box;
+  // more money comes in through PayPal Checkout on the public page.
+  const pledge = POOLS_SEED[POLICY.currency] || POOLS_SEED.USD;
+  state.pools = POOLS.map((p) => ({ ...p, hazard: "typhoon", created_at: now }));
+  state.contributions = POOLS.map((p, i) => ({
+    id: `ctb_seed_${i + 1}`,
+    pool_id: p.id,
+    funder_name: p.funder,
+    amount: pledge[i],
+    currency: POLICY.currency,
+    source: "seed",
+    status: "completed",
+    order_id: null,
+    capture_id: null,
+    at: now,
+  }));
 }
+
+const POOLS = [
+  {
+    id: "pool_pcic_bicol",
+    name: "PCIC Bicol typhoon pool",
+    funder: "Philippine Crop Insurance Corp. (demo)",
+    provinces: ["Albay", "Camarines Sur", "Camarines Norte", "Catanduanes", "Sorsogon", "Masbate"],
+  },
+  {
+    id: "pool_rice_ph",
+    name: "Global Rice Foundation, Philippines",
+    funder: "Global Rice Foundation (demo)",
+    provinces: [],
+  },
+];
+// Demo pledges per pool, in the payout currency.
+const POOLS_SEED = { PHP: [50_000, 30_000], USD: [1_000, 600] };
