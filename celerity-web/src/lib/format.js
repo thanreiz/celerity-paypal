@@ -41,6 +41,9 @@ const EVENT_LABELS = {
   "payout.batch_status": "PayPal batch status",
   "payout.item_status": "Payout status",
   "payout.error": "PayPal error",
+  "payout.submitting": "Sending to PayPal",
+  "payout.resumed": "PayPal submission resumed",
+  "payout.unconfirmed": "PayPal unconfirmed",
   "webhook.received": "PayPal webhook",
   "webhook.rejected": "Webhook rejected",
   "family.registered": "Family registered",
@@ -61,14 +64,19 @@ export function eventDetail(e) {
     case "payout.batch_status":
       return `${d.payout_batch_id} → ${d.batch_status}`;
     case "payout.item_status":
-      return `${d.family_id} → ${d.status}${d.transaction_id ? ` (tx ${d.transaction_id})` : ""}`;
+      return `${d.family_id ? `${d.family_id} → ` : ""}${d.status}${d.transaction_id ? ` (tx ${d.transaction_id})` : ""}`;
     case "webhook.received":
       return d.event_type;
     case "run.started":
       return d.bulletin;
     case "run.failed":
+      return d.message || "The agent run failed";
     case "payout.error":
-      return d.message;
+      return d.message || `PayPal refused the batch${d.name ? ` (${d.name})` : ""}`;
+    case "payout.submitting":
+      return `${d.recipients} payouts, ${money(d.amount, d.currency)} sent to PayPal`;
+    case "payout.unconfirmed":
+      return d.message || "PayPal did not confirm yet; approve again to resume";
     case "run.rejected":
       return d.reason || "";
     case "family.registered":

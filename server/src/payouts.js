@@ -1,9 +1,10 @@
 // Turning approved drafts into PayPal Payouts, and keeping payout status in
-// sync from webhooks (push) or batch lookups (pull). Every change runs inside
-// store.mutate, so it is applied whole or not at all.
+// sync from webhooks (push) or batch lookups (pull). Every state change runs
+// inside store.mutate, so it is applied whole or not at all; PayPal is always
+// called outside it.
 
 import { POLICY, checkDraft } from "./policy.js";
-import { createPayoutBatch, getPayoutBatch } from "./paypal.js";
+import { PayPalError, createPayoutBatch, getPayoutBatch } from "./paypal.js";
 import { newId } from "./store.js";
 
 export class HttpError extends Error {
@@ -14,13 +15,39 @@ export class HttpError extends Error {
   }
 }
 
+// A submission younger than this may still be in flight on another instance.
+const RESUME_AFTER_MS = 30_000;
+
+// PayPal answered and refused: nothing was created, the run can be retried.
+// Anything else (timeout, network, 5xx) leaves the outcome unknown.
+const definiteRejection = (e) => e instanceof PayPalError && e.status >= 400 && e.status < 500 && e.status !== 409 && e.status !== 429;
+
+/**
+ * Approve a run and send its payouts, in three steps so no database lock is
+ * held while PayPal is called:
+ *   1. claim: re-check policy, record the batch as SUBMITTING (its items count
+ *      as paid from now on, so no other run can re-draft these families);
+ *   2. call PayPal with no lock held;
+ *   3. record PayPal's answer.
+ * If the process dies or PayPal's answer is lost between 1 and 3, the batch
+ * stays SUBMITTING and the next Approve resumes it with the same
+ * PayPal-Request-Id, which PayPal answers idempotently instead of paying twice.
+ */
 export async function approveRun(store, runId, approver) {
-  // The PayPal call happens inside the transaction: the state stays locked
-  // until the batch is recorded, so a double click can't send twice. The
-  // run-derived sender_batch_id is a second guard on PayPal's side.
-  const outcome = await store.mutate(async (state, log) => {
+  const claim = await store.mutate((state, log) => {
     const run = state.runs.find((r) => r.id === runId);
     if (!run) throw new HttpError(404, "run not found");
+
+    if (run.status === "submitting") {
+      const batch = state.batches.find((b) => b.id === run.batch_id);
+      if (Date.now() - Date.parse(batch.submitted_at) < RESUME_AFTER_MS) {
+        throw new HttpError(409, "this run's payouts are being submitted to PayPal");
+      }
+      batch.submitted_at = new Date().toISOString();
+      log("payout.resumed", approver, { attempt: batch.attempt }, batch.id);
+      return { batch: structuredClone(batch), run: structuredClone(run) };
+    }
+
     if (run.status !== "awaiting_approval") throw new HttpError(409, `run is ${run.status}, not awaiting approval`);
     if (!run.drafts.length) throw new HttpError(409, "run has no drafts");
 
@@ -33,51 +60,27 @@ export async function approveRun(store, runId, approver) {
     }
     if (violations.length) throw new HttpError(409, "drafts no longer pass policy", { violations });
 
-    const senderBatchId = `celerity-${run.id}`;
-    const items = run.drafts.map((d) => {
-      const family = state.families.find((f) => f.id === d.family_id);
-      return {
-        family_id: d.family_id,
-        receiver: family.paypal_email,
-        amount: d.amount,
-        currency: d.currency || POLICY.currency,
-        note: `Celerity Relief: emergency cash aid for ${run.storm}. Stay safe.`,
-        senderItemId: `${run.id}-${d.family_id}`,
-      };
-    });
-
-    let res;
-    try {
-      res = await createPayoutBatch({
-        senderBatchId,
-        emailSubject: "You received emergency cash aid from Celerity Relief",
-        emailMessage: `Cash aid for families affected by ${run.storm}. No action is needed to keep it; it is already yours.`,
-        items,
-      });
-    } catch (e) {
-      // Return instead of throw so the error entry is saved in the log.
-      log("payout.error", "paypal", { message: e.message, debugId: e.debugId, details: e.details }, run.id);
-      return { error: new HttpError(502, `PayPal rejected the payout: ${e.message}`, { debugId: e.debugId }) };
-    }
-
     const now = new Date().toISOString();
+    run.payout_attempts = (run.payout_attempts || 0) + 1;
     const batch = {
       id: newId("bat"),
       run_id: run.id,
       bulletin_id: run.bulletin_id,
       storm: run.storm,
-      sender_batch_id: senderBatchId,
-      payout_batch_id: res.batch_header.payout_batch_id,
-      status: res.batch_header.batch_status,
+      sender_batch_id: `celerity-${run.id}`,
+      attempt: run.payout_attempts,
+      payout_batch_id: null,
+      status: "SUBMITTING",
       approved_by: approver,
       created_at: now,
+      submitted_at: now,
       updated_at: now,
-      items: items.map((it) => ({
-        family_id: it.family_id,
-        sender_item_id: it.senderItemId,
-        receiver: it.receiver,
-        amount: it.amount,
-        currency: it.currency,
+      items: run.drafts.map((d) => ({
+        family_id: d.family_id,
+        sender_item_id: `${run.id}-${d.family_id}`,
+        receiver: state.families.find((f) => f.id === d.family_id).paypal_email,
+        amount: d.amount,
+        currency: d.currency || POLICY.currency,
         status: "PENDING",
         payout_item_id: null,
         transaction_id: null,
@@ -85,24 +88,75 @@ export async function approveRun(store, runId, approver) {
       })),
     };
     state.batches.push(batch);
-    run.status = "approved";
+    run.status = "submitting";
     run.batch_id = batch.id;
-    run.approved_by = approver;
-    run.approved_at = now;
+    const amount = batch.items.reduce((s, i) => s + i.amount, 0);
+    log("payout.submitting", approver, { recipients: batch.items.length, amount, currency: POLICY.currency }, batch.id);
+    return { batch: structuredClone(batch), run: structuredClone(run) };
+  });
 
+  const { batch, run } = claim;
+  let res, error;
+  try {
+    res = await createPayoutBatch({
+      senderBatchId: batch.sender_batch_id,
+      requestId: `${batch.sender_batch_id}-${batch.attempt}`,
+      emailSubject: "You received emergency cash aid from Celerity Relief",
+      emailMessage: `Cash aid for families affected by ${run.storm}. No action is needed to keep it; it is already yours.`,
+      items: batch.items.map((it) => ({
+        receiver: it.receiver,
+        amount: it.amount,
+        currency: it.currency,
+        note: `Celerity Relief: emergency cash aid for ${run.storm}. Stay safe.`,
+        senderItemId: it.sender_item_id,
+      })),
+    });
+  } catch (e) {
+    error = e;
+  }
+
+  const outcome = await store.mutate((state, log) => {
+    const b = state.batches.find((x) => x.id === batch.id);
+    const r = state.runs.find((x) => x.id === runId);
+    // Another instance resumed and finished this batch first.
+    if (!b || b.status !== "SUBMITTING") return { batch: b };
+
+    if (error && definiteRejection(error)) {
+      state.batches.splice(state.batches.indexOf(b), 1);
+      r.status = "awaiting_approval";
+      r.batch_id = null;
+      log("payout.error", "paypal", { message: error.message, name: error.paypalName || null, debugId: error.debugId || null }, r.id);
+      return { error: new HttpError(502, `PayPal rejected the payout: ${error.message}`, { debugId: error.debugId }) };
+    }
+    if (error) {
+      log("payout.unconfirmed", "paypal", { message: error.message, debugId: error.debugId || null }, b.id);
+      return {
+        error: new HttpError(502, "PayPal did not confirm the payout. Nothing will be paid twice: approve again to resume it.", {
+          debugId: error.debugId,
+        }),
+      };
+    }
+
+    const now = new Date().toISOString();
+    b.payout_batch_id = res.batch_header.payout_batch_id;
+    b.status = res.batch_header.batch_status;
+    b.updated_at = now;
+    r.status = "approved";
+    r.approved_by = approver;
+    r.approved_at = now;
     log(
       "run.approved",
       approver,
-      { recipients: batch.items.length, amount: batch.items.reduce((s, i) => s + i.amount, 0), currency: POLICY.currency },
-      run.id
+      { recipients: b.items.length, amount: b.items.reduce((s, i) => s + i.amount, 0), currency: POLICY.currency },
+      r.id
     );
     log(
       "payout.batch_created",
       "paypal",
-      { payout_batch_id: batch.payout_batch_id, sender_batch_id: senderBatchId, batch_status: batch.status },
-      batch.id
+      { payout_batch_id: b.payout_batch_id, sender_batch_id: b.sender_batch_id, batch_status: b.status },
+      b.id
     );
-    return { batch };
+    return { batch: b };
   });
   if (outcome.error) throw outcome.error;
   return outcome.batch;
@@ -165,6 +219,7 @@ export function applyBatchSnapshot(log, batch, snapshot, source = "paypal-poll")
 export async function refreshBatch(store, batchId) {
   const before = (await store.read()).batches.find((b) => b.id === batchId);
   if (!before) throw new HttpError(404, "batch not found");
+  if (!before.payout_batch_id) throw new HttpError(409, "this batch is still being submitted: approve the run again to resume it");
   // Ask PayPal outside the lock; apply the answer inside it.
   const snapshot = await getPayoutBatch(before.payout_batch_id);
   return store.mutate((state, log) => {

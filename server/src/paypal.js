@@ -16,6 +16,9 @@ export class PayPalError extends Error {
 
 let cachedToken = null; // { value, expiresAt }
 
+// A hung PayPal request must fail well inside Vercel's function time limit.
+const TIMEOUT_MS = 20_000;
+
 export function paypalConfigured() {
   return Boolean(config.paypal.clientId && config.paypal.clientSecret);
 }
@@ -34,6 +37,7 @@ export async function getAccessToken() {
       Accept: "application/json",
     },
     body: "grant_type=client_credentials",
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -59,6 +63,7 @@ async function call(method, path, { body, requestId } = {}) {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const text = await res.text();
   const json = text ? JSON.parse(text) : {};
@@ -79,13 +84,13 @@ export function money(value) {
 }
 
 /**
- * Create a Payouts batch. `senderBatchId` doubles as the idempotency key:
- * PayPal rejects a reused sender_batch_id for 30 days, so a retried approval
- * can never pay the same run twice.
+ * Create a Payouts batch. PayPal rejects a reused sender_batch_id for 30
+ * days, so a run can never be paid twice. `requestId` (PayPal-Request-Id)
+ * makes a resent request return the original answer instead of an error.
  */
-export async function createPayoutBatch({ senderBatchId, emailSubject, emailMessage, items }) {
+export async function createPayoutBatch({ senderBatchId, requestId = senderBatchId, emailSubject, emailMessage, items }) {
   return call("POST", "/v1/payments/payouts", {
-    requestId: senderBatchId,
+    requestId,
     body: {
       sender_batch_header: {
         sender_batch_id: senderBatchId,

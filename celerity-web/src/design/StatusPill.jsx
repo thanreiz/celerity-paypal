@@ -15,6 +15,7 @@ const MAP = {
   RUNNING: [WARN, "Agent working"],
   PENDING: [WARN, "Pending"],
   PROCESSING: [WARN, "Processing"],
+  SUBMITTING: [WARN, "Sending to PayPal"],
   UNCLAIMED: [WARN, "Unclaimed"],
   ONHOLD: [WARN, "On hold"],
   SUSPENDED: [WARN, "Suspended"],
@@ -29,7 +30,7 @@ const MAP = {
   REVERSED: [BAD, "Reversed"],
 };
 
-const LIVE = new Set(["RUNNING", "PENDING", "PROCESSING"]);
+const LIVE = new Set(["RUNNING", "PENDING", "PROCESSING", "SUBMITTING"]);
 
 /** Status pill — dot + label, never color-only. Green = done, amber = waiting
  * on someone, red = money did not arrive, gray = closed without payment. */

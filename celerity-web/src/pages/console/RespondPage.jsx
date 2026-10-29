@@ -276,6 +276,16 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
               )}
             </div>
           )}
+          {run.status === "submitting" && (
+            <div className="cel-row-actions" style={{ borderTop: "1px solid var(--container-highest)", paddingTop: 16, justifyContent: "space-between" }}>
+              <span style={{ font: "var(--text-meta)", color: "var(--warn-text)" }}>
+                Sent to PayPal, waiting for confirmation. If this stays here, resume: PayPal will not pay twice.
+              </span>
+              <Button variant="default" onClick={approve} disabled={busy}>
+                {busy ? "Resuming…" : "Resume sending"}
+              </Button>
+            </div>
+          )}
           {run.status === "approved" && (
             <p style={{ font: "var(--text-meta)", margin: 0 }}>
               Approved by {run.approved_by} {when(run.approved_at)}.{" "}

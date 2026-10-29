@@ -17,6 +17,48 @@ import { newId, verifyChain } from "./store.js";
 
 const SUCCESS_STATES = new Set(["SUCCESS"]);
 
+// What the public transparency page may show of each evidence entry. Anything
+// not listed (receiver emails, error payloads, free text typed by
+// coordinators, family ids) stays coordinator-only.
+const PUBLIC_DETAIL = {
+  "family.registered": ["municipality", "province"],
+  "family.status": ["status"],
+  "bulletin.received": ["title"],
+  "run.started": ["bulletin", "model"],
+  "run.drafted": ["storm", "areas", "recipients", "amount", "currency"],
+  "run.failed": [],
+  "run.rejected": [],
+  "run.approved": ["recipients", "amount", "currency"],
+  "payout.submitting": ["recipients", "amount", "currency"],
+  "payout.resumed": [],
+  "payout.unconfirmed": [],
+  "payout.error": ["name", "debugId"],
+  "payout.batch_created": ["payout_batch_id", "batch_status"],
+  "payout.batch_status": ["payout_batch_id", "batch_status"],
+  "payout.item_status": ["status"],
+  "webhook.received": ["event_type"],
+};
+const SYSTEM_ACTORS = new Set(["agent", "paypal", "paypal-webhook", "paypal-poll"]);
+const FAMILY_EVENTS = new Set(["family.registered", "family.status"]);
+
+function publicEvent({ detail, actor, ref, ...e }) {
+  const keys = PUBLIC_DETAIL[e.type] || [];
+  return {
+    ...e,
+    actor: SYSTEM_ACTORS.has(actor) ? actor : "coordinator",
+    ref: FAMILY_EVENTS.has(e.type) ? null : ref,
+    detail: Object.fromEntries(keys.filter((k) => detail?.[k] !== undefined).map((k) => [k, detail[k]])),
+  };
+}
+
+/** A required, trimmed string of at most `max` characters, or a 400. */
+function text(value, field, max) {
+  if (typeof value !== "string" || !value.trim()) throw new HttpError(400, `${field} is required`);
+  const v = value.trim();
+  if (v.length > max) throw new HttpError(400, `${field} must be at most ${max} characters`);
+  return v;
+}
+
 // A run still "running" after this long died with its function instance
 // (Vercel caps a function at 300s).
 const STALE_RUN_MS = 6 * 60_000;
@@ -91,10 +133,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         amount: b.items.reduce((s, i) => s + i.amount, 0),
         delivered: b.items.filter((i) => SUCCESS_STATES.has(i.status)).length,
       })),
-      events: state.events.slice(-100).reverse().map(({ detail, ...e }) => ({
-        ...e,
-        detail: { ...detail, receiver: undefined },
-      })),
+      events: state.events.slice(-100).reverse().map(publicEvent),
       chain: verifyChain(state.events),
     });
   }));
@@ -105,20 +144,24 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     wrap(async (req, res) => {
       const b = req.body || {};
       const required = ["name", "municipality", "province", "paypal_email"];
-      const missing = required.filter((k) => !String(b[k] || "").trim());
+      const missing = required.filter((k) => typeof b[k] !== "string" || !b[k].trim());
       if (missing.length) throw new HttpError(400, `missing ${missing.join(", ")}`);
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.paypal_email)) throw new HttpError(400, "paypal_email is not an email");
+      const name = text(b.name, "name", 100);
+      const municipality = text(b.municipality, "municipality", 60);
+      const province = text(b.province, "province", 60);
+      const email = text(b.paypal_email, "paypal_email", 254);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new HttpError(400, "paypal_email is not an email");
       const size = Number(b.household_size);
       if (!Number.isInteger(size) || size < 1 || size > 30) throw new HttpError(400, "household_size must be 1-30");
       const family = {
         id: newId("fam"),
-        name: b.name.trim(),
-        municipality: b.municipality.trim(),
-        province: b.province.trim(),
+        name,
+        municipality,
+        province,
         household_size: size,
-        vulnerability: Object.fromEntries(VULNERABILITY_FLAGS.map((k) => [k, Boolean(b.vulnerability?.[k])])),
+        vulnerability: Object.fromEntries(VULNERABILITY_FLAGS.map((k) => [k, b.vulnerability?.[k] === true])),
         status: "active",
-        paypal_email: b.paypal_email.trim(),
+        paypal_email: email,
         registered_at: new Date().toISOString(),
       };
       await store.mutate((state, log) => {
@@ -152,15 +195,17 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     "/api/bulletins",
     coordinator,
     wrap(async (req, res) => {
-      const text = String(req.body?.text || "").trim();
-      if (text.length < 40) throw new HttpError(400, "bulletin text is too short");
-      if (text.length > 20000) throw new HttpError(400, "bulletin text is too long");
+      if (typeof req.body?.text !== "string") throw new HttpError(400, "bulletin text must be a string");
+      const body = req.body.text.trim();
+      if (body.length < 40) throw new HttpError(400, "bulletin text is too short");
+      if (body.length > 20000) throw new HttpError(400, "bulletin text is too long");
+      const title = typeof req.body.title === "string" ? req.body.title.trim().slice(0, 120) : "";
       const bulletin = {
         id: newId("blt"),
-        title: String(req.body?.title || "").trim().slice(0, 120) || "Pasted bulletin",
+        title: title || "Pasted bulletin",
         kind: "custom",
         source: "Pasted by coordinator",
-        text,
+        text: body,
         received_at: new Date().toISOString(),
       };
       await store.mutate((state, log) => {

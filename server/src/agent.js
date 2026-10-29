@@ -117,12 +117,14 @@ export const TOOLS = [
   },
 ];
 
+// Field caps match registration; they also bound records made before it
+// enforced them, so one oversized name can't flood the model's context.
 function publicFamily(f) {
   return {
     family_id: f.id,
-    head_of_household: f.name,
-    municipality: f.municipality,
-    province: f.province,
+    head_of_household: String(f.name).slice(0, 100),
+    municipality: String(f.municipality).slice(0, 60),
+    province: String(f.province).slice(0, 60),
     household_size: f.household_size,
     vulnerability: VULNERABILITY_FLAGS.filter((k) => f.vulnerability?.[k]),
     status: f.status,
