@@ -113,16 +113,23 @@ export async function getPayoutBatch(payoutBatchId) {
  */
 export async function verifyWebhookSignature(headers, event) {
   const h = (k) => headers[k] || headers[k.toLowerCase()];
-  const result = await call("POST", "/v1/notifications/verify-webhook-signature", {
-    body: {
-      auth_algo: h("paypal-auth-algo"),
-      cert_url: h("paypal-cert-url"),
-      transmission_id: h("paypal-transmission-id"),
-      transmission_sig: h("paypal-transmission-sig"),
-      transmission_time: h("paypal-transmission-time"),
-      webhook_id: config.paypal.webhookId,
-      webhook_event: event,
-    },
-  });
-  return result.verification_status === "SUCCESS";
+  const signed = {
+    auth_algo: h("paypal-auth-algo"),
+    cert_url: h("paypal-cert-url"),
+    transmission_id: h("paypal-transmission-id"),
+    transmission_sig: h("paypal-transmission-sig"),
+    transmission_time: h("paypal-transmission-time"),
+  };
+  // Unsigned requests can't be PayPal; don't spend a PayPal call on them.
+  if (Object.values(signed).some((v) => !v)) return false;
+  try {
+    const result = await call("POST", "/v1/notifications/verify-webhook-signature", {
+      body: { ...signed, webhook_id: config.paypal.webhookId, webhook_event: event },
+    });
+    return result.verification_status === "SUCCESS";
+  } catch (e) {
+    // PayPal answers malformed signature data with a 400; that is a failed check.
+    if (e instanceof PayPalError && e.status === 400) return false;
+    throw e;
+  }
 }

@@ -284,7 +284,9 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       if (config.paypal.webhookId) {
         const ok = await verifyWebhookSignature(req.headers, event);
         if (!ok) {
-          await store.mutate((state, log) => log("webhook.rejected", "paypal", { event_type: event.event_type, id: event.id }));
+          // Not written to the evidence log: anyone can post here, and the
+          // public log should only hold events PayPal actually sent.
+          console.warn(`webhook rejected: ${event.event_type} ${String(event.id).slice(0, 80)}`);
           throw new HttpError(400, "webhook signature verification failed");
         }
       } else if (process.env.ALLOW_UNVERIFIED_WEBHOOKS !== "1") {
@@ -292,7 +294,9 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       }
       await store.mutate((state, log) => {
         const outcome = applyWebhookEvent(state, log, event);
-        if (!outcome.duplicate) log("webhook.received", "paypal", { event_type: event.event_type, id: event.id, ...outcome });
+        // Events for batches this app didn't send (e.g. the smoke test) are
+        // acknowledged but kept out of the log.
+        if (outcome.batch) log("webhook.received", "paypal", { event_type: event.event_type, id: event.id, ...outcome });
       });
       res.json({ ok: true });
     })
