@@ -5,6 +5,31 @@ Newest first. History before the PayPal rebuild lives in the original repo,
 
 ---
 
+## 2026-10-30 — v0.3.0 Fund step, farmer phone page, QA fixes
+
+- **Fund:**
+  - Funders pay into pools earmarked by province through PayPal Checkout
+    (Orders v2), from the public page.
+  - A pool is credited once, on a completed capture, via the return redirect
+    or the `PAYMENT.CAPTURE.COMPLETED` webhook.
+  - Payouts are split pro-rata across the pools covering each family, and the
+    public page shows each funder's ledger.
+- **Farmer phone page:**
+  - A private link per family, sent by a simulated SMS in Tagalog and English.
+  - It opens the family's own sent payouts with a live Approved → Sent →
+    Received status, which funders paid, bulletin-to-money minutes, and how to
+    cash out to GCash or a bank.
+- **QA fixes (31 issues):**
+  - Approval no longer holds a lock across PayPal and resumes safely after a
+    lost answer.
+  - The public log is an allow-list per event type.
+  - Policy, agent input and status-ordering hardening.
+  - Generic errors and wrong-key throttling.
+  - Mobile tables and accessibility.
+  - Asset caching and share previews.
+- **Hosting:** Vercel (free) with Neon Postgres. Render was dropped.
+- Tests: 58 (from 14).
+
 ## 2026-10-28 — v0.2.0 PayPal rebuild (Celerity Relief)
 
 - Replaced the old payment and trigger layer, the recipient wallet app, and
