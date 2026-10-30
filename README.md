@@ -37,7 +37,12 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
 5. **PayPal pays.** Each payout is split across the pools that cover the family, pro-rata by what
    each has left, and recorded per funder. One Payouts batch per run. Verified PayPal webhooks update each family's status
    (Pending → Delivered, or Unclaimed) on a live timeline.
-6. **Everything is on the record.** Every agent run, approval, PayPal batch and webhook goes into
+6. **The farmer sees it on their phone.** Each family gets a private link by SMS (simulated in this
+   demo: the console shows the exact text). It opens a phone-first page, in Tagalog or English, with
+   the amount, the storm, a live Approved → Sent → Received status, which funders paid it, how many
+   minutes it took from bulletin to money, and how to move it to GCash or a bank. No login: the
+   unguessable link opens only that family's own payouts.
+7. **Everything is on the record.** Every agent run, approval, PayPal batch and webhook goes into
    an append-only SHA-256 hash-chained evidence log. A public page shows each funder's pool (what it
    put in, which storms and towns it paid for, what's left) and the chain, with no names or emails.
 

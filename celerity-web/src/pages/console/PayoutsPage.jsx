@@ -5,7 +5,7 @@ import Table from "../../design/Table";
 import StatusPill from "../../design/StatusPill";
 import { api } from "../../lib/api";
 import { money, when, clock, stormName } from "../../lib/format";
-import { PageHeader } from "./parts";
+import { PageHeader, copyText } from "./parts";
 
 const SOURCE_LABELS = { "paypal-webhook": "webhook", "paypal-poll": "PayPal lookup" };
 
@@ -42,7 +42,30 @@ function splitOf(batch) {
     .map(([id, c]) => [id, c / 100]);
 }
 
-export default function PayoutsPage({ data, config, act, busy, go }) {
+/** The SMS this family got when the payout was sent (simulated sending),
+ * with its private link. */
+function FarmerMessage({ sms, notify }) {
+  return (
+    <details style={{ marginTop: 6 }}>
+      <summary style={{ cursor: "pointer", font: "var(--text-fine)", fontWeight: 700, color: "var(--primary)" }}>Message to farmer</summary>
+      <div style={{ marginTop: 6, padding: "10px 12px", borderRadius: 10, background: "var(--surface-low)", font: "var(--text-fine)" }}>
+        <p lang="tl" style={{ margin: 0 }}>{sms.tl}</p>
+        <p style={{ margin: "6px 0 0", color: "var(--text-faint)" }}>{sms.en}</p>
+        <span style={{ display: "block", margin: "6px 0 0", color: "var(--text-faint)" }}>SMS sending is simulated in this demo.</span>
+        <div className="cel-row-actions" style={{ marginTop: 8 }}>
+          <Button size="sm" variant="ghost" onClick={async () => notify((await copyText(sms.link)) ? "Farmer link copied." : "Couldn't copy; open it instead.", false)}>
+            Copy link
+          </Button>
+          <a href={sms.link} target="_blank" rel="noopener" style={{ font: "var(--text-fine)", fontWeight: 700, color: "var(--primary)", alignSelf: "center" }}>
+            Open as farmer ↗
+          </a>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+export default function PayoutsPage({ data, config, act, busy, go, notify }) {
   const familiesById = useMemo(() => Object.fromEntries(data.families.map((f) => [f.id, f])), [data.families]);
 
   return (
@@ -129,6 +152,7 @@ export default function PayoutsPage({ data, config, act, busy, go }) {
                           </span>
                         )}
                         {i.error && <span style={{ display: "block", font: "var(--text-fine)", color: "var(--bad-text)" }}>{i.error}</span>}
+                        {i.sms && <FarmerMessage sms={i.sms} notify={notify} />}
                       </span>
                     ),
                   },
