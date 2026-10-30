@@ -7,7 +7,7 @@ import StatusPill from "../../design/StatusPill";
 import Badge from "../../design/Badge";
 import { api } from "../../lib/api";
 import { FLAG_LABELS, flagList, when } from "../../lib/format";
-import { PageHeader } from "./parts";
+import { PageHeader, copyText } from "./parts";
 
 const EMPTY = { name: "", municipality: "", province: "", household_size: "4", paypal_email: "", vulnerability: {} };
 
@@ -123,6 +123,20 @@ export default function FamiliesPage({ data, act, busy, notify }) {
               key: "actions",
               label: "",
               render: (f) => (
+                <span className="cel-row-actions" style={{ flexWrap: "nowrap" }}>
+                {f.link_token && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Copy ${f.name}'s private farmer link`}
+                    onClick={async () => {
+                      const link = `${window.location.origin}/#/r/${f.link_token}`;
+                      notify((await copyText(link)) ? `${f.name}'s farmer link copied.` : link, false);
+                    }}
+                  >
+                    Farmer link
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="ghost"
@@ -138,6 +152,7 @@ export default function FamiliesPage({ data, act, busy, notify }) {
                 >
                   {f.status === "active" ? "Suspend" : "Reactivate"}
                 </Button>
+                </span>
               ),
             },
           ]}

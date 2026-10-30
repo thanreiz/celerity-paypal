@@ -5,6 +5,7 @@
 
 import { config } from "./config.js";
 import { POLICY } from "./policy.js";
+import { newLinkToken } from "./notify.js";
 
 const FAMILIES = [
   ["Maria Santos", "Virac", "Catanduanes", 6, { senior: true }],
@@ -112,6 +113,7 @@ export function seedState(state) {
     // Demo families share a couple of sandbox accounts on purpose; that is
     // not the duplicate-receiver case the console warns about.
     demo_receiver: emails.length > 0,
+    link_token: newLinkToken(),
     registered_at: now,
   }));
   state.bulletins = BULLETINS.map((b) => ({ ...b, source: "PAGASA (simulated)", received_at: now }));

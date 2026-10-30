@@ -60,6 +60,7 @@ const EVENT_LABELS = {
   "payout.error": "PayPal error",
   "payout.submitting": "Sending to PayPal",
   "pool.created": "Funding pool opened",
+  "farmer.notified": "Farmers notified",
   "pool.funded": "Pool funded",
   "pool.funding_mismatch": "Funding amount mismatch",
   "payout.resumed": "PayPal submission resumed",
@@ -100,6 +101,8 @@ export function eventDetail(e, names = {}) {
       return d.message || `PayPal refused the batch${d.name ? ` (${d.name})` : ""}`;
     case "payout.submitting":
       return `${d.recipients} payouts, ${money(d.amount, d.currency)} sent to PayPal${d.pools?.length ? ` from ${d.pools.length} pool${d.pools.length === 1 ? "" : "s"}` : ""}`;
+    case "farmer.notified":
+      return `${d.count} famil${d.count === 1 ? "y" : "ies"} sent their private link${d.channel ? ` by ${d.channel}` : ""}`;
     case "pool.created":
       return `${d.name} (${d.funder})${d.provinces?.length ? `: ${d.provinces.join(", ")}` : ": nationwide"}`;
     case "pool.funded":

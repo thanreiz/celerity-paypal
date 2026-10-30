@@ -78,6 +78,7 @@ export const api = {
   removeDraft: (runId, familyId) => request(`/api/runs/${runId}/drafts/${familyId}`, { method: "DELETE" }),
   rejectRun: (runId, reason) => request(`/api/runs/${runId}/reject`, { method: "POST", body: { reason } }),
   pools: () => request("/api/pools"),
+  farmer: (token) => request(`/api/me/${encodeURIComponent(token)}`),
   createPool: (pool) => request("/api/pools", { method: "POST", body: pool }),
   fundPool: (poolId, funder_name, amount) => request(`/api/pools/${poolId}/fund`, { method: "POST", body: { funder_name, amount } }),
   refreshBatch: (batchId) => request(`/api/batches/${batchId}/refresh`, { method: "POST" }),

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Console from "./pages/console/Console";
 import TransparencyPage from "./pages/public/TransparencyPage";
 import { session } from "./lib/api";
+import FarmerPage from "./pages/farmer/FarmerPage";
 
 function useHash() {
   const [hash, setHash] = useState(() => window.location.hash);
@@ -15,6 +16,10 @@ function useHash() {
 
 export default function App() {
   const hash = useHash();
+  // A farmer's private link from their SMS: #/r/<token>.
+  const farmer = hash.match(/^#\/r\/([\w-]+)/);
+  if (farmer) return <FarmerPage token={farmer[1]} />;
+
   // Visitors without a coordinator key land on the public page; the console
   // is one link away.
   const bare = hash === "" || hash === "#" || hash === "#/";

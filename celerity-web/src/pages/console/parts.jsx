@@ -14,6 +14,16 @@ export function PageHeader({ title, lede, children }) {
   );
 }
 
+/** Copy text to the clipboard; resolves to whether it worked. */
+export async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const PROVIDER_NAMES = { anthropic: "Claude", openai: "OpenAI" };
 
 function Dot({ on }) {

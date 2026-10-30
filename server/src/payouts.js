@@ -175,6 +175,9 @@ export async function approveRun(store, runId, approver) {
       { payout_batch_id: b.payout_batch_id, sender_batch_id: b.sender_batch_id, batch_status: b.status },
       b.id
     );
+    // Each family's private link goes out by SMS (simulated: the console
+    // shows the text). Logged as a count only.
+    log("farmer.notified", "system", { count: b.items.length, channel: "sms (simulated)" }, b.id);
     return { batch: b };
   });
   if (outcome.error) throw outcome.error;
