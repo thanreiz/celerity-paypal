@@ -13,6 +13,7 @@ import { runAgent } from "./agent.js";
 import { approveRun, rejectRun, refreshBatch, applyWebhookEvent, HttpError } from "./payouts.js";
 import { waitUntil } from "@vercel/functions";
 import { PayPalError, captureOrder, createOrder, verifyWebhookSignature } from "./paypal.js";
+import { farmerLink, farmerView, newLinkToken, smsText } from "./notify.js";
 import { FUND_LIMITS, addPendingContribution, allocateRun, completeContribution, poolLedger, poolTotals } from "./funding.js";
 import { newId, verifyChain } from "./store.js";
 
@@ -33,6 +34,7 @@ const PUBLIC_DETAIL = {
   "run.approved": ["recipients", "amount", "currency"],
   "payout.submitting": ["recipients", "amount", "currency", "pools"],
   "pool.created": ["name", "funder", "provinces"],
+  "farmer.notified": ["count", "channel"],
   "pool.funded": ["pool", "funder_name", "amount", "currency"],
   "payout.resumed": [],
   "payout.unconfirmed": [],
@@ -42,7 +44,7 @@ const PUBLIC_DETAIL = {
   "payout.item_status": ["status"],
   "webhook.received": ["event_type"],
 };
-const SYSTEM_ACTORS = new Set(["agent", "paypal", "paypal-webhook", "paypal-poll"]);
+const SYSTEM_ACTORS = new Set(["agent", "paypal", "paypal-webhook", "paypal-poll", "system"]);
 const FAMILY_EVENTS = new Set(["family.registered", "family.status"]);
 
 function publicEvent({ detail, actor, ref, ...e }) {
@@ -95,6 +97,8 @@ function limiter(limit, windowMs) {
 const failedAuth = limiter(10, 10 * 60_000);
 // Checkout orders anyone can start from the public page.
 const fundStarts = limiter(10, 10 * 60_000);
+// Wrong farmer links: slows anyone trying to guess one.
+const linkMisses = limiter(20, 10 * 60_000);
 const clientIp = (req) => req.get("x-forwarded-for")?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
 
 // Where PayPal sends a funder back after Checkout.
@@ -155,13 +159,30 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
 
   // Everything the coordinator console needs, in one poll.
   app.get("/api/state", coordinator, wrap(async (req, res) => {
-    const state = await store.read();
+    let state = await store.read();
+    // Families registered before farmer links existed get one, once.
+    if (state.families.some((f) => !f.link_token)) {
+      await store.mutate((s) => {
+        for (const f of s.families) f.link_token ||= newLinkToken();
+      });
+      state = await store.read();
+    }
+    const base = baseUrl(req);
+    const famById = Object.fromEntries(state.families.map((f) => [f.id, f]));
+    const runById = Object.fromEntries(state.runs.map((r) => [r.id, r]));
     res.json({
       config: publicConfig(POLICY),
       families: state.families,
       bulletins: state.bulletins,
       runs: [...state.runs].reverse().map((r) => ({ ...r, totals: runTotals(r), funding: r.status === "awaiting_approval" ? fundingPreview(state, r) : undefined })),
-      batches: [...state.batches].reverse(),
+      // Each item carries the SMS its family got (simulated sending).
+      batches: [...state.batches].reverse().map((b) => ({
+        ...b,
+        items: b.items.map((it) => {
+          const f = famById[it.family_id];
+          return f?.link_token ? { ...it, sms: smsText(f, it, runById[b.run_id], farmerLink(base, f.link_token)) } : it;
+        }),
+      })),
       pools: poolLedger(state),
       events: state.events.slice(-300).reverse(),
       chain: verifiedChain(state.events),
@@ -209,6 +230,26 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       chain: verifiedChain(state.events),
     });
   }));
+
+  // --- The farmer's private link ----------------------------------------------------
+
+  // No coordinator key: the unguessable token in the link is the credential,
+  // and it opens only that family's own sent payouts.
+  app.get(
+    "/api/me/:token",
+    wrap(async (req, res) => {
+      const ip = clientIp(req);
+      if (linkMisses.over(ip)) throw new HttpError(429, "too many tries; try again in a few minutes");
+      const token = String(req.params.token || "");
+      const state = await store.read();
+      const family = token.length >= 20 && state.families.find((f) => f.link_token && sameSecret(f.link_token, token));
+      if (!family) {
+        linkMisses.note(ip);
+        throw new HttpError(404, "link not found");
+      }
+      res.json(farmerView(state, family));
+    })
+  );
 
   // --- Step 1: funders and pools ------------------------------------------------
 
@@ -326,6 +367,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         vulnerability: Object.fromEntries(VULNERABILITY_FLAGS.map((k) => [k, b.vulnerability?.[k] === true])),
         status: "active",
         paypal_email: email,
+        link_token: newLinkToken(),
         registered_at: new Date().toISOString(),
       };
       const shared = await store.mutate((state, log) => {

@@ -144,7 +144,7 @@ test("a definite PayPal refusal returns the run for another try, and the public 
   const pubErr = pub.events.find((e) => e.type === "payout.error");
   assert.deepEqual(pubErr.detail, { name: "INSUFFICIENT_FUNDS", debugId: "dbg1" });
   assert.equal(JSON.stringify(pub).includes("@"), false);
-  assert.ok(pub.events.every((e) => ["agent", "paypal", "paypal-webhook", "paypal-poll", "coordinator"].includes(e.actor)));
+  assert.ok(pub.events.every((e) => ["agent", "paypal", "paypal-webhook", "paypal-poll", "system", "coordinator"].includes(e.actor)));
 
   // The retry is a new attempt with a new request id.
   mode = "ok";
