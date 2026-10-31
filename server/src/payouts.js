@@ -3,10 +3,13 @@
 // inside store.mutate, so it is applied whole or not at all; PayPal is always
 // called outside it.
 
-import { POLICY, checkDraft } from "./policy.js";
+import { POLICY } from "./policy.js";
 import { PayPalError, createPayoutBatch, getPayoutBatch } from "./paypal.js";
 import { newId } from "./store.js";
-import { allocateRun, completeContribution, poolTotals } from "./funding.js";
+import { completeContribution, poolTotals } from "./funding.js";
+// The money rules at approval go through the core client, which can hand
+// them to the Java core (CORE_MODE); off by default.
+import * as core from "./core.js";
 
 export class HttpError extends Error {
   constructor(status, message, extra = {}) {
@@ -35,7 +38,7 @@ const definiteRejection = (e) => e instanceof PayPalError && e.status >= 400 && 
  * PayPal-Request-Id, which PayPal answers idempotently instead of paying twice.
  */
 export async function approveRun(store, runId, approver) {
-  const claim = await store.mutate((state, log) => {
+  const claim = await store.mutate(async (state, log) => {
     const run = state.runs.find((r) => r.id === runId);
     if (!run) throw new HttpError(404, "run not found");
 
@@ -56,14 +59,14 @@ export async function approveRun(store, runId, approver) {
     // a family, or a registration may have changed since the agent ran.
     const violations = [];
     for (const d of run.drafts) {
-      const errs = checkDraft(state, run, d);
+      const errs = await core.checkDraft(state, run, d);
       if (errs.length) violations.push({ family_id: d.family_id, errors: errs });
     }
     if (violations.length) throw new HttpError(409, "drafts no longer pass policy", { violations });
 
     // Split every payout across the funders' pools that cover the family. A
     // pool another run drained since drafting stops the approval here.
-    const { allocations, shortfalls } = allocateRun(state, run);
+    const { allocations, shortfalls } = await core.allocateRun(state, run);
     if (shortfalls.length) {
       throw new HttpError(409, "drafts no longer pass policy", {
         violations: shortfalls.map((x) => ({
