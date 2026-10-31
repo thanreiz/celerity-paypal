@@ -54,19 +54,75 @@ Start with `shadow` on real traffic, check the logs for `core shadow mismatch`, 
 
 ## Deploy to Google Cloud Run
 
-One-time setup, from a machine with the [gcloud CLI](https://cloud.google.com/sdk/docs/install) signed in to your Google Cloud project:
+Takes about 15 minutes, once. You do steps 1–4, which need your Google account and a browser. Steps 5–6 can then run from this machine.
+
+### 1. Create a Google Cloud project
+1. Go to https://console.cloud.google.com and sign in with your Google account.
+2. Accept the terms if asked.
+3. At the top, open the project picker → **New project**.
+   - **Name:** `celerity-core`.
+   - Leave the organization as "No organization".
+4. Click **Create**, then select the new project.
+5. Write down its **Project ID** (shown under the name, for example `celerity-core-123456`).
+
+### 2. Turn on billing
+Cloud Run's free tier still needs a billing account attached. It is enough for this service, which scales to zero when idle.
+1. Go to https://console.cloud.google.com/billing → **Create account** (or **Link a billing account**) and add a card.
+   - New accounts usually get free trial credit.
+2. Make sure the `celerity-core` project is linked to it: **Billing → Account management → Projects**.
+3. Recommended: **Billing → Budgets & alerts → Create budget** of about $1, with email alerts at 50% and 100%.
+   - You'll hear about it long before anything is charged.
+
+**No card?** Skip Cloud Run. The core also runs on Render's free plan (no card): a Docker web service from `core/Dockerfile` with root directory `core`. It sleeps when idle, which is fine in `shadow` mode, because a slow core never delays a payout.
+
+### 3. Install the gcloud CLI (macOS)
+In Terminal:
+
+```bash
+curl https://sdk.cloud.google.com | bash
+```
+
+- Press Enter to accept the defaults and answer `Y` to update your shell profile.
+- Then close and reopen Terminal (or run `exec -l $SHELL`).
+- Check it worked: `gcloud --version`.
+
+### 4. Sign in and pick the project
+
+```bash
+gcloud init
+```
+
+1. Choose **Log in with a new account**. A browser opens; sign in with the same Google account and click **Allow**.
+2. Pick the `celerity-core` project.
+3. If asked for a default region, choose `asia-southeast1` (Singapore).
+
+### 5. Deploy
 
 ```bash
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+CORE_TOKEN=$(openssl rand -hex 24)
 gcloud run deploy celerity-core \
   --source core \
   --region asia-southeast1 \
   --allow-unauthenticated \
   --min-instances 0 --max-instances 2 --memory 512Mi \
-  --set-env-vars CORE_TOKEN=<a long random secret>,PAYOUT_CURRENCY=PHP
+  --set-env-vars CORE_TOKEN=$CORE_TOKEN,PAYOUT_CURRENCY=PHP
 ```
 
-- `--source core` builds `core/Dockerfile` on Cloud Build. No local Docker is needed.
-- `--allow-unauthenticated` only opens the network path; every `/v1` call still needs `x-core-token`.
-- Then set `CORE_URL`, `CORE_TOKEN` and `CORE_MODE=shadow` on the Vercel project and redeploy.
-- With `--min-instances 0` it scales to zero when idle, which keeps it within the free tier. The first call after a quiet period takes a few seconds; in `shadow` mode that never delays a payout.
+- Run it from the repo root.
+- If it asks to create an Artifact Registry repository, answer `Y`.
+- About 3–5 minutes later it prints a **Service URL** like `https://celerity-core-xxxx.asia-southeast1.run.app`.
+- `--allow-unauthenticated` only opens the network path; every `/v1` call still needs the token.
+
+Check it: `curl <Service URL>/actuator/health` should print `"status":"UP"`.
+
+### 6. Connect the web app (Vercel)
+Add three environment variables to the Vercel project (Production), then redeploy:
+
+| Name | Value |
+| --- | --- |
+| `CORE_URL` | the Service URL |
+| `CORE_TOKEN` | the same token as step 5 (`echo $CORE_TOKEN`) |
+| `CORE_MODE` | `shadow` |
+
+In `shadow` mode the web app still decides every payout and only compares answers with the core. Mismatches appear in the Vercel logs as `core shadow mismatch`. Switch to `on` once the logs stay clean.
