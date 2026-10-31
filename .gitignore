@@ -39,3 +39,5 @@ DEMO-VIDEO-MOTION.pdf
 
 # Shared secret for the Java core (paste into Render, never commit)
 .core-token
+# Render API key for scripted deploys (never commit)
+.render-key
