@@ -1,0 +1,14 @@
+{
+  "name": "an empty log",
+  "op": "ledger/verify",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "events": []
+  },
+  "expected": {
+    "ok": true,
+    "length": 0,
+    "head": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}
