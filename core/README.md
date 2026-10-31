@@ -52,6 +52,25 @@ The bulletin parser is new and has no Node counterpart; `BulletinParserTest` cov
 
 Start with `shadow` on real traffic, check the logs for `core shadow mismatch`, then switch to `on`.
 
+## Deploy free on Render (no card)
+
+`render.yaml` at the repo root describes the service. You need a Render account and about 10 minutes.
+
+1. **Sign in.** Go to https://dashboard.render.com and sign in with **GitHub** (the account that owns the repo).
+2. **Create the service.** Choose **New → Blueprint** and pick `celerity-paypal`.
+   - If the repo isn't listed, click **Configure GitHub** and give Render access to it.
+   - Use the branch where `core/` lives (`main` once the Java core PR is merged).
+3. **Enter the token.** Render asks for `CORE_TOKEN`. Paste the contents of the local file `.core-token` from the repo root (`cat .core-token`).
+   - The file is git-ignored; the same value is already set on Vercel.
+4. **Deploy.** Click **Apply**.
+   - The first build takes about 5–10 minutes.
+   - When it shows **Live**, copy the service URL, for example `https://celerity-core.onrender.com`.
+5. **Check it.** `curl <service URL>/actuator/health` should print `"status":"UP"`.
+   - On the free plan the first request after 15 idle minutes takes about a minute.
+6. **Connect.** Set `CORE_URL` (the service URL) and `CORE_MODE=shadow` on the Vercel project, then redeploy.
+
+The free plan sleeps when idle. In `shadow` mode that's harmless: the web app decides every payout, and a call to a sleeping core just times out after 3 seconds and logs `core shadow call failed`.
+
 ## Deploy to Google Cloud Run
 
 Takes about 15 minutes, once. You do steps 1–4, which need your Google account and a browser. Steps 5–6 can then run from this machine.
@@ -73,7 +92,7 @@ Cloud Run's free tier still needs a billing account attached. It is enough for t
 3. Recommended: **Billing → Budgets & alerts → Create budget** of about $1, with email alerts at 50% and 100%.
    - You'll hear about it long before anything is charged.
 
-**No card?** Skip Cloud Run. The core also runs on Render's free plan (no card): a Docker web service from `core/Dockerfile` with root directory `core`. It sleeps when idle, which is fine in `shadow` mode, because a slow core never delays a payout.
+**No card?** Use Render instead (next section) and skip the rest of this one.
 
 ### 3. Install the gcloud CLI (macOS)
 In Terminal:
