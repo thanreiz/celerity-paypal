@@ -1,0 +1,71 @@
+# Celerity Relief · Light design exploration
+
+## Tokens
+
+| Token | Hex | Use |
+|---|---|---|
+| Pearl paper | `#F5F5F7` | Page canvas and frame background |
+| White | `#FFFFFF` | Cards, sheets, navigation |
+| Ink | `#101311` | Headlines, amounts, primary actions |
+| Body | `#353A36` | Main copy |
+| Muted | `#737B75` | Supporting copy and metadata |
+| Hairline | `#E5E8E5` | Dividers and borders |
+| Forest | `#0B5D3B` | Satin hero start, key brand tone |
+| Green | `#087444` | Links, actions, verified status |
+| Leaf | `#31B778` | Satin hero highlight |
+| Mint | `#E8F5ED` | Selected navigation and positive tags |
+| Amber | `#8A4B00` / `#FFF4E5` | Pending status |
+
+The primary card on each screen is white with an almost invisible hairline and shallow shadow. Use fine green contour strokes over the card, around `#087444` at 16–18% opacity. Keep card headings and money in ink, with forest green reserved for the small context label and active statuses. The overall palette reserves amber for pending and rust for policy exceptions.
+
+## Pattern recipe
+
+Draw 1px wave paths in green at roughly 16–18% opacity over the white hero card. Paths use broad, irregular sine-like bends with generous spacing; keep most content clear of the densest lines. On a few secondary white cards, use the same contour at 6–9% opacity. The paths suggest wind isobars and rice terraces without becoming a map illustration.
+
+## Type scale
+
+- Display/headings: Manrope, 600–800; tight tracking from `-.025em` to `-.04em`.
+- UI/body: DM Sans, 400–700; 14px base with 1.45 line height.
+- Money and counts: tabular numerals; hero values 38px desktop / 42px phone; supporting totals 16–28px.
+- Page titles: 30px desktop / 24px phone. Section titles: 16–19px. Metadata: 10–12px.
+
+Fonts load from Google Fonts when available; system sans-serif fallbacks keep the files usable offline.
+
+## Shape, spacing and shadow
+
+- Hero and main cards: 20px radius; phone content cards: 17px; fields: 12px; status labels: 6px.
+- Use a 4px spacing base. Desktop content has 30–34px outer padding; phone content has 18px side padding.
+- Cards are white with a near invisible 1px ink tint and a shallow shadow. Avoid glow, blur, and stacked nested tiles.
+- Pill buttons are solid ink for primary actions and white with a hairline for secondary actions.
+
+## Components
+
+- Coordinator shell: simple white left rail, a softly tinted active row, plain labels, no metric tile grid. Use one white contour card for response funds and live counts.
+- Status tags: uppercase, compact, and explicit (`Received`, `Pending`, `Refused`). Color reinforces rather than replaces the label.
+- Timeline: readable milestone labels with a thin line and filled completed dots.
+- Evidence: show the chain state and a short sample hash; omit names, emails and family IDs on the public screen.
+- Farmer page: English is selected and its heading matches the selected language. The Tagalog option is shown as the alternate state. Keep the approved amount, status and next action prominent.
+- Funding: use a receipt-like white sheet, area-pool context, amount selection, and a clear PayPal checkout action.
+
+All figures, dates, storm status and identities are mock data for the Typhoon Dalisay demo.
+
+## v2.1 · Emerald silk + landing (after Creator Loans)
+
+**Hero recipe** (`.hero` in styles.css, `.lp-hero` in landing.css), stacked bottom to top:
+1. Satin: `linear-gradient(150deg, #3ed48c 0%, #12925a 44%, #06492f 100%)`
+2. Mesh (`--mesh`): pearl highlight top right, bright emerald glow in the middle, deep `#022617` pools in the lower corners. On the landing it drifts over 24s.
+3. Folds (`--folds`): two faint diagonal white bands, like light on satin.
+4. Vignette: `inset 0 0 180px 30px rgb(1 34 20 / .32)`
+5. Engraving: `assets/guilloche-white.svg` (waves + rosettes) at 20–24% plus `assets/quilt-white.svg` lattice, masked fainter on the headline side.
+6. Grain: `assets/grain.svg`, overlay, 8–9%.
+7. Shine: a skewed white band that sweeps every 8s. The money figure gets a mint gleam.
+
+All motion sits inside `prefers-reduced-motion: no-preference`.
+
+**Card finishes** (landing step cards): pearl (white + mint corner glow), emerald (the satin), onyx (`#1c221f → #0a0d0b` with an emerald corner glow). Each carries guilloché, grain, a sweeping shine and a cursor-following glare.
+
+**White cards** get a lifted hairline (`inset 0 0 0 1px rgb(16 19 17/.055)`, an inset white top highlight, and a soft emerald drop) and, on one card per screen, a faint engraved rosette in a corner (16%).
+
+**Landing structure** (`index.html`): floating pill nav (frosted white once scrolled) → gradient hero with an interactive payouts card between an SMS card and an onyx pool card → ink promise marquee → funders strip → How it works (pearl / emerald / onyx) → guardrails with a tampered-bulletin card → numbers band → product screens → voices → FAQ → foil-edged final CTA (rotating conic border) → footer.
+
+Assets are generated by `assets/gen-guilloche.mjs` (run `node assets/gen-guilloche.mjs assets`) (the Creator Loans `guilloche.tsx` maths: 22 rings × 18 lobes, 14 phase-shifted waves).
