@@ -3,6 +3,7 @@ import Console from "./pages/console/Console";
 import TransparencyPage from "./pages/public/TransparencyPage";
 import { session } from "./lib/api";
 import FarmerPage from "./pages/farmer/FarmerPage";
+import LandingPage from "./pages/landing/LandingPage";
 
 function useHash() {
   const [hash, setHash] = useState(() => window.location.hash);
@@ -20,9 +21,10 @@ export default function App() {
   const farmer = hash.match(/^#\/r\/([\w-]+)/);
   if (farmer) return <FarmerPage token={farmer[1]} />;
 
-  // Visitors without a coordinator key land on the public page; the console
-  // is one link away.
+  // Visitors without a coordinator key land on the landing page; #/home shows
+  // it to signed-in coordinators too. The public record lives at #/public.
   const bare = hash === "" || hash === "#" || hash === "#/";
-  if (hash.startsWith("#/public") || (bare && !session.key)) return <TransparencyPage />;
+  if (hash.startsWith("#/home") || (bare && !session.key)) return <LandingPage />;
+  if (hash.startsWith("#/public")) return <TransparencyPage />;
   return <Console route={hash.replace(/^#\/?/, "")} />;
 }
