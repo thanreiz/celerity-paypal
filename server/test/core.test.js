@@ -8,9 +8,10 @@ import { createServer } from "node:http";
 process.env.PAYOUT_CURRENCY = "USD";
 process.env.SEED_RECEIVER_EMAILS = "";
 
-const { emptyState } = await import("../src/store.js");
+const { createMemoryStore, emptyState } = await import("../src/store.js");
 const { seedState } = await import("../src/seed.js");
 const core = await import("../src/core.js");
+const { approveRun } = await import("../src/payouts.js");
 
 let reply = () => ({ errors: [] });
 const received = [];
@@ -95,4 +96,93 @@ test("on: if the core is down, the local rules answer and it is logged", async (
   assert.equal(r.shortfalls.length, 0);
   assert.ok(r.allocations.fam_002.length >= 1);
   assert.match(warnings.join("\n"), /core unreachable on funding\/allocate, using the local rules/);
+});
+
+test("on: an answer in the wrong shape counts as no answer, so the local rules decide", async () => {
+  Object.assign(process.env, { CORE_MODE: "on", CORE_URL: url });
+  const local = { drafts: [draft] };
+  for (const bad of [{}, { errors: "no" }, { errors: [1] }]) {
+    reply = () => bad;
+    assert.deepEqual(await core.checkDraft(state, run, draft), []);
+  }
+  for (const bad of [
+    {},
+    { allocations: {}, shortfalls: [] },
+    { allocations: { fam_002: [{ pool_id: "p", amount: 1 }] }, shortfalls: [] },
+    { allocations: { fam_002: [{ amount: 70 }] }, shortfalls: [] },
+  ]) {
+    warnings.length = 0;
+    reply = () => bad;
+    const r = await core.allocateRun(state, local);
+    assert.equal(r.shortfalls.length, 0);
+    assert.ok(r.allocations.fam_002[0].pool_id.startsWith("pool_"));
+    assert.match(warnings.join("\n"), /using the local rules/);
+  }
+});
+
+test("shadow: a malformed answer is logged and changes nothing", async () => {
+  Object.assign(process.env, { CORE_MODE: "shadow", CORE_URL: url });
+  warnings.length = 0;
+  reply = () => ({});
+  assert.deepEqual(await core.checkDraft(state, run, draft), []);
+  assert.match(warnings.join("\n"), /core shadow call failed on policy\/check-draft: malformed/);
+});
+
+// A run waiting for approval, and a core that does `during` while it answers.
+function approval(during, checkAnswer = { errors: [] }) {
+  const store = createMemoryStore({
+    seed: (s) => {
+      seedState(s);
+      s.runs.push({ id: "run_core", status: "awaiting_approval", storm: run.storm, areas: run.areas, drafts: [draft] });
+    },
+  });
+  reply = async (path) => {
+    await during(store);
+    if (path === "/v1/policy/check-draft") return checkAnswer;
+    return { allocations: { fam_002: [{ pool_id: "pool_a", amount: 70 }] }, shortfalls: [] };
+  };
+  return store;
+}
+
+test("on: no lock is held while the core answers", async () => {
+  Object.assign(process.env, { CORE_MODE: "on", CORE_URL: url });
+  let writes = 0;
+  const store = approval(async (s) => {
+    const wrote = s.mutate((x) => void (x.lockProbe = 1)).then(() => (writes += 1));
+    await Promise.race([wrote, new Promise((r) => setTimeout(r, 500))]);
+  }, { errors: ["from the core"] });
+  // The probe writes state the rules don't read, so the core's answer stands.
+  await assert.rejects(approveRun(store, "run_core", "ana"), (e) => {
+    assert.equal(e.status, 409);
+    assert.deepEqual(e.violations, [{ family_id: "fam_002", errors: ["from the core"] }]);
+    return true;
+  });
+  assert.equal(writes, 2, "writers got through during both core calls");
+  assert.equal((await store.read()).runs.at(-1).status, "awaiting_approval");
+});
+
+test("on: if the state changes while the core answers, the local rules decide on the new state", async () => {
+  Object.assign(process.env, { CORE_MODE: "on", CORE_URL: url });
+  warnings.length = 0;
+  const store = approval((s) =>
+    s.mutate((x) => {
+      x.families.find((f) => f.id === "fam_002").status = "inactive";
+    })
+  );
+  await assert.rejects(approveRun(store, "run_core", "ana"), (e) => {
+    assert.equal(e.status, 409);
+    assert.equal(e.violations[0].family_id, "fam_002");
+    assert.ok(e.violations[0].errors.length >= 1);
+    return true;
+  });
+  assert.match(warnings.join("\n"), /core answers went stale/);
+});
+
+test("off: approving never calls the core", async () => {
+  const store = approval(async () => {}, { errors: ["from the core"] });
+  await store.mutate((x) => {
+    x.families.find((f) => f.id === "fam_002").status = "inactive";
+  });
+  await assert.rejects(approveRun(store, "run_core", "ana"), /no longer pass policy/);
+  assert.equal(received.length, 0);
 });

@@ -5,10 +5,10 @@
 //           logged, so the two can be compared on real traffic
 //   on      the core decides; if it can't be reached, this process does
 // Only what the rules read is sent: no names, and the PayPal email becomes a
-// yes/no flag.
+// yes/no flag. An answer in the wrong shape counts as no answer.
 
 import { createHash } from "node:crypto";
-import { POLICY, checkDraft as localCheckDraft } from "./policy.js";
+import { POLICY, cents, checkDraft as localCheckDraft } from "./policy.js";
 import { allocateRun as localAllocateRun } from "./funding.js";
 
 const TIMEOUT_MS = 3000;
@@ -17,6 +17,8 @@ const mode = () => {
   const m = (process.env.CORE_MODE || "off").toLowerCase();
   return process.env.CORE_URL && (m === "shadow" || m === "on") ? m : "off";
 };
+
+export const active = () => mode() !== "off";
 
 /** The slice of state the core's rules read. */
 export function coreState(state) {
@@ -90,13 +92,36 @@ async function decide(op, body, local, fromRemote) {
   }
 }
 
+function draftErrors(r) {
+  if (!Array.isArray(r?.errors) || !r.errors.every((e) => typeof e === "string")) throw new Error("malformed check-draft answer");
+  return r.errors;
+}
+
+/** A split must pay each draft in full unless the draft is a shortfall, or
+ * the payout's funding would not add up. */
+function runAllocation(r, run) {
+  const { allocations, shortfalls } = r || {};
+  if (!allocations || typeof allocations !== "object" || !Array.isArray(shortfalls)) throw new Error("malformed allocate answer");
+  const short = new Set(shortfalls.map((x) => x?.family_id));
+  for (const d of run.drafts) {
+    if (short.has(d.family_id)) continue;
+    const split = allocations[d.family_id];
+    const whole =
+      Array.isArray(split) &&
+      split.every((s) => typeof s?.pool_id === "string" && Number.isFinite(s.amount) && s.amount > 0) &&
+      split.reduce((sum, s) => sum + cents(s.amount), 0) === cents(d.amount);
+    if (!whole) throw new Error(`allocate answer does not cover ${d.family_id}`);
+  }
+  return { allocations, shortfalls };
+}
+
 /** Policy violations for one draft (empty = OK). */
 export function checkDraft(state, run, draft) {
   return decide(
     "policy/check-draft",
     { state: coreState(state), run: { storm: run.storm, areas: run.areas, drafts: run.drafts }, draft },
     () => localCheckDraft(state, run, draft),
-    (r) => r.errors
+    draftErrors
   );
 }
 
@@ -106,6 +131,34 @@ export function allocateRun(state, run) {
     "funding/allocate",
     { state: coreState(state), run: { drafts: run.drafts } },
     () => localAllocateRun(state, run),
-    (r) => r
+    (r) => runAllocation(r, run)
   );
+}
+
+// What the answers depend on, so a change between asking and claiming shows.
+const inputsKey = (state, run) =>
+  fingerprint(canon({ state: coreState(state), run: { storm: run.storm, areas: run.areas, drafts: run.drafts } }));
+
+/**
+ * Ask for every answer an approval needs. Call this with no lock held: each
+ * call can take up to TIMEOUT_MS, and a lock would block webhooks and funders
+ * meanwhile. Calls run side by side, so a run waits one timeout at most.
+ */
+export async function prepareApproval(state, run) {
+  const [checks, allocation] = await Promise.all([
+    Promise.all(run.drafts.map((d) => checkDraft(state, run, d))),
+    allocateRun(state, run),
+  ]);
+  return { key: inputsKey(state, run), checks, allocation };
+}
+
+/**
+ * The answers to apply inside the lock, against current state. Prepared
+ * answers count only if nothing they depend on has changed; otherwise the
+ * local rules decide on the current state, as they do when the core is down.
+ */
+export function approvalAnswers(state, run, prepared) {
+  if (prepared?.key === inputsKey(state, run)) return prepared;
+  if (prepared) console.warn("core answers went stale during approval, using the local rules");
+  return { checks: run.drafts.map((d) => localCheckDraft(state, run, d)), allocation: localAllocateRun(state, run) };
 }

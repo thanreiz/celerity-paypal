@@ -8,7 +8,8 @@ import { PayPalError, createPayoutBatch, getPayoutBatch } from "./paypal.js";
 import { newId } from "./store.js";
 import { completeContribution, poolTotals } from "./funding.js";
 // The money rules at approval go through the core client, which can hand
-// them to the Java core (CORE_MODE); off by default.
+// them to the Java core (CORE_MODE); off by default. Like PayPal, the core is
+// called outside store.mutate.
 import * as core from "./core.js";
 
 export class HttpError extends Error {
@@ -26,6 +27,13 @@ const RESUME_AFTER_MS = 30_000;
 // Anything else (timeout, network, 5xx) leaves the outcome unknown.
 const definiteRejection = (e) => e instanceof PayPalError && e.status >= 400 && e.status < 500 && e.status !== 409 && e.status !== 429;
 
+async function askCore(store, runId) {
+  if (!core.active()) return null;
+  const state = await store.read();
+  const run = state.runs.find((r) => r.id === runId);
+  return run?.status === "awaiting_approval" && run.drafts.length ? core.prepareApproval(state, run) : null;
+}
+
 /**
  * Approve a run and send its payouts, in three steps so no database lock is
  * held while PayPal is called:
@@ -38,7 +46,8 @@ const definiteRejection = (e) => e instanceof PayPalError && e.status >= 400 && 
  * PayPal-Request-Id, which PayPal answers idempotently instead of paying twice.
  */
 export async function approveRun(store, runId, approver) {
-  const claim = await store.mutate(async (state, log) => {
+  const prepared = await askCore(store, runId);
+  const claim = await store.mutate((state, log) => {
     const run = state.runs.find((r) => r.id === runId);
     if (!run) throw new HttpError(404, "run not found");
 
@@ -57,16 +66,16 @@ export async function approveRun(store, runId, approver) {
 
     // Re-check every draft against current state: another run may have paid
     // a family, or a registration may have changed since the agent ran.
+    const { checks, allocation } = core.approvalAnswers(state, run, prepared);
     const violations = [];
-    for (const d of run.drafts) {
-      const errs = await core.checkDraft(state, run, d);
-      if (errs.length) violations.push({ family_id: d.family_id, errors: errs });
-    }
+    run.drafts.forEach((d, i) => {
+      if (checks[i].length) violations.push({ family_id: d.family_id, errors: checks[i] });
+    });
     if (violations.length) throw new HttpError(409, "drafts no longer pass policy", { violations });
 
     // Split every payout across the funders' pools that cover the family. A
     // pool another run drained since drafting stops the approval here.
-    const { allocations, shortfalls } = await core.allocateRun(state, run);
+    const { allocations, shortfalls } = allocation;
     if (shortfalls.length) {
       throw new HttpError(409, "drafts no longer pass policy", {
         violations: shortfalls.map((x) => ({
