@@ -28,6 +28,29 @@ const FAMILIES = [
 
 const BULLETINS = [
   {
+    id: "blt_dalisay_07",
+    title: "Typhoon Dalisay, Bulletin #7 (irregular wording)",
+    kind: "irregular",
+    text: `TROPICAL CYCLONE BULLETIN NR. 07
+Typhoon DALISAY
+Issued at 11:00 PM, 13 November 2026
+
+DALISAY HAS INTENSIFIED INTO A TYPHOON AND IS NOW MOVING TOWARDS THE BICOL REGION.
+
+Location of Center (10:00 PM): 260 km East of Virac, Catanduanes
+Maximum sustained winds: 150 km/h near the center, gustiness up to 185 km/h
+
+TROPICAL CYCLONE WIND SIGNALS (TCWS) IN EFFECT
+
+TCWS No. 3 (Storm-force winds, 89 to 117 km/h, moderate to significant threat to life and property)
+Luzon: Catanduanes, the Caramoan Peninsula
+
+TCWS No. 2 (Gale-force winds, 62 to 88 km/h, minor to moderate threat to life and property)
+Luzon: Albay, the northern half of Sorsogon
+
+Note from the field: the Caramoan Peninsula covers the towns of Caramoan, Garchitorena, Presentacion and San Jose in Camarines Sur. Northern Sorsogon here means Sorsogon City, Castilla and Pilar.`,
+  },
+  {
     id: "blt_dalisay_08",
     title: "Typhoon Dalisay, Bulletin #8",
     kind: "standard",
@@ -141,12 +164,14 @@ const POOLS = [
     id: "pool_pcic_bicol",
     name: "PCIC Bicol typhoon pool",
     funder: "Philippine Crop Insurance Corp. (demo)",
+    funder_id: "fnd_pcic",
     provinces: ["Albay", "Camarines Sur", "Camarines Norte", "Catanduanes", "Sorsogon", "Masbate"],
   },
   {
     id: "pool_rice_ph",
     name: "Global Rice Foundation, Philippines",
     funder: "Global Rice Foundation (demo)",
+    funder_id: "fnd_grf",
     provinces: [],
   },
 ];

@@ -13,9 +13,12 @@ import { runAgent } from "./agent.js";
 import { approveRun, rejectRun, refreshBatch, applyWebhookEvent, HttpError } from "./payouts.js";
 import { waitUntil } from "@vercel/functions";
 import { PayPalError, captureOrder, createOrder, verifyWebhookSignature } from "./paypal.js";
-import { farmerLink, farmerView, newLinkToken, smsText } from "./notify.js";
+import { farmerLink, farmerView, maskEmail, newLinkToken, smsText } from "./notify.js";
 import { FUND_LIMITS, addPendingContribution, allocateRun, completeContribution, poolLedger, poolTotals } from "./funding.js";
 import { newId, verifyChain } from "./store.js";
+import { FUNDERS, RULE_LIMITS, checkPoolRule, funderById, funderView, normalizedRule } from "./funders.js";
+import { draftPoolRule, helpFarmer, stormStatus } from "./agents.js";
+import { autoRelease, draftByRules, readBulletin, routine } from "./rules.js";
 
 const SUCCESS_STATES = new Set(["SUCCESS"]);
 
@@ -26,14 +29,15 @@ const PUBLIC_DETAIL = {
   "family.registered": ["municipality", "province"],
   "family.status": ["status"],
   "bulletin.received": ["title"],
-  "run.started": ["bulletin", "model"],
-  "run.drafted": ["storm", "areas", "recipients", "amount", "currency"],
+  "run.started": ["bulletin", "model", "mode"],
+  "run.drafted": ["storm", "areas", "recipients", "amount", "currency", "mode"],
+  "case.opened": ["topic"],
   "run.failed": [],
   "run.rejected": [],
   "run.draft_removed": ["recipients", "amount", "currency"],
   "run.approved": ["recipients", "amount", "currency"],
   "payout.submitting": ["recipients", "amount", "currency", "pools"],
-  "pool.created": ["name", "funder", "provinces"],
+  "pool.created": ["name", "funder", "provinces", "min_signal"],
   "farmer.notified": ["count", "channel"],
   "pool.funded": ["pool", "funder_name", "amount", "currency"],
   "payout.resumed": [],
@@ -44,7 +48,7 @@ const PUBLIC_DETAIL = {
   "payout.item_status": ["status"],
   "webhook.received": ["event_type"],
 };
-const SYSTEM_ACTORS = new Set(["agent", "paypal", "paypal-webhook", "paypal-poll", "system"]);
+const SYSTEM_ACTORS = new Set(["agent", "rules", "paypal", "paypal-webhook", "paypal-poll", "system", "funder", "farmer"]);
 const FAMILY_EVENTS = new Set(["family.registered", "family.status"]);
 
 function publicEvent({ detail, actor, ref, ...e }) {
@@ -99,6 +103,15 @@ const failedAuth = limiter(10, 10 * 60_000);
 const fundStarts = limiter(10, 10 * 60_000);
 // Wrong farmer links: slows anyone trying to guess one.
 const linkMisses = limiter(20, 10 * 60_000);
+// AI calls anyone can start from the two apps: per client, and in total.
+const aiCalls = limiter(15, 60 * 60_000);
+const aiCallsAll = limiter(Number(process.env.APP_AI_CALLS_PER_HOUR) || 200, 60 * 60_000);
+function aiBudget(req) {
+  const ip = clientIp(req);
+  if (aiCalls.over(ip) || aiCallsAll.over("all")) throw new HttpError(429, "the assistant is busy; try again later");
+  aiCalls.note(ip);
+  aiCallsAll.note("all");
+}
 const clientIp = (req) => req.get("x-forwarded-for")?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
 
 // Where PayPal sends a funder back after Checkout.
@@ -184,6 +197,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         }),
       })),
       pools: poolLedger(state),
+      cases: [...(state.cases || [])].reverse(),
       events: state.events.slice(-300).reverse(),
       chain: verifiedChain(state.events),
     });
@@ -235,19 +249,150 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
 
   // No coordinator key: the unguessable token in the link is the credential,
   // and it opens only that family's own sent payouts.
+  async function familyByToken(req) {
+    const ip = clientIp(req);
+    if (linkMisses.over(ip)) throw new HttpError(429, "too many tries; try again in a few minutes");
+    const token = String(req.params.token || "");
+    const state = await store.read();
+    const family = token.length >= 20 && state.families.find((f) => f.link_token && sameSecret(f.link_token, token));
+    if (!family) {
+      linkMisses.note(ip);
+      throw new HttpError(404, "link not found");
+    }
+    return { state, family };
+  }
+
   app.get(
     "/api/me/:token",
     wrap(async (req, res) => {
-      const ip = clientIp(req);
-      if (linkMisses.over(ip)) throw new HttpError(429, "too many tries; try again in a few minutes");
-      const token = String(req.params.token || "");
-      const state = await store.read();
-      const family = token.length >= 20 && state.families.find((f) => f.link_token && sameSecret(f.link_token, token));
-      if (!family) {
-        linkMisses.note(ip);
-        throw new HttpError(404, "link not found");
+      const { state, family } = await familyByToken(req);
+      res.json({
+        ...farmerView(state, family),
+        registration: {
+          status: family.status,
+          household_size: family.household_size,
+          paypal_email: maskEmail(family.paypal_email),
+          registered_at: family.registered_at,
+        },
+        storm_status: stormStatus(state, family),
+        cases: (state.cases || []).filter((c) => c.family_id === family.id).map(({ topic, status, at }) => ({ topic, status, at })),
+      });
+    })
+  );
+
+  // The farmer's helper agent. Reads only this family's record; can open a
+  // case for a coordinator; cannot move money.
+  app.post(
+    "/api/me/:token/help",
+    wrap(async (req, res) => {
+      const raw = req.body?.messages;
+      if (!Array.isArray(raw) || !raw.length || raw.length > 12) throw new HttpError(400, "messages must be a list of 1 to 12 messages");
+      const messages = raw.map((m) => ({ role: m?.role === "helper" ? "helper" : "farmer", text: text(m?.text, "message text", 600) }));
+      if (messages.at(-1).role !== "farmer") throw new HttpError(400, "the last message must be the farmer's");
+      if (!aiClient && !config.ai.configured) throw new HttpError(503, "the helper is not available right now");
+      const { state, family } = await familyByToken(req);
+      aiBudget(req);
+      let pending = null;
+      const out = await helpFarmer({
+        state,
+        family,
+        messages,
+        client: aiClient,
+        openCase: (topic, summary) => {
+          pending = { topic, summary };
+        },
+      });
+      if (pending) {
+        await store.mutate((s, log) => {
+          s.cases ||= [];
+          if (s.cases.filter((c) => c.family_id === family.id && c.status === "open").length >= 5) return;
+          const c = { id: newId("case"), family_id: family.id, topic: pending.topic, summary: pending.summary, status: "open", at: new Date().toISOString() };
+          s.cases.push(c);
+          log("case.opened", "farmer", { topic: c.topic }, c.id);
+        });
       }
-      res.json(farmerView(state, family));
+      res.json({ reply: out.reply, case: out.case ? { topic: out.case.topic } : null });
+    })
+  );
+
+  // Demo farmers for the Farmer app's "Is this you?" screen: only seeded
+  // demo families (fictional), never anyone registered through the console.
+  app.get(
+    "/api/demo/farmers",
+    wrap(async (req, res) => {
+      if (process.env.DEMO_FARMERS === "0") return res.json({ farmers: [] });
+      const state = await store.read();
+      const seeded = state.families.filter((f) => /^fam_\d{3}$/.test(f.id) && f.status === "active" && f.link_token);
+      res.json({
+        farmers: seeded.map((f) => ({ name: f.name, municipality: f.municipality, province: f.province, token: f.link_token })),
+      });
+    })
+  );
+
+  // --- The Funder app ---------------------------------------------------------------
+
+  app.get("/api/funders", (req, res) => res.json({ funders: FUNDERS }));
+
+  const funderOr404 = (id) => {
+    const f = funderById(String(id || ""));
+    if (!f) throw new HttpError(404, "funder not found");
+    return f;
+  };
+
+  app.get(
+    "/api/funders/:id",
+    wrap(async (req, res) => {
+      const f = funderOr404(req.params.id);
+      res.json({ ...funderView(await store.read(), f.id), limits: FUND_LIMITS, rule_limits: RULE_LIMITS, policy_min_signal: POLICY.minSignal });
+    })
+  );
+
+  // The pool-rule agent: plain words in, a checked rule proposal out.
+  // Nothing is created until the funder confirms with POST .../pools.
+  app.post(
+    "/api/funders/:id/pool-drafts",
+    wrap(async (req, res) => {
+      const f = funderOr404(req.params.id);
+      const words = text(req.body?.text, "text", RULE_LIMITS.ruleTextMax);
+      if (!aiClient && !config.ai.configured) throw new HttpError(503, "the pool assistant is not available right now");
+      aiBudget(req);
+      const out = await draftPoolRule({ state: await store.read(), funderId: f.id, text: words, client: aiClient });
+      res.json({ proposal: out.proposal, note: out.note, steps: out.steps, model: out.model });
+    })
+  );
+
+  app.post(
+    "/api/funders/:id/pools",
+    wrap(async (req, res) => {
+      const f = funderOr404(req.params.id);
+      const ip = clientIp(req);
+      if (fundStarts.over(ip)) throw new HttpError(429, "too many requests; try again in a few minutes");
+      const b = req.body || {};
+      const rule = { name: b.name, provinces: b.provinces, min_signal: b.min_signal };
+      const ruleText = typeof b.rule_text === "string" ? b.rule_text.trim().slice(0, RULE_LIMITS.ruleTextMax) : null;
+      const notEnforced = Array.isArray(b.not_enforced) ? b.not_enforced.slice(0, 8).map((x) => String(x).slice(0, 200)) : [];
+      fundStarts.note(ip);
+      const pool = await store.mutate((state, log) => {
+        const problems = checkPoolRule(state, f.id, rule);
+        if (problems.length) throw new HttpError(400, problems.join("; "));
+        const r = normalizedRule(rule);
+        const pool = {
+          id: newId("pool"),
+          name: r.name,
+          funder: f.name,
+          funder_id: f.id,
+          provinces: r.provinces,
+          min_signal: r.min_signal,
+          rule_text: ruleText,
+          not_enforced: notEnforced,
+          hazard: "typhoon",
+          created_at: new Date().toISOString(),
+        };
+        state.pools.push(pool);
+        log("pool.created", "funder", { name: pool.name, funder: f.name, provinces: pool.provinces, min_signal: pool.min_signal }, pool.id);
+        return pool;
+      });
+      res.status(201).json(pool);
     })
   );
 
@@ -301,8 +446,8 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         currency: POLICY.currency,
         poolId: pool.id,
         poolName: pool.name,
-        returnUrl: `${base}/api/fund/return`,
-        cancelUrl: `${base}/api/fund/cancel`,
+        returnUrl: `${base}/api/fund/return${req.body?.return_to === "funder" ? "?to=funder" : ""}`,
+        cancelUrl: `${base}/api/fund/cancel${req.body?.return_to === "funder" ? "?to=funder" : ""}`,
         requestId: newId("fund"),
       });
       await store.mutate((state) => addPendingContribution(state, { pool, funderName, amount, orderId: order.id }));
@@ -314,7 +459,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   app.get(
     "/api/fund/return",
     wrap(async (req, res) => {
-      const back = (q) => res.redirect(302, `${baseUrl(req)}/#/public?${q}`);
+      const back = (q) => res.redirect(302, `${baseUrl(req)}/#/${req.query.to === "funder" ? "funder" : "public"}?${q}`);
       const orderId = String(req.query.token || "");
       const pending = (await store.read()).contributions.find((k) => k.order_id === orderId);
       if (!orderId || !pending) return back("funded=unknown");
@@ -339,7 +484,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         const k = state.contributions.find((x) => x.order_id === orderId && x.status === "pending");
         if (k) k.status = "cancelled";
       });
-      res.redirect(302, `${baseUrl(req)}/#/public?funded=cancelled`);
+      res.redirect(302, `${baseUrl(req)}/#/${req.query.to === "funder" ? "funder" : "public"}?funded=cancelled`);
     })
   );
 
@@ -428,7 +573,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
 
   // Run the agent after the 202 has gone out. Progress is saved after every
   // step; the console polls /api/state to show it.
-  async function runJob(runId, bulletin) {
+  async function runJob(runId, bulletin, parsed) {
     const snapshot = await store.read();
     const run = snapshot.runs.find((r) => r.id === runId);
     // Only a run that is still "running" in storage is ours to update: if the
@@ -445,12 +590,12 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       timer = setTimeout(() => reject(new Error(`the agent did not finish within ${RUN_DEADLINE_MS / 1000} seconds`)), RUN_DEADLINE_MS);
     });
     try {
-      await Promise.race([runAgent({ state: snapshot, run, bulletin, client: aiClient, onProgress: () => save() }), deadline]);
+      await Promise.race([runAgent({ state: snapshot, run, bulletin, parsed, client: aiClient, onProgress: () => save() }), deadline]);
       run.status = run.drafts.length ? "awaiting_approval" : "no_action";
       run.finished_at = new Date().toISOString();
       const totals = runTotals(run);
       await save((log) =>
-        log("run.drafted", "agent", { storm: run.storm, areas: run.areas?.length || 0, ...totals, currency: POLICY.currency }, run.id)
+        log("run.drafted", "agent", { storm: run.storm, areas: run.areas?.length || 0, ...totals, currency: POLICY.currency, mode: "agent" }, run.id)
       );
     } catch (e) {
       // Freeze what the agent did so far; a late step from the abandoned
@@ -468,14 +613,23 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     }
   }
 
+  // Celerity decides how a bulletin is handled. A routine bulletin the rules
+  // read completely is drafted by policy alone and released without waiting
+  // (AUTO_RELEASE). Anything the rules can't place goes to the AI agent, and
+  // a coordinator approves what it drafts. { mode: "agent" } forces the agent.
   app.post(
     "/api/bulletins/:id/runs",
     coordinator,
     wrap(async (req, res) => {
-      if (!aiClient && !config.ai.configured) {
+      const found = (await store.read()).bulletins.find((b) => b.id === req.params.id);
+      if (!found) throw new HttpError(404, "bulletin not found");
+      const parsed = await readBulletin(found.text);
+      const useRules = req.body?.mode !== "agent" && routine(parsed);
+      if (!useRules && !aiClient && !config.ai.configured) {
         const key = config.ai.provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
-        throw new HttpError(503, `AI is not configured: set ${key} on the server`);
+        throw new HttpError(503, `this bulletin needs the AI agent, which is not configured: set ${key} on the server`);
       }
+      const parseNote = { confidence: parsed.confidence, unparsed: parsed.unparsed, parsed_by: parsed.parsed_by };
       const { run, bulletin } = await store.mutate((state, log) => {
         const bulletin = state.bulletins.find((b) => b.id === req.params.id);
         if (!bulletin) throw new HttpError(404, "bulletin not found");
@@ -490,14 +644,16 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
         }
         if (state.runs.some((r) => r.status === "running")) throw new HttpError(409, "an agent run is already in progress");
         const lastHour = state.runs.filter((r) => now - Date.parse(r.started_at) < 3600_000).length;
-        if (lastHour >= config.agentRunsPerHour) throw new HttpError(429, "agent run limit reached for this hour");
+        if (lastHour >= config.agentRunsPerHour) throw new HttpError(429, "run limit reached for this hour");
 
         const run = {
           id: newId("run"),
           bulletin_id: bulletin.id,
           bulletin_title: bulletin.title,
+          mode: useRules ? "rules" : "agent",
+          parse: parseNote,
           status: "running",
-          model: config.ai.model,
+          model: useRules ? null : config.ai.model,
           started_by: req.actor,
           started_at: new Date(now).toISOString(),
           finished_at: null,
@@ -510,14 +666,30 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
           error: null,
           usage: { input_tokens: 0, output_tokens: 0 },
         };
+        log("run.started", req.actor, { bulletin: bulletin.title, model: run.model, mode: run.mode }, run.id);
+        if (useRules) {
+          draftByRules(state, run, parsed);
+          run.status = run.drafts.length ? "awaiting_approval" : "no_action";
+          run.finished_at = new Date().toISOString();
+          run.steps.push({ at: run.finished_at, kind: "note", text: `Read by the ${parsed.parsed_by === "java-core" ? "Java core" : "rules"} parser: ${parsed.areas.length} area(s), nothing left for AI.` });
+          log("run.drafted", "rules", { storm: run.storm, areas: run.areas.length, ...runTotals(run), currency: POLICY.currency, mode: "rules" }, run.id);
+        }
         state.runs.push(run);
-        log("run.started", req.actor, { bulletin: bulletin.title, model: run.model }, run.id);
         return { run, bulletin };
       });
+
+      if (run.mode === "rules") {
+        const release = run.status === "awaiting_approval" && autoRelease();
+        res.status(201).json({ ...run, totals: runTotals(run), auto_release: release });
+        // No AI touched this run, so it is released at once; if PayPal or a
+        // re-check refuses, it waits for a coordinator like any other run.
+        if (release) waitUntil(approveRun(store, run.id, "rules").catch((e) => console.warn(`auto-release of ${run.id} held: ${e.message}`)));
+        return;
+      }
       res.status(202).json(run);
       // On Vercel, waitUntil keeps the function alive until the job ends;
       // on a normal server the promise simply runs to completion.
-      waitUntil(runJob(run.id, bulletin).catch((e) => console.error("agent job crashed", e)));
+      waitUntil(runJob(run.id, bulletin, parsed).catch((e) => console.error("agent job crashed", e)));
     })
   );
 

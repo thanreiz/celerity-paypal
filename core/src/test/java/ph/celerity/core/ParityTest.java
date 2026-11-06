@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+import ph.celerity.core.bulletin.BulletinParser;
 import ph.celerity.core.funding.FundingEngine;
 import ph.celerity.core.ledger.HashChain;
 import ph.celerity.core.policy.PolicyConfig;
@@ -28,6 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 class ParityTest {
     private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final BulletinParser PARSER = new BulletinParser();
     private static final Path FIXTURES = Path.of("..", "contracts", "fixtures");
 
     @TestFactory
@@ -55,6 +57,7 @@ class ParityTest {
             case "funding/allocate" -> FundingEngine.allocateRun(state, in.get("run"));
             case "funding/balances" -> FundingEngine.poolBalances(state);
             case "ledger/verify" -> HashChain.verifyChain(in.get("events"));
+            case "bulletins/parse" -> PARSER.parse((String) in.get("text"));
             default -> throw new IllegalArgumentException("unknown op " + fixture.get("op"));
         };
         Object normalized = JSON.readValue(JSON.writeValueAsString(actual), Object.class);

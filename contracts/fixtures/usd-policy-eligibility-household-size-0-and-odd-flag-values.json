@@ -225,6 +225,7 @@
           "id": "pool_pcic_bicol",
           "name": "PCIC Bicol typhoon pool",
           "funder": "Philippine Crop Insurance Corp. (demo)",
+          "funder_id": "fnd_pcic",
           "provinces": [
             "Albay",
             "Camarines Sur",
@@ -240,6 +241,7 @@
           "id": "pool_rice_ph",
           "name": "Global Rice Foundation, Philippines",
           "funder": "Global Rice Foundation (demo)",
+          "funder_id": "fnd_grf",
           "provinces": [],
           "hazard": "typhoon",
           "created_at": "2000-01-01T00:00:00.000Z"

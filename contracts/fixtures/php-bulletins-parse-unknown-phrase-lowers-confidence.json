@@ -1,0 +1,39 @@
+{
+  "name": "unknown phrase lowers confidence",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "PHP",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon ESTER\nTCWS No. 2 (Gale-force winds)\nLuzon: Albay, the coastal towns near Mayon, Sorsogon and Masbate\nVisayas: Northern Samar"
+  },
+  "expected": {
+    "storm": "Typhoon Ester",
+    "bulletin_number": null,
+    "areas": [
+      {
+        "province": "Albay",
+        "municipality": null,
+        "signal_level": 2
+      },
+      {
+        "province": "Sorsogon",
+        "municipality": null,
+        "signal_level": 2
+      },
+      {
+        "province": "Masbate",
+        "municipality": null,
+        "signal_level": 2
+      },
+      {
+        "province": "Northern Samar",
+        "municipality": null,
+        "signal_level": 2
+      }
+    ],
+    "unparsed": [
+      "the coastal towns near Mayon"
+    ],
+    "confidence": 0.8
+  }
+}

@@ -118,7 +118,7 @@ test("coordinator actions require the key", async () => {
 });
 
 test("bulletin -> agent -> approval -> PayPal payout -> webhook", async () => {
-  const start = await api("/api/bulletins/blt_dalisay_08/runs", { method: "POST" });
+  const start = await api("/api/bulletins/blt_dalisay_08/runs", { method: "POST", body: { mode: "agent" } });
   assert.equal(start.status, 202);
   const run = await waitForRun(start.body.id);
 

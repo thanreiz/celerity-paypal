@@ -100,7 +100,7 @@ after(() => server.close());
 const runStatus = async (id) => (await store.read()).runs.find((r) => r.id === id);
 
 test("a run past its deadline fails, and the late agent can't bring it back", async () => {
-  const start = await api("/api/bulletins/blt_dalisay_08/runs", { method: "POST" });
+  const start = await api("/api/bulletins/blt_dalisay_08/runs", { method: "POST", body: { mode: "agent" } });
   assert.equal(start.status, 202);
   await new Promise((r) => setTimeout(r, 450));
   const failed = await runStatus(start.body.id);

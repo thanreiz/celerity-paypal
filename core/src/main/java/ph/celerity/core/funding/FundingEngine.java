@@ -25,14 +25,34 @@ public final class FundingEngine {
 
     /** Pools that cover a family: earmarked for its province, or nationwide. */
     public static List<Object> poolsFor(Object state, Object family) {
+        return poolsFor(state, family, null);
+    }
+
+    /**
+     * With a signal, only pools whose funder's rule pays at that signal or
+     * higher (a pool without min_signal pays at any signal policy allows).
+     */
+    public static List<Object> poolsFor(Object state, Object family, Integer signal) {
         List<Object> out = new ArrayList<>();
         if (family == null) return out;
         String province = norm(get(family, "province"));
         for (Object p : list(get(state, "pools"))) {
             List<Object> provinces = list(get(p, "provinces"));
-            if (provinces.isEmpty() || provinces.stream().anyMatch(x -> norm(x).equals(province))) out.add(p);
+            boolean covers = provinces.isEmpty() || provinces.stream().anyMatch(x -> norm(x).equals(province));
+            if (covers && (signal == null || signal >= minSignal(p))) out.add(p);
         }
         return out;
+    }
+
+    private static int minSignal(Object pool) {
+        Object v = get(pool, "min_signal");
+        return v instanceof Number n && Double.isFinite(n.doubleValue()) ? (int) n.doubleValue() : 0;
+    }
+
+    /** The signal a draft is paid under: from the run's areas when it has them, else none. */
+    private static Integer draftSignal(Object family, Object run) {
+        Object areas = get(run, "areas");
+        return family != null && areas instanceof List<?> ? PolicyEngine.signalFor(family, areas) : null;
     }
 
     /** Balances per pool in centavos: [contributed, committed]. */
@@ -78,7 +98,7 @@ public final class FundingEngine {
         for (Object d : list(get(run, "drafts"))) {
             Object family = PolicyEngine.findFamily(state, get(d, "family_id"));
             List<String> pools = new ArrayList<>();
-            for (Object p : poolsFor(state, family)) {
+            for (Object p : poolsFor(state, family, draftSignal(family, run))) {
                 String id = str(get(p, "id"));
                 if (left.getOrDefault(id, 0L) > 0) pools.add(id);
             }
@@ -131,7 +151,10 @@ public final class FundingEngine {
     public static String fundingProblem(Object state, Object run, Object draft, PolicyConfig policy) {
         List<Object> drafts = PolicyEngine.otherDrafts(run, get(draft, "family_id"));
         drafts.add(draft);
-        Map<String, Object> result = allocateRun(state, Map.of("drafts", drafts));
+        Map<String, Object> scoped = new LinkedHashMap<>();
+        scoped.put("areas", get(run, "areas"));
+        scoped.put("drafts", drafts);
+        Map<String, Object> result = allocateRun(state, scoped);
         Map<String, Object> s = null;
         for (Object x : (List<Object>) result.get("shortfalls")) {
             if (Objects.equals(get(x, "family_id"), get(draft, "family_id"))) {
@@ -143,6 +166,10 @@ public final class FundingEngine {
         Object family = PolicyEngine.findFamily(state, get(draft, "family_id"));
         if (family == null) return null; // eligibility already reports an unknown family
         if (poolsFor(state, family).isEmpty()) return "no funding pool covers " + str(get(family, "province"));
+        Integer signal = draftSignal(family, run);
+        if (poolsFor(state, family, signal).isEmpty()) {
+            return "no funding pool covers " + str(get(family, "province")) + " at signal " + signal;
+        }
         return "funding pools for " + str(get(family, "province")) + " have only "
                 + num((double) s.get("available")) + " " + policy.currency() + " left for this run";
     }

@@ -224,6 +224,7 @@
           "id": "pool_pcic_bicol",
           "name": "PCIC Bicol typhoon pool",
           "funder": "Philippine Crop Insurance Corp. (demo)",
+          "funder_id": "fnd_pcic",
           "provinces": [
             "Albay"
           ],

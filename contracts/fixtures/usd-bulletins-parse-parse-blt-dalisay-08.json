@@ -1,0 +1,62 @@
+{
+  "name": "parse blt_dalisay_08",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "TROPICAL CYCLONE BULLETIN NR. 08\nTyphoon DALISAY\nIssued at 5:00 AM, 14 November 2026\nValid for broadcast until the next bulletin at 11:00 AM today.\n\nDALISAY CONTINUES TO INTENSIFY AS IT APPROACHES CATANDUANES.\n\nLocation of Center (4:00 AM): 180 km East of Virac, Catanduanes\nMaximum sustained winds: 165 km/h near the center, gustiness up to 205 km/h\nMovement: West northwestward at 20 km/h\n\nTROPICAL CYCLONE WIND SIGNALS (TCWS) IN EFFECT\n\nTCWS No. 4 (Typhoon-force winds, 118 to 184 km/h, significant to severe threat to life and property)\nLuzon: Catanduanes\n\nTCWS No. 3 (Storm-force winds, 89 to 117 km/h, moderate to significant threat to life and property)\nLuzon: Albay, Sorsogon\n\nTCWS No. 2 (Gale-force winds, 62 to 88 km/h, minor to moderate threat to life and property)\nLuzon: Camarines Sur, Masbate including Ticao and Burias Islands\n\nTCWS No. 1 (Strong winds, 39 to 61 km/h, minimal to minor threat to life and property)\nLuzon: the southern portion of Quezon (Lucena City, Tayabas City, Sariaya), Marinduque\n\nHAZARDS AFFECTING LAND AREAS\nHeavy rainfall of 100 to 200 mm is expected over Catanduanes and Albay within 24 hours. Storm surge of up to 3 meters is possible along the coasts of Catanduanes and eastern Albay.\n\nThe public and disaster risk reduction and management offices concerned are advised to take all necessary measures to protect life and property."
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": "8",
+    "areas": [
+      {
+        "province": "Catanduanes",
+        "municipality": null,
+        "signal_level": 4
+      },
+      {
+        "province": "Albay",
+        "municipality": null,
+        "signal_level": 3
+      },
+      {
+        "province": "Sorsogon",
+        "municipality": null,
+        "signal_level": 3
+      },
+      {
+        "province": "Camarines Sur",
+        "municipality": null,
+        "signal_level": 2
+      },
+      {
+        "province": "Masbate",
+        "municipality": null,
+        "signal_level": 2
+      },
+      {
+        "province": "Quezon",
+        "municipality": "Lucena City",
+        "signal_level": 1
+      },
+      {
+        "province": "Quezon",
+        "municipality": "Tayabas City",
+        "signal_level": 1
+      },
+      {
+        "province": "Quezon",
+        "municipality": "Sariaya",
+        "signal_level": 1
+      },
+      {
+        "province": "Marinduque",
+        "municipality": null,
+        "signal_level": 1
+      }
+    ],
+    "unparsed": [],
+    "confidence": 1
+  }
+}

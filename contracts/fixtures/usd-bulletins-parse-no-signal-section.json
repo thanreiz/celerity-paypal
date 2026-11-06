@@ -1,0 +1,16 @@
+{
+  "name": "no signal section",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Weather advisory: rains expected over Bicol tonight."
+  },
+  "expected": {
+    "storm": null,
+    "bulletin_number": null,
+    "areas": [],
+    "unparsed": [],
+    "confidence": 0
+  }
+}

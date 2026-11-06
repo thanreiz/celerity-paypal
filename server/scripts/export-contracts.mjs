@@ -35,6 +35,7 @@ const { checkDraft, eligibility, runTotals, POLICY } = await import("../src/poli
 const { allocateRun, poolBalances } = await import("../src/funding.js");
 const { emptyState, hashEntry, verifyChain } = await import("../src/store.js");
 const { seedState } = await import("../src/seed.js");
+const { parseBulletin } = await import("../src/parser.js");
 
 // Fixed clock for every case. Batch dates are either long past (2000) or far
 // in the future (2099), so the 7-day cooldown gives the same answer whenever
@@ -167,6 +168,34 @@ add("totals add up in centavos", "policy/run-totals", { run: { drafts: [{ amount
   ];
   add("balances skip failed payouts and pending checkouts", "funding/balances", { state: spent }, poolBalances(spent));
   allocCase("allocation after earlier payouts", spent, run({ drafts: [{ family_id: "fam_004", amount: 45 }] }));
+}
+
+// --- funders' pool rules: a pool pays only at its minimum signal or higher ----------
+{
+  const s = baseState();
+  s.pools = [...s.pools, { id: "pool_strict", name: "Strict", provinces: ["Catanduanes", "Albay"], min_signal: 4 }];
+  s.contributions = [...s.contributions, { pool_id: "pool_strict", amount: 300, status: "completed" }];
+  const allocCase = (name, rr) => add(name, "funding/allocate", { state: s, run: rr }, allocateRun(s, rr));
+  allocCase("a signal 4 pool pays at signal 4", run({ drafts: [{ family_id: "fam_001", amount: 90 }] }));
+  allocCase("a signal 4 pool skips signal 3", run({ drafts: [{ family_id: "fam_005", amount: 50 }] }));
+  allocCase("no areas means no signal filter", { drafts: [{ family_id: "fam_005", amount: 50 }] });
+  const only = { ...s, pools: [s.pools.at(-1)], contributions: [s.contributions.at(-1)] };
+  add("only a stricter pool covers the family", "policy/check-draft", { state: only, run: run(), draft: { family_id: "fam_005", amount: 10 } }, {
+    errors: checkDraft(only, run(), { family_id: "fam_005", amount: 10 }),
+  });
+}
+
+// --- bulletins/parse: the seeded bulletins and the shapes PAGASA uses ---------------
+{
+  const s = emptyState();
+  seedState(s);
+  for (const b of s.bulletins) add(`parse ${b.id}`, "bulletins/parse", { text: b.text }, parseBulletin(b.text));
+  const extra = {
+    "unknown phrase lowers confidence": "Typhoon ESTER\nTCWS No. 2 (Gale-force winds)\nLuzon: Albay, the coastal towns near Mayon, Sorsogon and Masbate\nVisayas: Northern Samar",
+    "no signal section": "Weather advisory: rains expected over Bicol tonight.",
+    "portions and alternate spellings": "SEVERE TROPICAL STORM \"Ompong\"\nBULLETIN NO. 012\nTCWS No. 2 in effect: the northern and central portions of Cebu (Bogo City, Medellin and Daanbantayan), Western Samar, the Province of Leyte\n\nTCWS No. 1\nMindanao: Dinagat Islands; Surigao del Norte",
+  };
+  for (const [name, text] of Object.entries(extra)) add(name, "bulletins/parse", { text }, parseBulletin(text));
 }
 
 // --- ledger/verify -----------------------------------------------------------------

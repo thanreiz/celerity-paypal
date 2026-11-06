@@ -37,7 +37,7 @@ export function coreState(state) {
       created_at: b.created_at,
       items: b.items.map((i) => ({ family_id: i.family_id, status: i.status, funding: i.funding })),
     })),
-    pools: (state.pools || []).map((p) => ({ id: p.id, provinces: p.provinces })),
+    pools: (state.pools || []).map((p) => ({ id: p.id, provinces: p.provinces, ...(p.min_signal ? { min_signal: p.min_signal } : {}) })),
     contributions: (state.contributions || []).map((c) => ({ pool_id: c.pool_id, amount: c.amount, status: c.status })),
   };
 }
@@ -129,7 +129,7 @@ export function checkDraft(state, run, draft) {
 export function allocateRun(state, run) {
   return decide(
     "funding/allocate",
-    { state: coreState(state), run: { drafts: run.drafts } },
+    { state: coreState(state), run: { ...(Array.isArray(run.areas) ? { areas: run.areas } : {}), drafts: run.drafts } },
     () => localAllocateRun(state, run),
     (r) => runAllocation(r, run)
   );
@@ -161,4 +161,24 @@ export function approvalAnswers(state, run, prepared) {
   if (prepared?.key === inputsKey(state, run)) return prepared;
   if (prepared) console.warn("core answers went stale during approval, using the local rules");
   return { checks: run.drafts.map((d) => localCheckDraft(state, run, d)), allocation: localAllocateRun(state, run) };
+}
+
+function parseAnswer(r) {
+  const area = (a) => typeof a?.province === "string" && (a.municipality == null || typeof a.municipality === "string") && Number.isInteger(a.signal_level);
+  if (!r || !Array.isArray(r.areas) || !r.areas.every(area) || !Array.isArray(r.unparsed) || typeof r.confidence !== "number") {
+    throw new Error("malformed parse answer");
+  }
+  return {
+    storm: r.storm ?? null,
+    bulletin_number: r.bulletin_number ?? null,
+    areas: r.areas.map((a) => ({ province: a.province, municipality: a.municipality ?? null, signal_level: a.signal_level })),
+    unparsed: r.unparsed.map(String),
+    confidence: r.confidence,
+  };
+}
+
+/** The wind signals in a bulletin, read without AI. */
+export async function parseBulletin(text) {
+  const { parseBulletin: localParse } = await import("./parser.js");
+  return decide("bulletins/parse", { text }, () => localParse(text), parseAnswer);
 }

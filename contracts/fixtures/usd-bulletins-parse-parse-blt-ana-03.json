@@ -1,0 +1,32 @@
+{
+  "name": "parse blt_ana_03",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "TROPICAL CYCLONE BULLETIN NR. 03\nTropical Depression ANA\nIssued at 5:00 PM, 2 December 2026\n\nANA SLIGHTLY WEAKENS WHILE MOVING OVER THE PHILIPPINE SEA.\n\nMaximum sustained winds: 45 km/h near the center, gustiness up to 60 km/h\n\nTROPICAL CYCLONE WIND SIGNALS (TCWS) IN EFFECT\n\nTCWS No. 1 (Strong winds, 39 to 61 km/h, minimal to minor threat to life and property)\nLuzon: Catanduanes, the eastern portion of Camarines Sur (Caramoan, Garchitorena)\n\nNo other wind signals are in effect."
+  },
+  "expected": {
+    "storm": "Tropical Depression Ana",
+    "bulletin_number": "3",
+    "areas": [
+      {
+        "province": "Catanduanes",
+        "municipality": null,
+        "signal_level": 1
+      },
+      {
+        "province": "Camarines Sur",
+        "municipality": "Caramoan",
+        "signal_level": 1
+      },
+      {
+        "province": "Camarines Sur",
+        "municipality": "Garchitorena",
+        "signal_level": 1
+      }
+    ],
+    "unparsed": [],
+    "confidence": 1
+  }
+}
