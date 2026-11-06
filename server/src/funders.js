@@ -125,7 +125,7 @@ export function funderView(state, funderId) {
         pool_id,
         pool_name: pools.find((p) => p.id === pool_id)?.name,
         storm: b.storm,
-        decided_by: run?.mode === "rules" ? "rules" : "agent + coordinator",
+        decided_by: run?.mode === "rules" || run?.mode === "jev" ? run.mode : "agent + coordinator",
         at: b.created_at,
         status: b.status,
         payout_batch_id: b.payout_batch_id,

@@ -6,6 +6,8 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
+// Jev is tested in jev.test.js; here it stays off.
+delete process.env.TYPESAFE_API_KEY;
 process.env.PAYPAL_CLIENT_ID = "test-id";
 process.env.PAYPAL_CLIENT_SECRET = "test-secret";
 process.env.PAYPAL_WEBHOOK_ID = "";

@@ -193,7 +193,7 @@ export function stormStatus(state, family) {
  * "helper", text }], the last one from the farmer. `openCase(topic, summary)`
  * records a case; it is called at most once.
  */
-export async function helpFarmer({ state, family, messages, client, openCase }) {
+export async function helpFarmer({ state, family, messages, triage = null, client, openCase }) {
   let opened = null;
   const execute = (name, input) => {
     switch (name) {
@@ -243,7 +243,11 @@ export async function helpFarmer({ state, family, messages, client, openCase }) 
   const out = await loop({
     system: HELP_SYSTEM,
     tools: HELP_TOOLS,
-    userText: `Conversation so far (reply to the farmer's last message):\n<conversation>\n${transcript}\n</conversation>`,
+    userText: `Conversation so far (reply to the farmer's last message):\n<conversation>\n${transcript}\n</conversation>${
+      triage
+        ? `\n\nA fast classifier read the last message as "${triage.topic}"${triage.flag ? ", and thinks a coordinator must follow up: open a case" : ""}. Check it against the message yourself.`
+        : ""
+    }`,
     execute,
     client,
   });

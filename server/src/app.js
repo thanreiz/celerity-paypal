@@ -18,7 +18,11 @@ import { FUND_LIMITS, addPendingContribution, allocateRun, completeContribution,
 import { newId, verifyChain } from "./store.js";
 import { FUNDERS, RULE_LIMITS, checkPoolRule, funderById, funderView, normalizedRule } from "./funders.js";
 import { draftPoolRule, helpFarmer, stormStatus } from "./agents.js";
-import { autoRelease, draftByRules, readBulletin, routine } from "./rules.js";
+import { JEV_THRESHOLDS, triageFarmerMessage } from "./jev.js";
+
+// Jev's message topics -> the case topics a coordinator sees.
+const CASE_FOR_TOPIC = { payout_status: "not_received", cash_out_help: "cash_out_help", damage_report: "damage_report", wrong_details: "wrong_details" };
+import { autoRelease, draftByRules, routeBulletin } from "./rules.js";
 
 const SUCCESS_STATES = new Set(["SUCCESS"]);
 
@@ -48,7 +52,7 @@ const PUBLIC_DETAIL = {
   "payout.item_status": ["status"],
   "webhook.received": ["event_type"],
 };
-const SYSTEM_ACTORS = new Set(["agent", "rules", "paypal", "paypal-webhook", "paypal-poll", "system", "funder", "farmer"]);
+const SYSTEM_ACTORS = new Set(["agent", "rules", "jev", "paypal", "paypal-webhook", "paypal-poll", "system", "funder", "farmer"]);
 const FAMILY_EVENTS = new Set(["family.registered", "family.status"]);
 
 function publicEvent({ detail, actor, ref, ...e }) {
@@ -292,16 +296,33 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       if (!aiClient && !config.ai.configured) throw new HttpError(503, "the helper is not available right now");
       const { state, family } = await familyByToken(req);
       aiBudget(req);
+      // Jev triages first (~0.3 s): the topic steers GPT, and a confident
+      // "a person must follow up" opens a case even if GPT doesn't.
+      const triage = await triageFarmerMessage({ messages });
+      // Only where a person is the answer (damage, wrong details) at 0.7, or
+      // anything Jev is near-sure about at 0.9: "where is my money?" is
+      // answered from the record, not by opening a case.
+      if (triage) {
+        const personTopic = triage.topic === "damage_report" || triage.topic === "wrong_details";
+        triage.flag = triage.needsHuman >= (personTopic ? JEV_THRESHOLDS.needsHuman : 0.9);
+      }
       let pending = null;
       const out = await helpFarmer({
         state,
         family,
         messages,
+        triage,
         client: aiClient,
         openCase: (topic, summary) => {
           pending = { topic, summary };
         },
       });
+      if (!pending && triage?.flag) {
+        pending = {
+          topic: CASE_FOR_TOPIC[triage.topic] || "other",
+          summary: `Flagged by Jev (${Math.round(triage.needsHuman * 100)}%): "${messages.at(-1).text.slice(0, 200)}"`,
+        };
+      }
       if (pending) {
         await store.mutate((s, log) => {
           s.cases ||= [];
@@ -311,7 +332,11 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
           log("case.opened", "farmer", { topic: c.topic }, c.id);
         });
       }
-      res.json({ reply: out.reply, case: out.case ? { topic: out.case.topic } : null });
+      res.json({
+        reply: out.reply,
+        case: pending ? { topic: pending.topic } : null,
+        triage: triage ? { topic: triage.topic, needs_human: triage.needsHuman, model: triage.model, ms: triage.ms } : null,
+      });
     })
   );
 
@@ -573,7 +598,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
 
   // Run the agent after the 202 has gone out. Progress is saved after every
   // step; the console polls /api/state to show it.
-  async function runJob(runId, bulletin, parsed) {
+  async function runJob(runId, bulletin, parsed, jev) {
     const snapshot = await store.read();
     const run = snapshot.runs.find((r) => r.id === runId);
     // Only a run that is still "running" in storage is ours to update: if the
@@ -590,7 +615,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       timer = setTimeout(() => reject(new Error(`the agent did not finish within ${RUN_DEADLINE_MS / 1000} seconds`)), RUN_DEADLINE_MS);
     });
     try {
-      await Promise.race([runAgent({ state: snapshot, run, bulletin, parsed, client: aiClient, onProgress: () => save() }), deadline]);
+      await Promise.race([runAgent({ state: snapshot, run, bulletin, parsed, jev, client: aiClient, onProgress: () => save() }), deadline]);
       run.status = run.drafts.length ? "awaiting_approval" : "no_action";
       run.finished_at = new Date().toISOString();
       const totals = runTotals(run);
@@ -623,13 +648,16 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
     wrap(async (req, res) => {
       const found = (await store.read()).bulletins.find((b) => b.id === req.params.id);
       if (!found) throw new HttpError(404, "bulletin not found");
-      const parsed = await readBulletin(found.text);
-      const useRules = req.body?.mode !== "agent" && routine(parsed);
+      // Parser first, then Jev for what the parser left (outside any lock:
+      // each can take a few seconds).
+      const { route, parsed, jev, hold } = await routeBulletin(found.text, { forceAgent: req.body?.mode === "agent" });
+      const useRules = route === "rules" || route === "jev";
       if (!useRules && !aiClient && !config.ai.configured) {
         const key = config.ai.provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
         throw new HttpError(503, `this bulletin needs the AI agent, which is not configured: set ${key} on the server`);
       }
       const parseNote = { confidence: parsed.confidence, unparsed: parsed.unparsed, parsed_by: parsed.parsed_by };
+      const jevNote = jev ? { model: jev.model, ms: jev.ms, injection: jev.injection, placements: jev.placements, hold } : null;
       const { run, bulletin } = await store.mutate((state, log) => {
         const bulletin = state.bulletins.find((b) => b.id === req.params.id);
         if (!bulletin) throw new HttpError(404, "bulletin not found");
@@ -650,8 +678,9 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
           id: newId("run"),
           bulletin_id: bulletin.id,
           bulletin_title: bulletin.title,
-          mode: useRules ? "rules" : "agent",
+          mode: useRules ? route : "agent",
           parse: parseNote,
+          jev: jevNote,
           status: "running",
           model: useRules ? null : config.ai.model,
           started_by: req.actor,
@@ -672,24 +701,30 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
           run.status = run.drafts.length ? "awaiting_approval" : "no_action";
           run.finished_at = new Date().toISOString();
           run.steps.push({ at: run.finished_at, kind: "note", text: `Read by the ${parsed.parsed_by === "java-core" ? "Java core" : "rules"} parser: ${parsed.areas.length} area(s), nothing left for AI.` });
-          log("run.drafted", "rules", { storm: run.storm, areas: run.areas.length, ...runTotals(run), currency: POLICY.currency, mode: "rules" }, run.id);
+          if (route === "jev") {
+            for (const pl of jev.placements) {
+              run.steps.push({ at: run.finished_at, kind: "note", text: `Jev placed "${pl.phrase}" as all of ${pl.province} (${Math.round(pl.p * 100)}% sure, ${Math.round(pl.whole * 100)}% whole province).` });
+            }
+          }
+          if (hold) run.steps.push({ at: run.finished_at, kind: "note", text: `${hold}: held for a coordinator.` });
+          log("run.drafted", route, { storm: run.storm, areas: run.areas.length, ...runTotals(run), currency: POLICY.currency, mode: route }, run.id);
         }
         state.runs.push(run);
         return { run, bulletin };
       });
 
-      if (run.mode === "rules") {
-        const release = run.status === "awaiting_approval" && autoRelease();
+      if (run.mode === "rules" || run.mode === "jev") {
+        const release = run.status === "awaiting_approval" && autoRelease() && !hold;
         res.status(201).json({ ...run, totals: runTotals(run), auto_release: release });
         // No AI touched this run, so it is released at once; if PayPal or a
         // re-check refuses, it waits for a coordinator like any other run.
-        if (release) waitUntil(approveRun(store, run.id, "rules").catch((e) => console.warn(`auto-release of ${run.id} held: ${e.message}`)));
+        if (release) waitUntil(approveRun(store, run.id, run.mode).catch((e) => console.warn(`auto-release of ${run.id} held: ${e.message}`)));
         return;
       }
       res.status(202).json(run);
       // On Vercel, waitUntil keeps the function alive until the job ends;
       // on a normal server the promise simply runs to completion.
-      waitUntil(runJob(run.id, bulletin, parsed).catch((e) => console.error("agent job crashed", e)));
+      waitUntil(runJob(run.id, bulletin, parsed, jev).catch((e) => console.error("agent job crashed", e)));
     })
   );
 

@@ -83,13 +83,13 @@ export function eventDetail(e, names = {}) {
   const who = (id) => (id && names[id]) || id;
   switch (e.type) {
     case "run.drafted": {
-      const by = d.mode === "rules" ? "Rules, no AI · " : d.mode === "agent" ? "AI agent · " : "";
+      const by = d.mode === "rules" ? "Rules, no AI · " : d.mode === "jev" ? "Rules + Jev · " : d.mode === "agent" ? "AI agent · " : "";
       return d.recipients
         ? `${by}${stormName(d.storm)}: ${d.recipients} families, ${money(d.amount, d.currency)}`
         : `${by}${stormName(d.storm) || "No storm"}: nothing to pay`;
     }
     case "run.approved":
-      return `${e.actor === "rules" ? "By the rules" : "By a coordinator"}: ${d.recipients} payouts, ${money(d.amount, d.currency)}`;
+      return `${e.actor === "rules" ? "By the rules" : e.actor === "jev" ? "By the rules + Jev" : "By a coordinator"}: ${d.recipients} payouts, ${money(d.amount, d.currency)}`;
     case "case.opened":
       return (d.topic || "").replace(/_/g, " ");
     case "payout.batch_created":
@@ -100,7 +100,7 @@ export function eventDetail(e, names = {}) {
     case "webhook.received":
       return d.event_type;
     case "run.started":
-      return `${d.bulletin}${d.mode === "rules" ? " (rules)" : d.mode === "agent" ? " (AI agent)" : ""}`;
+      return `${d.bulletin}${d.mode === "rules" ? " (rules)" : d.mode === "jev" ? " (rules + Jev)" : d.mode === "agent" ? " (AI agent)" : ""}`;
     case "run.failed":
       return d.message || "The agent run failed";
     case "payout.error":

@@ -4,6 +4,8 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 
+// Jev is tested in jev.test.js; here it stays off.
+delete process.env.TYPESAFE_API_KEY;
 process.env.PAYPAL_CLIENT_ID = "test-id";
 process.env.PAYPAL_CLIENT_SECRET = "test-secret";
 process.env.AI_PROVIDER = "anthropic";

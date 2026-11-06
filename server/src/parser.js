@@ -154,3 +154,26 @@ export function parseBulletin(text) {
 /** A bulletin the rules can act on alone: a storm name, at least one area,
  * and nothing left over for an AI to interpret. */
 export const routine = (parsed) => Boolean(parsed.storm) && parsed.areas.length > 0 && parsed.unparsed.length === 0 && parsed.confidence === 1;
+
+/** The wind signal of the TCWS block a list item sits in (0 if none): the
+ * same walk as parseBulletin, used to give a phrase placed later (by Jev)
+ * the signal its line carried. */
+export function signalOfPhrase(text, phrase) {
+  let signal = 0;
+  for (const line of String(text || "").split(LINE_BREAK)) {
+    const s = line.match(SIGNAL);
+    if (s) {
+      signal = Number(s[1]);
+      const inline = s[2].match(IN_EFFECT);
+      if (inline && splitTopLevel(inline[1]).some((x) => x.trim().replace(/[.;]+$/, "").trim() === phrase)) return signal;
+      continue;
+    }
+    const r = line.match(REGION);
+    if (r && signal > 0) {
+      if (splitTopLevel(r[2]).some((x) => x.trim().replace(/[.;]+$/, "").trim() === phrase)) return signal;
+      continue;
+    }
+    if (!line.trim()) signal = 0;
+  }
+  return 0;
+}

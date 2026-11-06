@@ -44,7 +44,9 @@ const I = {
 };
 
 function DecidedBy({ by }) {
-  return by === "rules" ? <span className="app-tag rules">Rules · no AI</span> : <span className="app-tag ai">AI read · person approved</span>;
+  if (by === "rules") return <span className="app-tag rules">Rules · no AI</span>;
+  if (by === "jev") return <span className="app-tag rules">Rules + Jev</span>;
+  return <span className="app-tag ai">AI read · person approved</span>;
 }
 
 function payoutState(r) {
