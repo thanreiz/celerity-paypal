@@ -1,0 +1,466 @@
+{
+  "name": "recipient cap",
+  "op": "policy/check-draft",
+  "input": {
+    "currency": "PHP",
+    "now": "2026-11-15T00:00:00.000Z",
+    "state": {
+      "families": [
+        {
+          "id": "fam_001",
+          "name": "Maria Santos",
+          "municipality": "Virac",
+          "province": "Catanduanes",
+          "household_size": 6,
+          "vulnerability": {
+            "senior": true
+          },
+          "status": "active",
+          "paypal_email": "maria.santos@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_002",
+          "name": "Jose Reyes",
+          "municipality": "Virac",
+          "province": "Catanduanes",
+          "household_size": 4,
+          "vulnerability": {},
+          "status": "active",
+          "paypal_email": "jose.reyes@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_003",
+          "name": "Ana Dela Cruz",
+          "municipality": "San Andres",
+          "province": "Catanduanes",
+          "household_size": 5,
+          "vulnerability": {
+            "infant": true
+          },
+          "status": "active",
+          "paypal_email": "ana.dela.cruz@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_004",
+          "name": "Ramon Villanueva",
+          "municipality": "Bato",
+          "province": "Catanduanes",
+          "household_size": 3,
+          "vulnerability": {
+            "pwd": true
+          },
+          "status": "active",
+          "paypal_email": "ramon.villanueva@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_005",
+          "name": "Liza Bautista",
+          "municipality": "Legazpi City",
+          "province": "Albay",
+          "household_size": 5,
+          "vulnerability": {
+            "pregnant": true
+          },
+          "status": "active",
+          "paypal_email": "liza.bautista@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_006",
+          "name": "Eduardo Garcia",
+          "municipality": "Daraga",
+          "province": "Albay",
+          "household_size": 7,
+          "vulnerability": {
+            "senior": true,
+            "infant": true
+          },
+          "status": "active",
+          "paypal_email": "eduardo.garcia@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_007",
+          "name": "Rosario Mendoza",
+          "municipality": "Tabaco City",
+          "province": "Albay",
+          "household_size": 2,
+          "vulnerability": {
+            "senior": true
+          },
+          "status": "active",
+          "paypal_email": "rosario.mendoza@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_008",
+          "name": "Carlos Ramos",
+          "municipality": "Guinobatan",
+          "province": "Albay",
+          "household_size": 4,
+          "vulnerability": {},
+          "status": "active",
+          "paypal_email": "carlos.ramos@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_009",
+          "name": "Teresita Aquino",
+          "municipality": "Sorsogon City",
+          "province": "Sorsogon",
+          "household_size": 4,
+          "vulnerability": {},
+          "status": "active",
+          "paypal_email": "teresita.aquino@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_010",
+          "name": "Fernando Castillo",
+          "municipality": "Bulan",
+          "province": "Sorsogon",
+          "household_size": 6,
+          "vulnerability": {
+            "pwd": true
+          },
+          "status": "active",
+          "paypal_email": "fernando.castillo@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_011",
+          "name": "Gloria Navarro",
+          "municipality": "Naga City",
+          "province": "Camarines Sur",
+          "household_size": 3,
+          "vulnerability": {},
+          "status": "active",
+          "paypal_email": "gloria.navarro@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_012",
+          "name": "Ricardo Torres",
+          "municipality": "Pili",
+          "province": "Camarines Sur",
+          "household_size": 5,
+          "vulnerability": {
+            "infant": true
+          },
+          "status": "active",
+          "paypal_email": "ricardo.torres@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_013",
+          "name": "Imelda Flores",
+          "municipality": "Iriga City",
+          "province": "Camarines Sur",
+          "household_size": 4,
+          "vulnerability": {},
+          "status": "suspended",
+          "paypal_email": "imelda.flores@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_014",
+          "name": "Antonio Lim",
+          "municipality": "Masbate City",
+          "province": "Masbate",
+          "household_size": 5,
+          "vulnerability": {},
+          "status": "active",
+          "paypal_email": "antonio.lim@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_015",
+          "name": "Cristina Pascual",
+          "municipality": "Lucena City",
+          "province": "Quezon",
+          "household_size": 4,
+          "vulnerability": {
+            "senior": true
+          },
+          "status": "active",
+          "paypal_email": "cristina.pascual@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fam_016",
+          "name": "Danilo Ocampo",
+          "municipality": "Tayabas City",
+          "province": "Quezon",
+          "household_size": 3,
+          "vulnerability": {},
+          "status": "active",
+          "paypal_email": "danilo.ocampo@relief-demo.example",
+          "demo_receiver": false,
+          "registered_at": "2000-01-01T00:00:00.000Z"
+        }
+      ],
+      "batches": [],
+      "pools": [
+        {
+          "id": "pool_pcic_bicol",
+          "name": "PCIC Bicol typhoon pool",
+          "funder": "Philippine Crop Insurance Corp. (demo)",
+          "provinces": [
+            "Albay",
+            "Camarines Sur",
+            "Camarines Norte",
+            "Catanduanes",
+            "Sorsogon",
+            "Masbate"
+          ],
+          "hazard": "typhoon",
+          "created_at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "pool_rice_ph",
+          "name": "Global Rice Foundation, Philippines",
+          "funder": "Global Rice Foundation (demo)",
+          "provinces": [],
+          "hazard": "typhoon",
+          "created_at": "2000-01-01T00:00:00.000Z"
+        }
+      ],
+      "contributions": [
+        {
+          "id": "ctb_seed_1",
+          "pool_id": "pool_pcic_bicol",
+          "funder_name": "Philippine Crop Insurance Corp. (demo)",
+          "amount": 50000,
+          "currency": "PHP",
+          "source": "seed",
+          "status": "completed",
+          "order_id": null,
+          "capture_id": null,
+          "at": "2000-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "ctb_seed_2",
+          "pool_id": "pool_rice_ph",
+          "funder_name": "Global Rice Foundation (demo)",
+          "amount": 30000,
+          "currency": "PHP",
+          "source": "seed",
+          "status": "completed",
+          "order_id": null,
+          "capture_id": null,
+          "at": "2000-01-01T00:00:00.000Z"
+        }
+      ]
+    },
+    "run": {
+      "storm": "Typhoon Dalisay",
+      "areas": [
+        {
+          "province": "Catanduanes",
+          "municipality": null,
+          "signal_level": 4
+        },
+        {
+          "province": "Albay",
+          "municipality": null,
+          "signal_level": 3
+        },
+        {
+          "province": "Quezon",
+          "municipality": "Lucena City",
+          "signal_level": 1
+        }
+      ],
+      "drafts": [
+        {
+          "family_id": "x_0",
+          "amount": 1
+        },
+        {
+          "family_id": "x_1",
+          "amount": 1
+        },
+        {
+          "family_id": "x_2",
+          "amount": 1
+        },
+        {
+          "family_id": "x_3",
+          "amount": 1
+        },
+        {
+          "family_id": "x_4",
+          "amount": 1
+        },
+        {
+          "family_id": "x_5",
+          "amount": 1
+        },
+        {
+          "family_id": "x_6",
+          "amount": 1
+        },
+        {
+          "family_id": "x_7",
+          "amount": 1
+        },
+        {
+          "family_id": "x_8",
+          "amount": 1
+        },
+        {
+          "family_id": "x_9",
+          "amount": 1
+        },
+        {
+          "family_id": "x_10",
+          "amount": 1
+        },
+        {
+          "family_id": "x_11",
+          "amount": 1
+        },
+        {
+          "family_id": "x_12",
+          "amount": 1
+        },
+        {
+          "family_id": "x_13",
+          "amount": 1
+        },
+        {
+          "family_id": "x_14",
+          "amount": 1
+        },
+        {
+          "family_id": "x_15",
+          "amount": 1
+        },
+        {
+          "family_id": "x_16",
+          "amount": 1
+        },
+        {
+          "family_id": "x_17",
+          "amount": 1
+        },
+        {
+          "family_id": "x_18",
+          "amount": 1
+        },
+        {
+          "family_id": "x_19",
+          "amount": 1
+        },
+        {
+          "family_id": "x_20",
+          "amount": 1
+        },
+        {
+          "family_id": "x_21",
+          "amount": 1
+        },
+        {
+          "family_id": "x_22",
+          "amount": 1
+        },
+        {
+          "family_id": "x_23",
+          "amount": 1
+        },
+        {
+          "family_id": "x_24",
+          "amount": 1
+        },
+        {
+          "family_id": "x_25",
+          "amount": 1
+        },
+        {
+          "family_id": "x_26",
+          "amount": 1
+        },
+        {
+          "family_id": "x_27",
+          "amount": 1
+        },
+        {
+          "family_id": "x_28",
+          "amount": 1
+        },
+        {
+          "family_id": "x_29",
+          "amount": 1
+        },
+        {
+          "family_id": "x_30",
+          "amount": 1
+        },
+        {
+          "family_id": "x_31",
+          "amount": 1
+        },
+        {
+          "family_id": "x_32",
+          "amount": 1
+        },
+        {
+          "family_id": "x_33",
+          "amount": 1
+        },
+        {
+          "family_id": "x_34",
+          "amount": 1
+        },
+        {
+          "family_id": "x_35",
+          "amount": 1
+        },
+        {
+          "family_id": "x_36",
+          "amount": 1
+        },
+        {
+          "family_id": "x_37",
+          "amount": 1
+        },
+        {
+          "family_id": "x_38",
+          "amount": 1
+        },
+        {
+          "family_id": "x_39",
+          "amount": 1
+        }
+      ]
+    },
+    "draft": {
+      "family_id": "fam_001",
+      "amount": 1
+    }
+  },
+  "expected": {
+    "errors": [
+      "run would exceed 40 recipients"
+    ]
+  }
+}

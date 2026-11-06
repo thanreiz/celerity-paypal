@@ -1,0 +1,15 @@
+# Celerity core: the deterministic money rules over HTTP.
+# Cloud Run sets PORT; locally it defaults to 8081 so it doesn't clash with the Node server.
+server:
+  port: ${PORT:8081}
+  shutdown: graceful
+spring:
+  application:
+    name: celerity-core
+  main:
+    banner-mode: "off"
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

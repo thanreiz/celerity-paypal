@@ -108,8 +108,23 @@ payout policy.
   `fetch` (no SDK). App state is one JSON document. On Vercel it lives in Neon Postgres and every
   change runs in a transaction holding a row lock, so concurrent requests on different serverless
   instances apply one at a time (no double approvals). Locally it's a JSON file.
-- **`celerity-web/`**: React 18 + Vite. Coordinator console (Overview, Respond, Payouts,
-  Families, Evidence log) and a public transparency page at `/#/public`.
+- **`celerity-web/`**: React 18 + Vite. Coordinator console (Overview, Funds, Respond, Payouts,
+  Families, Evidence log), a public transparency page at `/#/public`, and each farmer's private
+  phone page at `/#/r/<link>`.
+- **`core/`**: Java 21 + Spring Boot. The deterministic money rules as a stateless service on
+  Google Cloud Run:
+  - eligibility, caps and draft checks;
+  - the pro-rata split across funders' pools;
+  - hash-chain verification;
+  - a PAGASA bulletin parser that reads routine bulletins without AI.
+
+  The Node server can hand approvals to it (`CORE_MODE=shadow|on`). Java and Node are held to
+  identical answers by `contracts/fixtures`. See [`core/README.md`](core/README.md).
+
+**The split:** code decides wherever the answer must be the same every time. That covers who
+qualifies, how much they get, which funder pays, and whether the record was changed. AI handles
+what rules can't: free-text bulletins the parser can't place, storms that change between bulletins,
+field reports, and farmers' messages in their own language.
 
 ## Repo layout
 
@@ -231,6 +246,8 @@ function limit (a typical run takes about 30 seconds).
 | `DATABASE_URL` | on Vercel | Postgres connection string (Neon sets it). Without it, state is a local JSON file. |
 | `DATA_DIR`, `PORT` | no | Local file store folder and port. Default `server/data`, `8787` |
 | `PUBLIC_URL` | no | Where PayPal Checkout sends funders back, e.g. `https://celerity-relief.vercel.app`. Default: the request's host |
+| `CORE_URL`, `CORE_TOKEN` | no | The Java core (`core/`) and its shared secret |
+| `CORE_MODE` | no | `off` (default), `shadow` (Node decides, the core is compared), `on` (the core decides, Node's rules answer if it's unreachable) |
 
 ---
 

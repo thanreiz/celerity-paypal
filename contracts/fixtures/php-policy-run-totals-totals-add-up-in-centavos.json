@@ -1,0 +1,25 @@
+{
+  "name": "totals add up in centavos",
+  "op": "policy/run-totals",
+  "input": {
+    "currency": "PHP",
+    "now": "2026-11-15T00:00:00.000Z",
+    "run": {
+      "drafts": [
+        {
+          "amount": 0.1
+        },
+        {
+          "amount": 0.2
+        },
+        {
+          "amount": 19.99
+        }
+      ]
+    }
+  },
+  "expected": {
+    "recipients": 3,
+    "amount": 20.29
+  }
+}

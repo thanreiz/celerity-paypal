@@ -1,0 +1,22 @@
+# Render Blueprint for the Java core (core/) on the free plan: no card needed.
+# Render -> New -> Blueprint -> pick this repo. It builds core/Dockerfile.
+# The free plan sleeps after 15 minutes idle; the first call after that takes
+# about a minute. With CORE_MODE=shadow on the web app that never delays a
+# payout: the web app decides and only compares answers with the core.
+services:
+  - type: web
+    name: celerity-core
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: core
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      # Paste the same secret the web app uses (CORE_TOKEN on Vercel).
+      - key: CORE_TOKEN
+        sync: false
+      - key: PAYOUT_CURRENCY
+        value: PHP

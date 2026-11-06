@@ -1,0 +1,73 @@
+{
+  "name": "a valid chain",
+  "op": "ledger/verify",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "events": [
+      {
+        "seq": 0,
+        "id": "evt_0",
+        "at": "2000-01-01T00:00:00.000Z",
+        "type": "run.drafted",
+        "actor": "agent",
+        "ref": "run_1",
+        "detail": {
+          "storm": "Typhoon Dalisay",
+          "recipients": 13,
+          "amount": 39500.5,
+          "currency": "USD",
+          "areas": 9
+        },
+        "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "761f63953f298fd6a6c9130b3d08ab6d412fbfbc4ddd18a4cfc2a9f4ae97a0a8"
+      },
+      {
+        "seq": 1,
+        "id": "evt_1",
+        "at": "2000-01-01T00:00:00.000Z",
+        "type": "pool.funded",
+        "actor": "paypal",
+        "ref": "pool_x",
+        "detail": {
+          "pool": "PCIC Bicol typhoon pool",
+          "funder_name": "Bayanihan \"Relief\" Fund\nñ ✓ 🌀",
+          "amount": 500,
+          "currency": "USD"
+        },
+        "prevHash": "761f63953f298fd6a6c9130b3d08ab6d412fbfbc4ddd18a4cfc2a9f4ae97a0a8",
+        "hash": "d31a5a48bb13066204572f26978bdf2369cbdd06711fe6465c60ea9bde9098a5"
+      },
+      {
+        "seq": 2,
+        "id": "evt_2",
+        "at": "2000-01-01T00:00:00.000Z",
+        "type": "payout.submitting",
+        "actor": "Ana Reyes",
+        "ref": "bat_1",
+        "detail": {
+          "recipients": 2,
+          "amount": 0.3,
+          "pools": [
+            {
+              "pool_id": "a",
+              "amount": 0.1
+            },
+            {
+              "pool_id": "b",
+              "amount": 0.2
+            }
+          ],
+          "note": null
+        },
+        "prevHash": "d31a5a48bb13066204572f26978bdf2369cbdd06711fe6465c60ea9bde9098a5",
+        "hash": "d2e4368bbc547cfdde3ff8c730722901223d2baa3bcef10709263a419e2a19c6"
+      }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "length": 3,
+    "head": "d2e4368bbc547cfdde3ff8c730722901223d2baa3bcef10709263a419e2a19c6"
+  }
+}
