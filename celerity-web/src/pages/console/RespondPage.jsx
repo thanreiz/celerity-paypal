@@ -151,9 +151,20 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
     <Card>
       <div className="cel-row-actions" style={{ justifyContent: "space-between" }}>
         <div style={{ minWidth: 0 }}>
-          <strong style={{ font: "var(--text-h2)" }}>{stormName(run.storm) || "Agent run"}</strong>
+          <strong style={{ font: "var(--text-h2)" }}>{stormName(run.storm) || "Agent run"}</strong>{" "}
+          <span
+            className="cel-chip"
+            style={{
+              marginLeft: 6,
+              background: run.mode === "rules" ? "var(--ok-bg)" : "var(--accent-soft)",
+              color: run.mode === "rules" ? "var(--ok-text)" : "#8a5a06",
+            }}
+          >
+            {run.mode === "rules" ? "Rules · no AI" : "AI agent · needs approval"}
+          </span>
           <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
-            Started {when(run.started_at)} by {run.started_by} · {run.model}
+            Started {when(run.started_at)} by {run.started_by} · {run.mode === "rules" ? `read by the ${run.parse?.parsed_by === "java-core" ? "Java core" : "rules"} parser` : run.model}
+            {run.mode !== "rules" && run.parse?.unparsed?.length ? ` · parser couldn't place: ${run.parse.unparsed.join("; ")}` : ""}
             {run.usage?.output_tokens ? ` · ${(run.usage.input_tokens + run.usage.output_tokens).toLocaleString()} tokens` : ""}
           </span>
         </div>
@@ -362,7 +373,7 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
           )}
           {run.status === "approved" && (
             <p style={{ font: "var(--text-meta)", margin: 0 }}>
-              Approved by {run.approved_by} {when(run.approved_at)}.{" "}
+              {run.approved_by === "rules" ? "Released by the rules, no approval needed: no AI touched this run," : `Approved by ${run.approved_by}`} {when(run.approved_at)}.{" "}
               <button onClick={() => go("payouts")} style={{ color: "var(--primary)", background: "none", border: "none", padding: 0, font: "inherit", fontWeight: 700, cursor: "pointer" }}>
                 Track the payouts
               </button>
@@ -490,9 +501,13 @@ export default function RespondPage({ data, config, act, busy, go }) {
                   <Button
                     variant="outline"
                     disabled={busy || anyRunning || !config.aiConfigured}
-                    onClick={() => act("Agent started.", () => api.startRun(bulletin.id)).catch(() => {})}
+                    onClick={() => act("Celerity is on it.", () => api.startRun(bulletin.id)).catch(() => {})}
+                    title="Routine bulletins are decided by the rules and released at once; anything else goes to the AI agent and waits for your approval."
                   >
-                    {anyRunning ? "Agent is working…" : runs.length ? "Run the agent again" : "Run the agent"}
+                    {anyRunning ? "Agent is working…" : runs.length ? "Run Celerity again" : "Run Celerity"}
+                  </Button>
+                  <Button variant="ghost" size="sm" disabled={busy || anyRunning || !config.aiConfigured} onClick={() => act("Agent started.", () => api.startRun(bulletin.id, "agent")).catch(() => {})}>
+                    Force the AI agent
                   </Button>
                 </div>
                 {bulletin.kind === "adversarial" && (

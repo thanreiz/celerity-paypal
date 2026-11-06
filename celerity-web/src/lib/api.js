@@ -73,13 +73,22 @@ export const api = {
   addFamily: (family) => request("/api/families", { method: "POST", body: family }),
   setFamilyStatus: (id, status) => request(`/api/families/${id}`, { method: "PATCH", body: { status } }),
   addBulletin: (title, text) => request("/api/bulletins", { method: "POST", body: { title, text } }),
-  startRun: (bulletinId) => request(`/api/bulletins/${bulletinId}/runs`, { method: "POST" }),
+  startRun: (bulletinId, mode) => request(`/api/bulletins/${bulletinId}/runs`, { method: "POST", body: mode ? { mode } : {} }),
   approveRun: (runId) => request(`/api/runs/${runId}/approve`, { method: "POST" }),
   removeDraft: (runId, familyId) => request(`/api/runs/${runId}/drafts/${familyId}`, { method: "DELETE" }),
   rejectRun: (runId, reason) => request(`/api/runs/${runId}/reject`, { method: "POST", body: { reason } }),
   pools: () => request("/api/pools"),
   farmer: (token) => request(`/api/me/${encodeURIComponent(token)}`),
   createPool: (pool) => request("/api/pools", { method: "POST", body: pool }),
-  fundPool: (poolId, funder_name, amount) => request(`/api/pools/${poolId}/fund`, { method: "POST", body: { funder_name, amount } }),
+  fundPool: (poolId, funder_name, amount, return_to) =>
+    request(`/api/pools/${poolId}/fund`, { method: "POST", body: { funder_name, amount, ...(return_to ? { return_to } : {}) } }),
+  // Funder app
+  funders: () => request("/api/funders"),
+  funder: (id) => request(`/api/funders/${encodeURIComponent(id)}`),
+  draftPool: (id, text) => request(`/api/funders/${encodeURIComponent(id)}/pool-drafts`, { method: "POST", body: { text } }),
+  createFunderPool: (id, pool) => request(`/api/funders/${encodeURIComponent(id)}/pools`, { method: "POST", body: pool }),
+  // Farmer app
+  demoFarmers: () => request("/api/demo/farmers"),
+  help: (token, messages) => request(`/api/me/${encodeURIComponent(token)}/help`, { method: "POST", body: { messages } }),
   refreshBatch: (batchId) => request(`/api/batches/${batchId}/refresh`, { method: "POST" }),
 };

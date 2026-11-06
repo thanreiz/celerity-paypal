@@ -1,7 +1,8 @@
 export function money(amount, currency = "USD") {
   const n = Number(amount) || 0;
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+    // Whole amounts without ".00": "₱4,500", but "₱4,500.50".
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
   } catch {
     return `${n.toFixed(2)} ${currency}`;
   }
@@ -48,10 +49,11 @@ export function flagList(vulnerability) {
 }
 
 const EVENT_LABELS = {
-  "run.started": "Agent run started",
-  "run.drafted": "Agent drafted payouts",
+  "run.started": "Run started",
+  "run.drafted": "Payouts drafted",
+  "case.opened": "Farmer case opened",
   "run.failed": "Agent run failed",
-  "run.approved": "Coordinator approved",
+  "run.approved": "Payouts released",
   "run.rejected": "Coordinator rejected",
   "run.draft_removed": "Draft removed",
   "payout.batch_created": "PayPal batch created",
@@ -80,12 +82,16 @@ export function eventDetail(e, names = {}) {
   const d = e.detail || {};
   const who = (id) => (id && names[id]) || id;
   switch (e.type) {
-    case "run.drafted":
+    case "run.drafted": {
+      const by = d.mode === "rules" ? "Rules, no AI · " : d.mode === "agent" ? "AI agent · " : "";
       return d.recipients
-        ? `${stormName(d.storm)}: ${d.recipients} families, ${money(d.amount, d.currency)}`
-        : `${stormName(d.storm) || "No storm"}: nothing to pay`;
+        ? `${by}${stormName(d.storm)}: ${d.recipients} families, ${money(d.amount, d.currency)}`
+        : `${by}${stormName(d.storm) || "No storm"}: nothing to pay`;
+    }
     case "run.approved":
-      return `${d.recipients} payouts, ${money(d.amount, d.currency)}`;
+      return `${e.actor === "rules" ? "By the rules" : "By a coordinator"}: ${d.recipients} payouts, ${money(d.amount, d.currency)}`;
+    case "case.opened":
+      return (d.topic || "").replace(/_/g, " ");
     case "payout.batch_created":
     case "payout.batch_status":
       return `${d.payout_batch_id} → ${d.batch_status}`;
@@ -94,7 +100,7 @@ export function eventDetail(e, names = {}) {
     case "webhook.received":
       return d.event_type;
     case "run.started":
-      return d.bulletin;
+      return `${d.bulletin}${d.mode === "rules" ? " (rules)" : d.mode === "agent" ? " (AI agent)" : ""}`;
     case "run.failed":
       return d.message || "The agent run failed";
     case "payout.error":
@@ -104,7 +110,7 @@ export function eventDetail(e, names = {}) {
     case "farmer.notified":
       return `${d.count} famil${d.count === 1 ? "y" : "ies"} sent their private link${d.channel ? ` by ${d.channel}` : ""}`;
     case "pool.created":
-      return `${d.name} (${d.funder})${d.provinces?.length ? `: ${d.provinces.join(", ")}` : ": nationwide"}`;
+      return `${d.name} (${d.funder})${d.provinces?.length ? `: ${d.provinces.join(", ")}` : ": nationwide"}${d.min_signal ? `, signal ${d.min_signal}+` : ""}`;
     case "pool.funded":
       return `${d.funder_name} → ${d.pool}, ${money(d.amount, d.currency)}`;
     case "payout.unconfirmed":
