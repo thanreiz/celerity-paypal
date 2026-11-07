@@ -397,6 +397,49 @@
   padding-top: 8px;
 }
 
+/* On a laptop the Farmer app sits in a phone-shaped container (like the
+   original Celerity demo) so it reads as a phone app. On a real phone it
+   stays full screen. The page scrolls inside the phone, and the tab bar and
+   cash-out sheet stay within its edges. */
+@media (min-width: 641px) {
+  .phone-stage {
+    display: grid;
+    place-items: center;
+    padding: 24px 16px;
+  }
+  .phone-stage .phone {
+    width: 430px;
+    max-width: 100%;
+    min-height: 0;
+    height: min(880px, calc(100dvh - 48px));
+    border-radius: 40px;
+    overflow: hidden;
+    border: 1px solid var(--container-highest);
+    box-shadow: 0 30px 80px rgba(22, 69, 45, 0.1), 0 2px 8px rgba(42, 42, 40, 0.05);
+  }
+  .phone-stage .phone-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+  .phone-stage .phone-body::-webkit-scrollbar {
+    display: none;
+  }
+  .phone-stage .phone-tabs {
+    position: absolute;
+    left: 0;
+    transform: none;
+    width: 100%;
+    padding-bottom: 14px;
+  }
+  .phone-stage .app-modal-back {
+    position: absolute;
+  }
+  .phone-stage .app-modal {
+    max-height: calc(100% - 32px);
+  }
+}
+
 @media (max-width: 640px) {
   .app-flow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
