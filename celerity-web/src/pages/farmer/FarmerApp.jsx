@@ -182,7 +182,7 @@ export function FarmerConnect() {
     api.demoFarmers().then((d) => setFarmers(d.farmers)).catch(() => setFarmers([]));
   }, []);
   return (
-    <div className="app-shell">
+    <div className="app-shell phone-stage">
       <div className="phone">
         <div className="phone-body" style={{ paddingBottom: 32 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -435,7 +435,7 @@ export default function FarmerApp({ token }) {
   const coming = payouts.filter((p) => !FINAL.has(p.status) && !BAD.has(p.status)).reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="app-shell">
+    <div className="app-shell phone-stage">
       <div className="phone">
         <div className="phone-body" lang={lang}>
           <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -567,8 +567,8 @@ export default function FarmerApp({ token }) {
             ))}
           </nav>
         )}
+        {cashOut && data && <CashOut data={data} a={a} onClose={() => setCashOut(false)} />}
       </div>
-      {cashOut && data && <CashOut data={data} a={a} onClose={() => setCashOut(false)} />}
     </div>
   );
 }
