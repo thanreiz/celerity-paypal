@@ -1,0 +1,73 @@
+{
+  "name": "an edited entry breaks the chain",
+  "op": "ledger/verify",
+  "input": {
+    "currency": "PHP",
+    "now": "2026-11-15T00:00:00.000Z",
+    "events": [
+      {
+        "seq": 0,
+        "id": "evt_0",
+        "at": "2000-01-01T00:00:00.000Z",
+        "type": "run.drafted",
+        "actor": "agent",
+        "ref": "run_1",
+        "detail": {
+          "storm": "Typhoon Dalisay",
+          "recipients": 13,
+          "amount": 39500.5,
+          "currency": "PHP",
+          "areas": 9
+        },
+        "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "7729cfac90a57ef27a204992a36aa1ac447b2ed423840756e52edc9d761bb551"
+      },
+      {
+        "seq": 1,
+        "id": "evt_1",
+        "at": "2000-01-01T00:00:00.000Z",
+        "type": "pool.funded",
+        "actor": "paypal",
+        "ref": "pool_x",
+        "detail": {
+          "pool": "PCIC Bicol typhoon pool",
+          "funder_name": "Bayanihan \"Relief\" Fund\nñ ✓ 🌀",
+          "amount": 5000,
+          "currency": "PHP"
+        },
+        "prevHash": "7729cfac90a57ef27a204992a36aa1ac447b2ed423840756e52edc9d761bb551",
+        "hash": "6c44bbff58c241ab47c04013fa4d5ffd446a7c80b08e0cdde2cda136cdc7b78a"
+      },
+      {
+        "seq": 2,
+        "id": "evt_2",
+        "at": "2000-01-01T00:00:00.000Z",
+        "type": "payout.submitting",
+        "actor": "Ana Reyes",
+        "ref": "bat_1",
+        "detail": {
+          "recipients": 2,
+          "amount": 0.3,
+          "pools": [
+            {
+              "pool_id": "a",
+              "amount": 0.1
+            },
+            {
+              "pool_id": "b",
+              "amount": 0.2
+            }
+          ],
+          "note": null
+        },
+        "prevHash": "6c44bbff58c241ab47c04013fa4d5ffd446a7c80b08e0cdde2cda136cdc7b78a",
+        "hash": "721945671e89064d889b7784dd8ae0bebdce7ced172b39286a4762e1861e0450"
+      }
+    ]
+  },
+  "expected": {
+    "ok": false,
+    "brokenAt": 1,
+    "reason": "hash mismatch"
+  }
+}

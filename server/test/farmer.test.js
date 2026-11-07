@@ -4,6 +4,8 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 
+// Jev is tested in jev.test.js; here it stays off.
+delete process.env.TYPESAFE_API_KEY;
 process.env.PAYPAL_CLIENT_ID = "test-id";
 process.env.PAYPAL_CLIENT_SECRET = "test-secret";
 process.env.PAYPAL_WEBHOOK_ID = "";
@@ -107,7 +109,11 @@ test("a farmer's link shows only their own sent payouts, with who paid and how f
   assert.equal(/fam_\d|vulnerab/.test(text), false);
   const email = (await store.read()).families.find((f) => f.id === "fam_004").paypal_email;
   assert.equal(text.includes(email), false, "only the masked email");
-  assert.equal(text.includes("Typhoon Other"), false);
+  // Another family's payout never shows; the storm itself may, in
+  // storm_status, because it reached this family's town too.
+  assert.equal(JSON.stringify(me.payouts).includes("Typhoon Other"), false);
+  assert.ok(me.storm_status.storms.every((s) => s.my_signal > 0));
+  assert.equal(me.registration.paypal_email, p.receiver);
 });
 
 test("a wrong link says nothing about who exists, and guessing is throttled", async () => {

@@ -151,14 +151,27 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
     <Card>
       <div className="cel-row-actions" style={{ justifyContent: "space-between" }}>
         <div style={{ minWidth: 0 }}>
-          <strong style={{ font: "var(--text-h2)" }}>{stormName(run.storm) || "Agent run"}</strong>
+          <strong style={{ font: "var(--text-h2)" }}>{stormName(run.storm) || "Agent run"}</strong>{" "}
+          <span
+            className="cel-chip"
+            style={{
+              marginLeft: 6,
+              background: run.mode === "agent" ? "var(--accent-soft)" : "var(--ok-bg)",
+              color: run.mode === "agent" ? "#8a5a06" : "var(--ok-text)",
+            }}
+          >
+            {run.mode === "rules" ? "Rules · no AI" : run.mode === "jev" ? "Rules + Jev" : "AI agent · needs approval"}
+          </span>
           <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
-            Started {when(run.started_at)} by {run.started_by} · {run.model}
+            Started {when(run.started_at)} by {run.started_by} · {run.mode !== "agent" ? `read by the ${run.parse?.parsed_by === "java-core" ? "Java core" : "rules"} parser` : run.model}
+            {run.jev ? ` · Jev ${run.jev.model} in ${run.jev.ms} ms` : ""}
+            {run.mode !== "rules" && run.parse?.unparsed?.length ? ` · parser couldn't place: ${run.parse.unparsed.join("; ")}` : ""}
             {run.usage?.output_tokens ? ` · ${(run.usage.input_tokens + run.usage.output_tokens).toLocaleString()} tokens` : ""}
           </span>
         </div>
         <div className="cel-row-actions">
           <StatusPill status={run.status} />
+          {run.jev?.hold && <span className="cel-chip" style={{ background: "var(--warn-bg)", color: "var(--warn-text)" }}>Held: {run.jev.hold}</span>}
           {!latest && (
             <Button variant="ghost" size="sm" onClick={() => setOpen((o) => !o)}>
               {open ? "Hide" : "Show"}
@@ -362,7 +375,12 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
           )}
           {run.status === "approved" && (
             <p style={{ font: "var(--text-meta)", margin: 0 }}>
-              Approved by {run.approved_by} {when(run.approved_at)}.{" "}
+              {run.approved_by === "rules"
+                ? "Released by the rules, no approval needed: no AI touched this run,"
+                : run.approved_by === "jev"
+                  ? "Released by the rules after Jev placed every area with high confidence,"
+                  : `Approved by ${run.approved_by}`}{" "}
+              {when(run.approved_at)}.{" "}
               <button onClick={() => go("payouts")} style={{ color: "var(--primary)", background: "none", border: "none", padding: 0, font: "inherit", fontWeight: 700, cursor: "pointer" }}>
                 Track the payouts
               </button>
@@ -490,9 +508,13 @@ export default function RespondPage({ data, config, act, busy, go }) {
                   <Button
                     variant="outline"
                     disabled={busy || anyRunning || !config.aiConfigured}
-                    onClick={() => act("Agent started.", () => api.startRun(bulletin.id)).catch(() => {})}
+                    onClick={() => act("Celerity is on it.", () => api.startRun(bulletin.id)).catch(() => {})}
+                    title="Routine bulletins are decided by the rules and released at once; anything else goes to the AI agent and waits for your approval."
                   >
-                    {anyRunning ? "Agent is working…" : runs.length ? "Run the agent again" : "Run the agent"}
+                    {anyRunning ? "Agent is working…" : runs.length ? "Run Celerity again" : "Run Celerity"}
+                  </Button>
+                  <Button variant="ghost" size="sm" disabled={busy || anyRunning || !config.aiConfigured} onClick={() => act("Agent started.", () => api.startRun(bulletin.id, "agent")).catch(() => {})}>
+                    Force the AI agent
                   </Button>
                 </div>
                 {bulletin.kind === "adversarial" && (

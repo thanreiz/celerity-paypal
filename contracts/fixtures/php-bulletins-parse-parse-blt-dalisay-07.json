@@ -1,0 +1,30 @@
+{
+  "name": "parse blt_dalisay_07",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "PHP",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "TROPICAL CYCLONE BULLETIN NR. 07\nTyphoon DALISAY\nIssued at 11:00 PM, 13 November 2026\n\nDALISAY HAS INTENSIFIED INTO A TYPHOON AND IS NOW MOVING TOWARDS THE BICOL REGION.\n\nLocation of Center (10:00 PM): 260 km East of Virac, Catanduanes\nMaximum sustained winds: 150 km/h near the center, gustiness up to 185 km/h\n\nTROPICAL CYCLONE WIND SIGNALS (TCWS) IN EFFECT\n\nTCWS No. 3 (Storm-force winds, 89 to 117 km/h, moderate to significant threat to life and property)\nLuzon: Catanduanes, the Caramoan Peninsula\n\nTCWS No. 2 (Gale-force winds, 62 to 88 km/h, minor to moderate threat to life and property)\nLuzon: Albay, the northern half of Sorsogon\n\nNote from the field: the Caramoan Peninsula covers the towns of Caramoan, Garchitorena, Presentacion and San Jose in Camarines Sur. Northern Sorsogon here means Sorsogon City, Castilla and Pilar."
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": "7",
+    "areas": [
+      {
+        "province": "Catanduanes",
+        "municipality": null,
+        "signal_level": 3
+      },
+      {
+        "province": "Albay",
+        "municipality": null,
+        "signal_level": 2
+      }
+    ],
+    "unparsed": [
+      "the Caramoan Peninsula",
+      "the northern half of Sorsogon"
+    ],
+    "confidence": 0.5
+  }
+}

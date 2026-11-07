@@ -36,3 +36,8 @@ DEMO-VIDEO-MOTION.pdf
 
 # Vercel CLI project link
 .vercel
+
+# Shared secret for the Java core (paste into Render, never commit)
+.core-token
+# Render API key for scripted deploys (never commit)
+.render-key

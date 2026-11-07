@@ -1,0 +1,40 @@
+{
+  "name": "portions and alternate spellings",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "SEVERE TROPICAL STORM \"Ompong\"\nBULLETIN NO. 012\nTCWS No. 2 in effect: the northern and central portions of Cebu (Bogo City, Medellin and Daanbantayan), Western Samar, the Province of Leyte\n\nTCWS No. 1\nMindanao: Dinagat Islands; Surigao del Norte"
+  },
+  "expected": {
+    "storm": "Severe Tropical Storm Ompong",
+    "bulletin_number": "12",
+    "areas": [
+      {
+        "province": "Cebu",
+        "municipality": "Bogo City",
+        "signal_level": 2
+      },
+      {
+        "province": "Cebu",
+        "municipality": "Medellin",
+        "signal_level": 2
+      },
+      {
+        "province": "Cebu",
+        "municipality": "Daanbantayan",
+        "signal_level": 2
+      },
+      {
+        "province": "Samar",
+        "municipality": null,
+        "signal_level": 2
+      }
+    ],
+    "unparsed": [
+      "the Province of Leyte",
+      "Dinagat Islands; Surigao del Norte"
+    ],
+    "confidence": 0.5
+  }
+}

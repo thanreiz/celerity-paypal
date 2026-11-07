@@ -133,6 +133,22 @@ All work is after Oct 1, 2026. Times are Manila (UTC+8).
   demo seed. All 16 families have private links, and none appear on the
   public pages.
 
+## 2026-10-31
+
+- **Java core for the deterministic rules** (`core/`, Java 21 + Spring Boot 4):
+  - Ported the eligibility, caps and draft checks, the pro-rata pool split and
+    hash-chain verification from Node.
+  - Added a PAGASA bulletin parser that reads routine bulletins without AI;
+    what it can't place is handed to an agent, with a confidence score.
+  - Stateless HTTP API behind a shared token, ready for Google Cloud Run.
+- **Parity:** `contracts/fixtures` holds 76 cases (38 per currency) answered by
+  the Node rules. Java matches all 76 to the message and the centavo, and the
+  test was checked to fail on a one-character change.
+- **Connection:** Node can hand approval checks to Java with `CORE_MODE`
+  (`off` by default, `shadow` compares, `on` uses Java with a local fallback).
+  Only rule inputs are sent: no names, and the email becomes a yes/no flag.
+- Tests: Java 87, Node 63.
+
 ## Next
 
 - **Make the repo public** (hackathon rule).
@@ -153,3 +169,6 @@ All work is after Oct 1, 2026. Times are Manila (UTC+8).
   expires around Nov 28.
 - **Optional:** branch protection on `main`, since every push deploys
   production.
+- **Java core:** deploy to Cloud Run and run `CORE_MODE=shadow` on Vercel.
+  Then phase 2 moves PayPal payouts, webhooks and ledger writes into Java and
+  builds the AI agents (Storm Watch, Farmer SMS) on the parser.

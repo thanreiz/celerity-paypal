@@ -90,6 +90,29 @@ export default function FamiliesPage({ data, act, busy, notify }) {
         )}
       </PageHeader>
       {adding && <AddFamily act={act} notify={notify} onDone={() => setAdding(false)} />}
+      {data.cases?.some((c) => c.status === "open") && (
+        <Card title="Cases from the Farmer app">
+          <p style={{ margin: "0 0 10px", font: "var(--text-meta)", color: "var(--text-dim)" }}>
+            Opened by the helper agent when a farmer needs a person. The agent can't change payouts; you follow up.
+          </p>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            {data.cases
+              .filter((c) => c.status === "open")
+              .map((c) => {
+                const f = data.families.find((x) => x.id === c.family_id);
+                return (
+                  <li key={c.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <span>
+                      <strong>{f ? `${f.name}, ${f.municipality}` : c.family_id}</strong> · {c.topic.replace(/_/g, " ")}
+                      <span style={{ display: "block", font: "var(--text-meta)", color: "var(--text-dim)" }}>{c.summary}</span>
+                    </span>
+                    <span style={{ font: "var(--text-fine)", color: "var(--text-faint)" }}>{new Date(c.at).toLocaleString()}</span>
+                  </li>
+                );
+              })}
+          </ul>
+        </Card>
+      )}
       <Card>
         <div style={{ maxWidth: 320, marginBottom: 12 }}>
           <Input placeholder="Search name, town, or province" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search families" />

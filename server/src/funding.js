@@ -7,16 +7,24 @@
 // always computed from contributions and payout allocations, never stored,
 // so they can't drift from the record.
 
-import { POLICY, NOT_PAID, cents, norm } from "./policy.js";
+import { POLICY, NOT_PAID, cents, norm, signalFor } from "./policy.js";
 import { newId } from "./store.js";
 
-/** Pools that cover a family: earmarked for its province, or nationwide. */
-export function poolsFor(state, family) {
+/** Pools that cover a family: earmarked for its province, or nationwide.
+ * With a signal, only pools whose funder's rule pays at that signal or
+ * higher (a pool without min_signal pays at any signal policy allows). */
+export function poolsFor(state, family, signal = null) {
   if (!family) return [];
   return (state.pools || []).filter(
-    (p) => !p.provinces?.length || p.provinces.some((prov) => norm(prov) === norm(family.province))
+    (p) =>
+      (!p.provinces?.length || p.provinces.some((prov) => norm(prov) === norm(family.province))) &&
+      (signal == null || signal >= (Number(p.min_signal) || 0))
   );
 }
+
+/** The signal a draft is paid under: from the run's areas when it has them,
+ * else none (no pool rule filters on it). */
+const draftSignal = (family, run) => (family && Array.isArray(run.areas) ? signalFor(family, run.areas) : null);
 
 /** { pool_id: { contributed, committed, available } } in pesos. Pending
  * checkouts don't count; payouts that never reached the family free their
@@ -49,7 +57,7 @@ export function allocateRun(state, run) {
   const shortfalls = [];
   for (const d of run.drafts) {
     const family = state.families.find((f) => f.id === d.family_id);
-    const pools = poolsFor(state, family).filter((p) => left[p.id] > 0);
+    const pools = poolsFor(state, family, draftSignal(family, run)).filter((p) => left[p.id] > 0);
     const want = cents(d.amount);
     const have = pools.reduce((s, p) => s + left[p.id], 0);
     if (want > have) {
@@ -82,12 +90,14 @@ export function poolTotals(allocations) {
  * null. The agent sees this as a policy refusal. */
 export function fundingProblem(state, run, draft) {
   const others = run.drafts.filter((d) => d.family_id !== draft.family_id);
-  const { shortfalls } = allocateRun(state, { drafts: [...others, draft] });
+  const { shortfalls } = allocateRun(state, { areas: run.areas, drafts: [...others, draft] });
   const s = shortfalls.find((x) => x.family_id === draft.family_id);
   if (!s) return null;
   const family = state.families.find((f) => f.id === draft.family_id);
   if (!family) return null; // eligibility already reports an unknown family
   if (!poolsFor(state, family).length) return `no funding pool covers ${family.province}`;
+  const signal = draftSignal(family, run);
+  if (!poolsFor(state, family, signal).length) return `no funding pool covers ${family.province} at signal ${signal}`;
   return `funding pools for ${family.province} have only ${s.available} ${POLICY.currency} left for this run`;
 }
 
@@ -133,6 +143,9 @@ export function poolLedger(state) {
       name: p.name,
       funder: p.funder,
       provinces: p.provinces,
+      funder_id: p.funder_id || null,
+      min_signal: Number(p.min_signal) || null,
+      rule_text: p.rule_text || null,
       hazard: p.hazard,
       currency: POLICY.currency,
       ...balances[p.id],

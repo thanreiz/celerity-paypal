@@ -18,3 +18,7 @@ server/data/
 docs/
 reference/
 tools/
+
+# Java core and its fixtures deploy separately (Cloud Run)
+core/
+contracts/

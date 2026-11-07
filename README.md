@@ -5,7 +5,7 @@
 <h1 align="center">Celerity Relief</h1>
 
 <p align="center">
-  <strong>Typhoon cash aid, pooled from many funders through PayPal, drafted by an AI agent, approved by a person, sent by PayPal.</strong>
+  <strong>Typhoon cash aid: funders cash in and farmers cash out through PayPal; rules decide what they can, AI agents handle what they can't.</strong>
 </p>
 
 <p align="center">
@@ -20,31 +20,50 @@
 ---
 
 When a typhoon hits the Philippines, relief money usually already exists. What's slow is
-deciding who gets it and getting it into their hands. Celerity Relief cuts that to minutes:
+deciding who gets it and getting it into their hands. Celerity keeps the shape of the original
+[Celerity](https://github.com/thanreiz/Celerity), two apps around one decision-making backend,
+with PayPal at both edges and AI agents only where rules can't decide:
 
-0. **Funders pool money.** An insurer, a foundation or anyone else puts money into a pool earmarked
-   for an area (say, Bicol typhoon relief) through **PayPal Checkout**. Many funders can cover the same
-   area; each one's money stays traceable to them.
-1. **A bulletin arrives.** A coordinator pastes a tropical cyclone bulletin, or picks one from the feed.
-2. **The agent drafts.** An LLM agent (OpenAI or Claude) reads the free-text bulletin, works out which provinces and towns
-   are under which wind signal, finds registered families there, and drafts a payout for each
-   eligible family with a one-line reason.
-3. **Code enforces the limits.** Every draft goes through a policy engine: signal minimum, per-family
-   cap, per-run cap, recipient cap, no double payment for the same storm. The agent proposes; code
-   decides. If the agent asks for too much, the draft is refused and it has to adjust.
-4. **A person approves.** Nothing moves until a coordinator reviews the drafts and approves the run.
-   Policy is checked again at approval.
-5. **PayPal pays.** Each payout is split across the pools that cover the family, pro-rata by what
-   each has left, and recorded per funder. One Payouts batch per run. Verified PayPal webhooks update each family's status
-   (Pending → Delivered, or Unclaimed) on a live timeline.
-6. **The farmer sees it on their phone.** Each family gets a private link by SMS (simulated in this
-   demo: the console shows the exact text). It opens a phone-first page, in Tagalog or English, with
-   the amount, the storm, a live Approved → Sent → Received status, which funders paid it, how many
-   minutes it took from bulletin to money, and how to move it to GCash or a bank. No login: the
-   unguessable link opens only that family's own payouts.
-7. **Everything is on the record.** Every agent run, approval, PayPal batch and webhook goes into
-   an append-only SHA-256 hash-chained evidence log. A public page shows each funder's pool (what it
-   put in, which storms and towns it paid for, what's left) and the chain, with no names or emails.
+```
+ PayPal ⇄ Farmer app ⇄  Celerity: rules + AI agents  ⇄ Funder app ⇄ PayPal
+ cash out (Payouts)       decides who, how much, when          cash in (Checkout)
+```
+
+- **Funder app** (`#/funder`). An insurer or foundation signs in, sees only its own pools, and
+  cashes in with **PayPal Checkout**. It describes a pool in plain words ("rice farmers in Bicol
+  at Signal 3 or higher"); the **pool-rule agent** turns that into a rule, and code checks it
+  (real provinces, a signal the program allows) before the pool exists. Whatever the code
+  can't enforce (crops, installments) is shown to the funder as not enforced. Every release is
+  traced to the towns it reached.
+- **Celerity** (the backend). Code decides wherever the answer must be the same every time:
+  - A routine PAGASA bulletin is read by a **parser with no AI** (Java core, with a Node port held
+    to the same answers). Policy picks every eligible family and its amount, funders' pools cover
+    it pro-rata, and the payouts go to **PayPal Payouts** at once. No AI touched it, so no one has
+    to approve it.
+  - What the parser can't place goes to **Jev**, TypeSafe AI's System One model: fast (~0.3 s)
+    typed decisions with calibrated probabilities. Jev picks which province each leftover phrase
+    means (only among provinces the bulletin names) and whether it covers the whole province. If
+    every phrase is a whole province at 95%+, the rules take over and pay ("Rules + Jev").
+  - Anything still uncertain ("the Caramoan Peninsula", "the northern half of Sorsogon": parts of
+    provinces) goes to the **relief agent** (GPT-5.5 or Claude) with Jev's guesses as context. It
+    drafts within the same hard limits, and a coordinator approves before money moves.
+  - Jev also checks every bulletin for instructions aimed at software. The tampered demo bulletin
+    scores 99%, so even its rules-only run waits for a person.
+- **Farmer app** (`#/farmer`, or the private link `#/r/<token>` from the SMS). The original phone
+  app, in Tagalog or English: what arrived, whether the storm over their town qualifies them
+  (the rules' answer), how to move it from PayPal to GCash, and a **helper agent** (GPT-5.5) that
+  answers from that farmer's own record and can open a case for a coordinator. Jev triages each
+  message first: a damage report or wrong details opens a case even if GPT doesn't. Neither can
+  move money.
+- **Everything is on the record.** Every run (rules or agent), approval, PayPal batch, webhook and
+  farmer case goes into an append-only SHA-256 hash-chained evidence log, with a public page.
+
+**Three layers:** GPT-5.5 writes and reads open text; Jev makes fast fuzzy decisions with a
+confidence; the money rules (Node, held to the Java core by `contracts/fixtures`) decide caps,
+eligibility, the split across pools and no double payment, and check every AI output before money
+moves. High confidence goes on the automatic path; low confidence goes to a person. Set
+`AUTO_RELEASE=0` to have a coordinator approve every run. Without a TypeSafe key, Jev is skipped
+and the parser + GPT agent + coordinator path works as before.
 
 > **Hosted demo:** https://celerity-relief.vercel.app (PayPal sandbox; coordinator key shared with judges in the submission) · **Demo video:** _coming soon_
 >
@@ -61,6 +80,9 @@ deciding who gets it and getting it into their hands. Celerity Relief cuts that 
 | **PayPal Payouts API** (`/v1/payments/payouts`) | Sends every approved run as one batch to families' PayPal emails. `sender_batch_id` is derived from the run ID, so a retried approval can never pay twice. |
 | **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`, `PAYMENT.CAPTURE.COMPLETED`) | Push status updates. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
 | **PayPal OAuth 2.0** (client credentials) | Server-side only; the token is cached until shortly before it expires. |
+| **Pool-rule and helper agents** ([`agents.js`](server/src/agents.js)) | The Funder app's agent turns a funder's words into a pool rule (`registry_coverage`, `propose_pool`, checked by [`funders.js`](server/src/funders.js)). The Farmer app's agent answers from one farmer's record (`get_my_payouts`, `get_my_registration`, `get_storm_status`, `open_case`). Neither can move money. |
+| **Jev** ([`jev.js`](server/src/jev.js)), TypeSafe System One API (`POST /v1/systemone`) | Places bulletin phrases the parser couldn't read, flags injected instructions, triages farmer messages. Every answer is checked in code; any failure falls back. |
+| **Rules path** ([`parser.js`](server/src/parser.js), [`rules.js`](server/src/rules.js)) | Reads routine bulletins without AI and drafts by policy alone; Node port of the Java parser, both held to `contracts/fixtures`. |
 | **LLM agent**: OpenAI (Responses API, function calling) or Anthropic Claude (Messages API, tool use) | The agent loop ([`agent.js`](server/src/agent.js), [`providers.js`](server/src/providers.js)). Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. One env var (`AI_PROVIDER`) switches vendors. |
 | **Policy engine** ([`server/src/policy.js`](server/src/policy.js)) | Deterministic eligibility and caps. The only thing that decides whether a draft is allowed. |
 | **Funding pools** ([`server/src/funding.js`](server/src/funding.js)) | Earmarked pools over the one PayPal balance. Splits every payout pro-rata across the pools that cover the family; refuses drafts the pools can't cover. Balances are computed from the record, never stored. |
@@ -108,8 +130,23 @@ payout policy.
   `fetch` (no SDK). App state is one JSON document. On Vercel it lives in Neon Postgres and every
   change runs in a transaction holding a row lock, so concurrent requests on different serverless
   instances apply one at a time (no double approvals). Locally it's a JSON file.
-- **`celerity-web/`**: React 18 + Vite. Coordinator console (Overview, Respond, Payouts,
-  Families, Evidence log) and a public transparency page at `/#/public`.
+- **`celerity-web/`**: React 18 + Vite. Coordinator console (Overview, Funds, Respond, Payouts,
+  Families, Evidence log), a public transparency page at `/#/public`, and each farmer's private
+  phone page at `/#/r/<link>`.
+- **`core/`**: Java 21 + Spring Boot. The deterministic money rules as a stateless service on
+  Google Cloud Run:
+  - eligibility, caps and draft checks;
+  - the pro-rata split across funders' pools;
+  - hash-chain verification;
+  - a PAGASA bulletin parser that reads routine bulletins without AI.
+
+  The Node server can hand approvals to it (`CORE_MODE=shadow|on`). Java and Node are held to
+  identical answers by `contracts/fixtures`. See [`core/README.md`](core/README.md).
+
+**The split:** code decides wherever the answer must be the same every time. That covers who
+qualifies, how much they get, which funder pays, and whether the record was changed. AI handles
+what rules can't: free-text bulletins the parser can't place, storms that change between bulletins,
+field reports, and farmers' messages in their own language.
 
 ## Repo layout
 
@@ -231,6 +268,14 @@ function limit (a typical run takes about 30 seconds).
 | `DATABASE_URL` | on Vercel | Postgres connection string (Neon sets it). Without it, state is a local JSON file. |
 | `DATA_DIR`, `PORT` | no | Local file store folder and port. Default `server/data`, `8787` |
 | `PUBLIC_URL` | no | Where PayPal Checkout sends funders back, e.g. `https://celerity-relief.vercel.app`. Default: the request's host |
+| `CORE_URL`, `CORE_TOKEN` | no | The Java core (`core/`) and its shared secret |
+| `CORE_MODE` | no | `off` (default), `shadow` (Node decides, the core is compared), `on` (the core decides, Node's rules answer if it's unreachable) |
+| `TYPESAFE_API_KEY` | no | Jev (TypeSafe AI). Unset: Jev is skipped and the app works as before |
+| `TYPESAFE_MODEL` | no | Default `jev-latest` |
+| `JEV_PLACE_THRESHOLD` | no | Default `0.95`: how sure Jev must be of a province before the rules use it |
+| `AUTO_RELEASE` | no | `1` (default): a bulletin the rules read completely is paid without approval. `0`: a coordinator approves every run |
+| `APP_AI_CALLS_PER_HOUR` | no | Default `200`: cap on pool-rule and helper agent calls from the two apps (also 15 per client per hour) |
+| `DEMO_FARMERS` | no | `0` hides the seeded demo farmers on the Farmer app's "Is this you?" screen |
 
 ---
 

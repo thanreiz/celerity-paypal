@@ -4,6 +4,8 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 
+// Jev is tested in jev.test.js; here it stays off.
+delete process.env.TYPESAFE_API_KEY;
 process.env.PAYPAL_CLIENT_ID = "test-id";
 process.env.PAYPAL_CLIENT_SECRET = "test-secret";
 process.env.PAYPAL_WEBHOOK_ID = "";
@@ -118,7 +120,7 @@ test("coordinator actions require the key", async () => {
 });
 
 test("bulletin -> agent -> approval -> PayPal payout -> webhook", async () => {
-  const start = await api("/api/bulletins/blt_dalisay_08/runs", { method: "POST" });
+  const start = await api("/api/bulletins/blt_dalisay_08/runs", { method: "POST", body: { mode: "agent" } });
   assert.equal(start.status, 202);
   const run = await waitForRun(start.body.id);
 

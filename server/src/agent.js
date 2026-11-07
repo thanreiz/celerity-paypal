@@ -247,14 +247,26 @@ function summarize(name, input, result) {
  * is called after every step so the caller can persist and the UI can poll.
  * `client` overrides the SDK client (tests pass a scripted fake).
  */
-export async function runAgent({ state, run, bulletin, client, provider = config.ai.provider, onProgress = () => {} }) {
+export async function runAgent({ state, run, bulletin, parsed = null, jev = null, client, provider = config.ai.provider, onProgress = () => {} }) {
+  // What the rules parser could and couldn't read, so the agent works on the
+  // part that needs judgment. A hint only: record_bulletin_facts still checks
+  // every area against the bulletin text.
+  const hint = parsed?.unparsed?.length
+    ? `\n\nCelerity's rules parser read ${parsed.areas.length} area(s) from this bulletin but could not place these phrases; work out which provinces and towns they mean from the bulletin itself:\n${parsed.unparsed.map((u) => `- ${escapeTags(u)}`).join("\n")}${
+        jev?.placements?.length
+          ? `\n\nA fast classifier's guesses, for context only (they may be wrong; the bulletin decides):\n${jev.placements
+              .map((p) => `- ${escapeTags(p.phrase)}: ${p.province || "no province"} (${Math.round(p.p * 100)}%), ${p.whole >= 0.5 ? "probably the whole province" : "probably only part of it"}`)
+              .join("\n")}`
+          : ""
+      }`
+    : "";
   const session = createSession({
     provider,
     client,
     system: SYSTEM_PROMPT,
     tools: TOOLS,
     // Escaped so a "</bulletin>" inside the text can't end the data block.
-    userText: `Bulletin received ${bulletin.received_at} from ${bulletin.source}.\n\n<bulletin>\n${escapeTags(bulletin.text)}\n</bulletin>`,
+    userText: `Bulletin received ${bulletin.received_at} from ${bulletin.source}.\n\n<bulletin>\n${escapeTags(bulletin.text)}\n</bulletin>${hint}`,
   });
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {

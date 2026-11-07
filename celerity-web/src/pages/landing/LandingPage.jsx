@@ -6,7 +6,9 @@ import "./landing.css";
 /** The front door: what Celerity is, for funders, coordinators and families.
  * The app routes by hash, so in-page links scroll instead of setting #ids. */
 
-const FUND = "#/public";
+const FUND = "#/funder";
+const PUBLIC = "#/public";
+const FARMER = "#/farmer";
 const SIGN_IN = "#/console";
 
 const Icon = ({ d, className = "i", ...rest }) => (
@@ -105,8 +107,9 @@ function Nav() {
           <a href="#guardrails" onClick={scrollTo("guardrails")}>Guardrails</a>
           <a href="#faq" onClick={scrollTo("faq")}>FAQ</a>
         </nav>
+        <a className="signin" href={FARMER}>Farmer app</a>
         <a className="signin" href={SIGN_IN}>Coordinator sign in</a>
-        <a className="btn btn-white" href={FUND}>Fund a pool</a>
+        <a className="btn btn-white" href={FUND}>Funder app</a>
       </div>
     </header>
   );
@@ -642,7 +645,7 @@ function Numbers() {
           <div><b className="num">0</b><span>Double payments</span></div>
         </div>
         <div style={{ marginTop: 28 }} data-reveal>
-          <a className="btn btn-soft" href={FUND}>Open the public record <Icon d={ARROW} /></a>
+          <a className="btn btn-soft" href={PUBLIC}>Open the public record <Icon d={ARROW} /></a>
         </div>
       </div>
     </section>
@@ -713,7 +716,7 @@ function Final() {
             <p>Fill a pool today. When the bulletin comes, families get help in minutes, not weeks.</p>
             <div className="ctas">
               <a className="btn btn-lg btn-white" href={FUND}>Fund a pool <Icon d={ARROW} /></a>
-              <a className="btn btn-lg btn-glass" href={SIGN_IN}>Coordinator sign in</a>
+              <a className="btn btn-lg btn-glass" href={FARMER}>Farmer app</a>
             </div>
           </div>
         </div>
@@ -730,8 +733,8 @@ function Footer() {
           <a className="brand" href="#/" onClick={scrollTo("top")}><img src="/logo-dove.png" alt="" /><span>CELERITY<small>RELIEF NETWORK</small></span></a>
           <p style={{ marginTop: 14, maxWidth: 320 }}>Typhoon cash aid, pooled through PayPal, drafted by an agent, approved by a person.</p>
         </div>
-        <div><h4>Product</h4><a href="#how" onClick={scrollTo("how")}>How it works</a><a href="#guardrails" onClick={scrollTo("guardrails")}>Guardrails</a><a href={FUND}>Public record</a></div>
-        <div><h4>For</h4><a href={FUND}>Funders</a><a href={SIGN_IN}>Coordinators</a><a href="#story" onClick={scrollTo("story")}>Families</a></div>
+        <div><h4>Product</h4><a href="#how" onClick={scrollTo("how")}>How it works</a><a href="#guardrails" onClick={scrollTo("guardrails")}>Guardrails</a><a href={PUBLIC}>Public record</a></div>
+        <div><h4>For</h4><a href={FUND}>Funder app</a><a href={FARMER}>Farmer app</a><a href={SIGN_IN}>Coordinators</a></div>
         <div><h4>Built on</h4><a href="#paypal" onClick={scrollTo("paypal")}>PayPal Checkout</a><a href="#paypal" onClick={scrollTo("paypal")}>PayPal Payouts</a><a href="#faq" onClick={scrollTo("faq")}>FAQ</a></div>
         <div className="fine"><span>PayPal sandbox demo · Simulated bulletins · No real money moves.</span><span>© 2026 Celerity Relief</span></div>
       </div>
