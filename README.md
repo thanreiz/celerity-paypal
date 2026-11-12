@@ -30,7 +30,8 @@ with PayPal at both edges and AI agents only where rules can't decide:
 ```
 
 - **Funder app** (`#/funder`). An insurer or foundation signs in, sees only its own pools, and
-  cashes in with **PayPal Checkout**. It describes a pool in plain words ("rice farmers in Bicol
+  cashes in with **PayPal Checkout**. In the demo, sign-in is a picker of two demo institutions;
+  set `DEMO_FUNDERS=0` and `FUNDER_CODES` to require an access code per funder. It describes a pool in plain words ("rice farmers in Bicol
   at Signal 3 or higher"); the **pool-rule agent** turns that into a rule, and code checks it
   (real provinces, a signal the program allows) before the pool exists. Whatever the code
   can't enforce (crops, installments) is shown to the funder as not enforced. Every release is
@@ -39,16 +40,22 @@ with PayPal at both edges and AI agents only where rules can't decide:
   - A routine PAGASA bulletin is read by a **parser with no AI** (Java core, with a Node port held
     to the same answers). Policy picks every eligible family and its amount, funders' pools cover
     it pro-rata, and the payouts go to **PayPal Payouts** at once. No AI touched it, so no one has
-    to approve it.
+    to approve it. The parser only calls a bulletin routine when it read every line of every
+    signal block: part of a province with no towns named, a lifted or lowered signal, or a line
+    it can't read all go to AI and a person instead.
   - What the parser can't place goes to **Jev**, TypeSafe AI's System One model: fast (~0.3 s)
     typed decisions with calibrated probabilities. Jev picks which province each leftover phrase
     means (only among provinces the bulletin names) and whether it covers the whole province. If
-    every phrase is a whole province at 95%+, the rules take over and pay ("Rules + Jev").
+    every phrase is a whole province at 95%+, the rules draft the payouts and a coordinator
+    approves ("Rules + Jev"): an AI judgment decided where the money goes, so a person signs off.
   - Anything still uncertain ("the Caramoan Peninsula", "the northern half of Sorsogon": parts of
     provinces) goes to the **relief agent** (GPT-5.5 or Claude) with Jev's guesses as context. It
     drafts within the same hard limits, and a coordinator approves before money moves.
   - Jev also checks every bulletin for instructions aimed at software. The tampered demo bulletin
-    scores 99%, so even its rules-only run waits for a person.
+    scores 99%, so even its rules-only run waits for a person. If Jev is switched on but doesn't
+    answer, the run waits for a person too. Without a TypeSafe key there is no such check: the
+    parser still never reads text outside the signal blocks, so the injected line has nothing to
+    act on.
 - **Farmer app** (`#/farmer`, or the private link `#/r/<token>` from the SMS). The original phone
   app, in Tagalog or English: what arrived, whether the storm over their town qualifies them
   (the rules' answer), how to move it from PayPal to GCash, and a **helper agent** (GPT-5.5) that
@@ -61,8 +68,8 @@ with PayPal at both edges and AI agents only where rules can't decide:
 **Three layers:** GPT-5.5 writes and reads open text; Jev makes fast fuzzy decisions with a
 confidence; the money rules (Node, held to the Java core by `contracts/fixtures`) decide caps,
 eligibility, the split across pools and no double payment, and check every AI output before money
-moves. High confidence goes on the automatic path; low confidence goes to a person. Set
-`AUTO_RELEASE=0` to have a coordinator approve every run. Without a TypeSafe key, Jev is skipped
+moves. Only a run no AI touched goes on the automatic path; anything Jev placed or the agent
+drafted goes to a person. Set `AUTO_RELEASE=0` to have a coordinator approve every run. Without a TypeSafe key, Jev is skipped
 and the parser + GPT agent + coordinator path works as before.
 
 > **Hosted demo:** https://celerity-relief.vercel.app (PayPal sandbox; coordinator key shared with judges in the submission) · **Demo video:** _coming soon_
@@ -78,7 +85,7 @@ and the parser + GPT agent + coordinator path works as before.
 | --- | --- |
 | **PayPal Checkout** (Orders v2: `/v2/checkout/orders`, `/capture`) | How funders put money into a pool, from the public page. The pool is credited only when PayPal reports a completed capture of the chosen amount, from the return redirect or the `PAYMENT.CAPTURE.COMPLETED` webhook, once. |
 | **PayPal Payouts API** (`/v1/payments/payouts`) | Sends every approved run as one batch to families' PayPal emails. `sender_batch_id` is derived from the run ID, so a retried approval can never pay twice. |
-| **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`, `PAYMENT.CAPTURE.COMPLETED`) | Push status updates. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
+| **PayPal Webhooks** (`PAYMENT.PAYOUTSBATCH.*`, `PAYMENT.PAYOUTS-ITEM.*`, `PAYMENT.CAPTURE.*`) | Push status updates, and take a refunded or reversed contribution back out of its pool. Each delivery is verified with `/v1/notifications/verify-webhook-signature` and de-duplicated by event ID. |
 | **PayPal OAuth 2.0** (client credentials) | Server-side only; the token is cached until shortly before it expires. |
 | **Pool-rule and helper agents** ([`agents.js`](server/src/agents.js)) | The Funder app's agent turns a funder's words into a pool rule (`registry_coverage`, `propose_pool`, checked by [`funders.js`](server/src/funders.js)). The Farmer app's agent answers from one farmer's record (`get_my_payouts`, `get_my_registration`, `get_storm_status`, `open_case`). Neither can move money. |
 | **Jev** ([`jev.js`](server/src/jev.js)), TypeSafe System One API (`POST /v1/systemone`) | Places bulletin phrases the parser couldn't read, flags injected instructions, triages farmer messages. Every answer is checked in code; any failure falls back. |
@@ -98,7 +105,10 @@ system prompt says so, but the guarantee comes from the code, not the prompt.
 
 More of what the code enforces, whatever the model says:
 
-- Every area the agent records must name a province that appears in the bulletin text.
+- Every area the agent records must name a province that appears in the bulletin text, by its whole
+  name ("Eastern Samar" doesn't name Samar), and never at a higher signal than the parser read for it.
+- Jev's answers are checked before use: a probability outside 0 to 1, or a province that wasn't
+  offered, counts as no answer.
 - A family paid in the last 7 days can't be drafted again under any storm name.
 - Approval never holds a database lock while PayPal is called. If PayPal's answer is lost, the batch
   stays "sending" and Approve resumes it with the same PayPal-Request-Id, so nothing is paid twice.
@@ -154,23 +164,42 @@ field reports, and farmers' messages in their own language.
 server/
   src/
     index.js        local server: API + built frontend
-    app.js          HTTP routes, coordinator auth, rate limit, background agent jobs
-    agent.js        agent loop and tool implementations
+    app.js          HTTP routes, coordinator / funder / farmer access, rate limits, background agent jobs
+    config.js       environment and what /api/config reports
+    parser.js       reads routine PAGASA bulletins with no AI (Node port of the Java parser)
+    provinces.js    province names and their other spellings
+    rules.js        routes a bulletin (rules, Rules + Jev, or agent) and drafts by policy
+    jev.js          Jev (TypeSafe System One): placements, injection score, message triage
+    agent.js        relief agent loop and tool implementations
+    agents.js       pool-rule agent (Funder app) and helper agent (Farmer app)
     providers.js    OpenAI and Claude adapters behind one interface
     policy.js       hard limits and eligibility
+    funding.js      pools, PayPal Checkout contributions, pro-rata split
+    funders.js      funder accounts and pool-rule checks
     payouts.js      approval → PayPal batch, webhook + poll status sync
-    paypal.js       OAuth, Payouts, webhook verification
+    paypal.js       OAuth, Orders, Payouts, webhook verification
+    core.js         client for the Java core (CORE_MODE)
+    notify.js       the simulated SMS to each family
     store.js        transactional store (Postgres or file), hash-chained evidence log
     storage.js      picks Postgres (DATABASE_URL) or the local file store
-    seed.js         demo families and simulated bulletins
-  scripts/paypal-smoke.mjs   sandbox smoke test (token → payout → poll)
-  test/             node:test suites (policy, store incl. Postgres via PGlite, end-to-end flow)
+    seed.js         demo families, funders and simulated bulletins
+  scripts/paypal-smoke.mjs       sandbox smoke test (token → payout → poll)
+  scripts/export-contracts.mjs   writes contracts/fixtures from the Node rules
+  test/             node:test suites: policy, parser contracts, Jev, agents, funding, approval,
+                    webhooks, access, store (incl. Postgres via PGlite), end-to-end flow
 celerity-web/
+  src/pages/landing/  landing page
+  src/pages/funder/   Funder app
+  src/pages/farmer/   Farmer app
   src/pages/console/  coordinator console
   src/pages/public/   public transparency page
   src/design/         design system (tokens, Card, Table, StatusPill, …)
+core/                Java 21 + Spring Boot: the same money rules and parser as a service
+contracts/fixtures/  rule inputs and answers that Node and Java must both give
+docs/DEVLOG.md       dated build log
 api/index.js         Vercel function entry (wraps the Express app)
 vercel.json          Vercel build, rewrites, headers, 300s function limit
+render.yaml          Render Blueprint for the Java core
 ```
 
 ---
@@ -186,7 +215,7 @@ Requires **Node 22+** (24 recommended).
 2. Under **Sandbox accounts**, note the email of a **Personal** account. Demo payouts will land there.
 3. (Optional, for webhooks) In the app's **Webhooks** section, add
    `https://<your-public-host>/api/webhooks/paypal` and subscribe to `PAYMENT.PAYOUTSBATCH.*`,
-   `PAYMENT.PAYOUTS-ITEM.*` and `PAYMENT.CAPTURE.COMPLETED`. Copy the **Webhook ID**. Without it, use **Refresh from PayPal** on the
+   `PAYMENT.PAYOUTS-ITEM.*` and `PAYMENT.CAPTURE.*` (completed, refunded, reversed, denied). Copy the **Webhook ID**. Without it, use **Refresh from PayPal** on the
    Payouts page to pull status instead.
 
 ### 2. Configure
@@ -218,7 +247,7 @@ cd server && npm run dev
 cd celerity-web && npm install && npm run dev
 ```
 
-Open the Vite URL (it proxies `/api` to the server on port 8787) and sign in with your
+Open the Vite URL, <http://localhost:5173> (it proxies `/api` to the server on port 8787) and sign in with your
 `COORDINATOR_KEY`. Or build the frontend once (`npm run build` in `celerity-web/`) and open
 <http://localhost:8787>: the server serves the build itself.
 
@@ -257,7 +286,7 @@ function limit (a typical run takes about 30 seconds).
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | yes | PayPal REST app credentials |
 | `PAYPAL_ENV` | no | `sandbox` (default) or `live` |
 | `PAYPAL_WEBHOOK_ID` | for webhooks | Verifies webhook signatures; webhooks are rejected without it |
-| `AI_PROVIDER` | no | `openai` or `anthropic`; unset picks whichever key is present |
+| `AI_PROVIDER` | no | `openai` or `anthropic`; unset picks whichever key is present (Anthropic if both or neither) |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | one of them | Key for the agent's provider |
 | `OPENAI_MODEL`, `CLAUDE_MODEL` | no | Default `gpt-5.5`, `claude-opus-5-5` |
 | `AI_EFFORT` | no | Reasoning effort, default `medium` |
@@ -267,7 +296,7 @@ function limit (a typical run takes about 30 seconds).
 | `AGENT_RUNS_PER_HOUR` | no | Default `20`; protects a public demo |
 | `DATABASE_URL` | on Vercel | Postgres connection string (Neon sets it). Without it, state is a local JSON file. |
 | `DATA_DIR`, `PORT` | no | Local file store folder and port. Default `server/data`, `8787` |
-| `PUBLIC_URL` | no | Where PayPal Checkout sends funders back, e.g. `https://celerity-relief.vercel.app`. Default: the request's host |
+| `PUBLIC_URL` | off Vercel | Where PayPal Checkout sends funders back, e.g. `https://celerity-relief.vercel.app`. Default: the Vercel URL, or localhost in development |
 | `CORE_URL`, `CORE_TOKEN` | no | The Java core (`core/`) and its shared secret |
 | `CORE_MODE` | no | `off` (default), `shadow` (Node decides, the core is compared), `on` (the core decides, Node's rules answer if it's unreachable) |
 | `TYPESAFE_API_KEY` | no | Jev (TypeSafe AI). Unset: Jev is skipped and the app works as before |
@@ -275,7 +304,13 @@ function limit (a typical run takes about 30 seconds).
 | `JEV_PLACE_THRESHOLD` | no | Default `0.95`: how sure Jev must be of a province before the rules use it |
 | `AUTO_RELEASE` | no | `1` (default): a bulletin the rules read completely is paid without approval. `0`: a coordinator approves every run |
 | `APP_AI_CALLS_PER_HOUR` | no | Default `200`: cap on pool-rule and helper agent calls from the two apps (also 15 per client per hour) |
-| `DEMO_FARMERS` | no | `0` hides the seeded demo farmers on the Farmer app's "Is this you?" screen |
+| `DEMO_FARMERS` | no | `0` hides the seeded demo farmers on the Farmer app's "Is this you?" screen. Never served when `PAYPAL_ENV=live` |
+| `DEMO_FUNDERS` | no | `0` makes Funder app sign-in ask for an access code instead of offering the demo picker |
+| `FUNDER_CODES` | with `DEMO_FUNDERS=0` | JSON object of funder ID to access code |
+| `TRUST_PROXY_HOPS` | no | Behind a proxy other than Vercel: how many proxies set `X-Forwarded-For`. Unset: the socket address is the client |
+| `RUN_DEADLINE_MS` | no | How long an agent run may take before it is failed and stopped |
+| `TYPESAFE_TIMEOUT_MS` | no | Default `4000`: how long to wait for Jev before falling back |
+| `SMOKE_RECEIVER_EMAIL` | for `npm run smoke` | Sandbox personal account that receives the 1.00 smoke payout |
 
 ---
 
