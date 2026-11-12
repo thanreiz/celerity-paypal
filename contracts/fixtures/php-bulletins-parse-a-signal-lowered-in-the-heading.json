@@ -1,0 +1,18 @@
+{
+  "name": "a signal lowered in the heading",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "PHP",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon DALISAY\nTCWS No. 3 has been lowered to TCWS No. 1\nLuzon: Albay"
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": null,
+    "areas": [],
+    "unparsed": [
+      "TCWS No. 3 has been lowered to TCWS No. 1"
+    ],
+    "confidence": 0
+  }
+}

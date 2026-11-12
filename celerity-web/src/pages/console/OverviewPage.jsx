@@ -9,8 +9,8 @@ import { PageHeader, SystemStatus, Label } from "./parts";
 // The five steps of the Celerity rail.
 const STEPS = [
   ["Fund", "Funders put money into pools earmarked for an area, through PayPal Checkout."],
-  ["Trigger", "A typhoon bulletin arrives. An AI agent reads it and drafts payouts for families in signal areas; code enforces every cap."],
-  ["Settle", "A coordinator approves the run. Each payout is split across the pools that cover the family, and never paid twice."],
+  ["Trigger", "A typhoon bulletin arrives. The rules read it first; an AI agent drafts only what they can't place. Code enforces every cap."],
+  ["Settle", "A routine run is paid at once with no approval. A run an AI had a hand in waits for a coordinator. Each payout is split across the pools that cover the family, and never paid twice."],
   ["Cash out", "PayPal Payouts sends the money. Webhooks update each family's status here."],
   ["Proof", "Every step lands on a hash-chained record, and the public page shows each funder where its money went."],
 ];
@@ -33,7 +33,7 @@ export default function OverviewPage({ data, config, go }) {
 
   return (
     <main className="cel-page cel-page--wide">
-      <PageHeader title="Overview" lede="An AI agent drafts typhoon cash aid within hard limits. A person approves it. PayPal delivers it.">
+      <PageHeader title="Overview" lede="Rules pay routine bulletins at once. Anything an AI had a hand in waits for a person to approve it, within hard limits. PayPal delivers it.">
         <SystemStatus config={config} />
       </PageHeader>
 
@@ -41,7 +41,7 @@ export default function OverviewPage({ data, config, go }) {
         <Card variant="notice">
           <div className="cel-row-actions" style={{ justifyContent: "space-between" }}>
             <div>
-              <strong>{waiting.length === 1 ? "1 agent run needs" : `${waiting.length} agent runs need`} your approval</strong>
+              <strong>{waiting.length === 1 ? "1 run needs" : `${waiting.length} runs need`} your approval</strong>
               <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", margin: "2px 0 0" }}>
                 {waiting
                   .map((r) => `${stormName(r.storm)}: ${r.totals.recipients} families, ${money(r.totals.amount, currency)}`)
@@ -106,7 +106,7 @@ export default function OverviewPage({ data, config, go }) {
 
       <Card title="Latest batches">
         {data.batches.length === 0 ? (
-          <p style={{ color: "var(--text-faint)" }}>No payouts yet. Approve an agent run to send the first batch.</p>
+          <p style={{ color: "var(--text-faint)" }}>No payouts yet. Run a bulletin from Respond; routine ones are paid at once, and AI-drafted ones wait for your approval.</p>
         ) : (
           <div className="cel-stack" style={{ gap: 10 }}>
             {data.batches.slice(0, 4).map((b) => {

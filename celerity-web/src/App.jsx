@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Console from "./pages/console/Console";
 import TransparencyPage from "./pages/public/TransparencyPage";
-import { session } from "./lib/api";
 import FarmerApp, { FarmerConnect } from "./pages/farmer/FarmerApp";
 import FunderApp from "./pages/funder/FunderApp";
 import LandingPage from "./pages/landing/LandingPage";
@@ -21,17 +20,23 @@ function useHash() {
 //   #/farmer      the Farmer app ("Is this you?"), #/r/<token> one farmer's app
 //   #/console/... Celerity operations: coordinators approve what AI drafted
 // plus the public record at #/public and the landing page.
+// Console pages, by first path segment. Anything else unknown is the landing page.
+const CONSOLE = new Set(["console", "overview", "funds", "respond", "payouts", "families", "evidence"]);
+
 export default function App() {
   const hash = useHash();
+  // First path segment of "#/segment/rest?query".
+  const seg = (hash.startsWith("#/") ? hash.slice(2) : "").split(/[/?]/)[0];
   const farmer = hash.match(/^#\/r\/([\w-]+)/);
   if (farmer) return <FarmerApp token={farmer[1]} />;
-  if (hash.startsWith("#/farmer")) return <FarmerConnect />;
-  if (hash.startsWith("#/funder")) return <FunderApp query={hash.split("?")[1] || ""} />;
-  if (hash.startsWith("#/public")) return <TransparencyPage />;
+  if (seg === "farmer") return <FarmerConnect />;
+  if (seg === "funder") return <FunderApp query={hash.split("?")[1] || ""} />;
+  if (seg === "public") return <TransparencyPage />;
+  if (CONSOLE.has(seg)) return <Console route={hash.replace(/^#\/?/, "").replace(/^console\/?/, "")} />;
 
-  // Visitors without a coordinator key land on the landing page; #/home shows
-  // it to signed-in coordinators too.
-  const bare = hash === "" || hash === "#" || hash === "#/";
-  if (hash.startsWith("#/home") || (bare && !session.key)) return <LandingPage />;
-  return <Console route={hash.replace(/^#\/?/, "").replace(/^console\/?/, "")} />;
+  // Everything else is the landing page, signed in or not: "#/", "#/home",
+  // unknown routes, "#/r/" with no token, and bare anchors such as "#how"
+  // (the landing page scrolls to the section itself). Coordinators reach the
+  // console through "Coordinator sign in" (#/console).
+  return <LandingPage />;
 }

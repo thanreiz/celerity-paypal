@@ -1,0 +1,32 @@
+{
+  "name": "two provinces each narrowed to towns",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon DALISAY\nTCWS No. 3\nLuzon: Albay (Legazpi City) and Sorsogon (Bulan, Irosin)"
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": null,
+    "areas": [
+      {
+        "province": "Albay",
+        "municipality": "Legazpi City",
+        "signal_level": 3
+      },
+      {
+        "province": "Sorsogon",
+        "municipality": "Bulan",
+        "signal_level": 3
+      },
+      {
+        "province": "Sorsogon",
+        "municipality": "Irosin",
+        "signal_level": 3
+      }
+    ],
+    "unparsed": [],
+    "confidence": 1
+  }
+}

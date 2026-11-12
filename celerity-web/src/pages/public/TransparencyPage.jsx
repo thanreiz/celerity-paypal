@@ -5,10 +5,11 @@ import StatusPill from "../../design/StatusPill";
 import Badge from "../../design/Badge";
 import CountUp from "../../design/CountUp";
 import Toast from "../../design/Toast";
-import { PoolList } from "./Pools";
+import { PoolList, hasDemoPledge } from "./Pools";
 import { api } from "../../lib/api";
 import { money, when, eventLabel, eventDetail, short, stormName } from "../../lib/format";
 import { ChainStatus } from "../console/EvidencePage";
+import Checkpoint from "./Checkpoint";
 
 /** Public, no-login page: how much relief went out, for which storm, and
  * the hash-chained record behind it. No names or emails. */
@@ -19,6 +20,7 @@ function fundedNotice() {
   const funded = q.get("funded");
   if (!funded) return null;
   if (funded === "cancelled") return { msg: "Payment cancelled. Nothing was charged." };
+  if (funded === "pending") return { msg: "PayPal is still processing your payment. It will be credited to the pool as soon as PayPal confirms it.", neutral: true };
   if (funded === "failed" || funded === "unknown") return { msg: "PayPal didn't confirm that payment, so nothing was added.", error: true };
   return { poolId: funded, amount: Number(q.get("amount")) || 0 };
 }
@@ -73,9 +75,14 @@ export default function TransparencyPage() {
         <div>
           <h1 style={{ font: "var(--text-display)", margin: 0, letterSpacing: "var(--tracking-tight)" }}>Where the relief went</h1>
           <p style={{ font: "var(--text-body)", color: "var(--text-dim)", margin: "6px 0 0", maxWidth: 680 }}>
-            Celerity Relief sends typhoon cash aid through PayPal. An AI agent drafts each payout within fixed limits, a coordinator
-            approves it, and every step is written to a tamper-evident log you can check here.
+            Celerity Relief sends typhoon cash aid through PayPal. Rules pay routine bulletins within fixed limits. When a bulletin is
+            unclear, an AI agent drafts and a coordinator approves. Every step is written to a tamper-evident log you can check here.
           </p>
+          {data && hasDemoPledge(data.pools) && (
+            <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", margin: "10px 0 0", maxWidth: 680 }}>
+              Pool totals on this page include a demo pledge seeded for this sandbox. It is not real money.
+            </p>
+          )}
           {data?.paypalEnv === "sandbox" && (
             <div style={{ marginTop: 10 }}>
               <Badge stub>Demo: PayPal sandbox, simulated bulletins</Badge>
@@ -135,6 +142,7 @@ export default function TransparencyPage() {
             </Card>
 
             <ChainStatus chain={data.chain} />
+            <Checkpoint chain={data.chain} />
 
             <Card title="Latest record entries">
               <Table
@@ -173,6 +181,7 @@ export default function TransparencyPage() {
       {notice && (
         <Toast
           error={notice.error}
+          neutral={notice.neutral}
           message={
             notice.msg ||
             `Thank you. ${money(notice.amount, data?.currency || "PHP")} was added to ${

@@ -30,7 +30,7 @@ function scrollTo(id) {
 const reduceMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /* ── Live numbers from the public record, with labelled example data as a fallback ── */
-const EXAMPLE = { pooled: 6820000, delivered: 2480000, families: 1284, events: 3412, live: false };
+const EXAMPLE = { pooled: 6820000, delivered: 2480000, families: 1284, events: 3412, currency: "PHP", live: false };
 
 function useLiveRecord() {
   const [rec, setRec] = useState({ pooled: 0, delivered: 0, families: 0, events: 0, live: true, loading: true });
@@ -42,7 +42,8 @@ function useLiveRecord() {
         if (off) return;
         const pooled = (d.pools || []).reduce((s, p) => s + (p.contributed || 0), 0);
         const delivered = (d.storms || []).reduce((s, x) => s + (x.sent || 0), 0);
-        setRec({ pooled, delivered, families: d.registered || 0, events: d.chain?.length || 0, chainOk: d.chain?.ok, env: d.paypalEnv, live: true });
+        const demo = (d.pools || []).some((p) => (p.contributions || []).some((c) => c.source === "seed"));
+        setRec({ pooled, delivered, families: d.registered || 0, events: d.chain?.length || 0, chainOk: d.chain?.ok, env: d.paypalEnv, currency: d.currency || "PHP", demo, live: true });
       })
       .catch(() => !off && setRec(EXAMPLE));
     return () => {
@@ -52,8 +53,19 @@ function useLiveRecord() {
   return rec;
 }
 
-const peso = (n) =>
-  n >= 1e6 ? `₱${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `₱${Math.round(n / 1e3)}k` : `₱${Math.round(n).toLocaleString("en-PH")}`;
+// Short money for the strip, in the currency the API reports (the server may
+// pay out in USD or PHP), not always pesos.
+function symbolFor(currency) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, currencyDisplay: "narrowSymbol" }).formatToParts(0).find((x) => x.type === "currency")?.value || currency;
+  } catch {
+    return currency;
+  }
+}
+const shortMoney = (n, currency = "PHP") => {
+  const sym = symbolFor(currency);
+  return n >= 1e6 ? `${sym}${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${sym}${Math.round(n / 1e3)}k` : `${sym}${Math.round(n).toLocaleString("en-US")}`;
+};
 
 function Counter({ value, format = (n) => Math.round(n).toLocaleString("en-PH") }) {
   return <>{format(useCountUp(value, 1200))}</>;
@@ -83,14 +95,49 @@ function useReveal(rootRef) {
 }
 
 /* ── Nav ─────────────────────────────────────────────────────────── */
+const MENU = [
+  ["How it works", "#how"],
+  ["For families", "#story"],
+  ["PayPal", "#paypal"],
+  ["Guardrails", "#guardrails"],
+  ["FAQ", "#faq"],
+  null,
+  ["Farmer app", FARMER],
+  ["Coordinator sign in", SIGN_IN],
+  ["Funder app", FUND],
+];
+
 function Nav() {
   const [lifted, setLifted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const menuBtn = useRef(null);
+  const menu = useRef(null);
   useEffect(() => {
     const on = () => setLifted(window.scrollY > 24);
     on();
     window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
+  // Escape closes the menu and hands focus back to its button; a press
+  // outside closes it too. Only listening while it is open.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        menuBtn.current?.focus();
+      }
+    };
+    const onDown = (e) => {
+      if (!menu.current?.contains(e.target) && !menuBtn.current?.contains(e.target)) setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [open]);
   return (
     <header className="nav" data-lifted={lifted || undefined}>
       <div className="bar">
@@ -110,7 +157,36 @@ function Nav() {
         <a className="signin" href={FARMER}>Farmer app</a>
         <a className="signin" href={SIGN_IN}>Coordinator sign in</a>
         <a className="btn btn-white" href={FUND}>Funder app</a>
+        <button ref={menuBtn} type="button" className="menu-btn" aria-label="Menu" aria-expanded={open} aria-controls="nav-menu" onClick={() => setOpen((o) => !o)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d={open ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16"} />
+          </svg>
+        </button>
       </div>
+      {open && (
+        <nav id="nav-menu" ref={menu} className="menu" aria-label="Menu">
+          {MENU.map((item, i) => {
+            if (!item) return <hr key={i} />;
+            const [label, href] = item;
+            // Section links scroll in place (the app routes by hash); the rest
+            // are real routes. Either way the menu closes on selection.
+            return href.startsWith("#/") ? (
+              <a key={href} href={href} onClick={() => setOpen(false)}>{label}</a>
+            ) : (
+              <a
+                key={href}
+                href={href}
+                onClick={(e) => {
+                  scrollTo(href.slice(1))(e);
+                  setOpen(false);
+                }}
+              >
+                {label}
+              </a>
+            );
+          })}
+        </nav>
+      )}
     </header>
   );
 }
@@ -121,16 +197,16 @@ const AUDIENCES = [
     key: "funders",
     label: "Funders",
     title: ["Typhoon aid,", "in minutes."],
-    sub: "Pool money through PayPal before the storm. When the bulletin comes, an AI agent drafts who gets help, code enforces the limits, a person approves, and PayPal pays families directly.",
+    sub: "Pool money through PayPal before the storm. When the bulletin comes, rules pay the routine cases at once, an AI agent drafts the rest for a person to approve, and PayPal pays families directly.",
     cta: ["Fund a pool", FUND],
-    alt: ["See the public record", FUND],
-    chips: ["Paid by PayPal", "A person approves every run", "Every peso on the record"],
+    alt: ["See the public record", "#/public"],
+    chips: ["Paid by PayPal", "A person approves every AI draft", "Every peso on the record"],
   },
   {
     key: "coordinators",
     label: "Coordinators",
     title: ["Approve aid", "before the rain stops."],
-    sub: "Paste the PAGASA bulletin. The agent drafts a payout for every eligible family, the policy engine refuses anything over the limits, and one approval sends the whole batch.",
+    sub: "Paste the PAGASA bulletin. Rules pay a routine one at once. If an AI had a hand in it, the agent drafts a payout for every eligible family, the policy engine refuses anything over the limits, and your approval sends the batch.",
     cta: ["Coordinator sign in", SIGN_IN],
     alt: ["See the guardrails", "#guardrails"],
     chips: ["Drafts in under a minute", "Caps checked twice", "One PayPal batch per run"],
@@ -139,7 +215,7 @@ const AUDIENCES = [
     key: "families",
     label: "Families",
     title: ["Help that lands", "on your phone."],
-    sub: "No forms, no lines. A text arrives with a private link that shows how much is coming, where it is right now, and how to move it to GCash or a bank. In Tagalog or English.",
+    sub: "No forms, no lines. A text arrives with a private link that shows how much is coming, where it is right now, and how to move it from PayPal to a bank or e-wallet. In Tagalog or English.",
     cta: ["See how it arrives", "#story"],
     alt: ["Read the FAQ", "#faq"],
     chips: ["Tagalog and English", "Live payout status", "No account to open"],
@@ -251,9 +327,9 @@ function PaperHead({ title, tag = "EXAMPLE" }) {
 }
 
 const PAYOUTS = [
-  { ini: "DR", c: ["#e2f5e9", "#0f7b3f"], name: "Delos Reyes family", where: "Naga City · Signal 3", amt: "₱10,000", on: 3, meta: ["Approved · Sent · Received", <b key="b">Received 10:19</b>] },
-  { ini: "SA", c: ["#e8eefc", "#2c4f8f"], name: "Santos family", where: "Pili · Signal 3", amt: "₱8,500", on: 2, meta: ["Approved · Sent", "Waiting for claim"] },
-  { ini: "VI", c: ["#fff1df", "#8a4b00"], name: "Villanueva family", where: "Legazpi · Signal 3", amt: "₱10,000", on: 1, meta: ["Approved", "In the PayPal batch"] },
+  { ini: "DR", c: ["#e2f5e9", "#0f7b3f"], name: "Delos Reyes family", where: "Naga City · Signal 3", amt: "₱3,250", on: 3, meta: ["Approved · Sent · Received", <b key="b">Received 10:19</b>] },
+  { ini: "SA", c: ["#e8eefc", "#2c4f8f"], name: "Santos family", where: "Pili · Signal 3", amt: "₱2,500", on: 2, meta: ["Approved · Sent", "Waiting for claim"] },
+  { ini: "VI", c: ["#fff1df", "#8a4b00"], name: "Villanueva family", where: "Legazpi · Signal 3", amt: "₱3,500", on: 1, meta: ["Approved", "In the PayPal batch"] },
 ];
 
 function PayoutRow({ p, on, onClick }) {
@@ -275,8 +351,8 @@ function FunderStage() {
   return (
     <>
       <div className="float sms" aria-hidden="true">
-        <div className="who"><i>✉</i>SMS · CELERITY</div>
-        <p>May ₱10,000 para sa pamilya Delos Reyes mula sa Typhoon Dalisay relief. Tingnan dito: cel.ph/r/8Kq2…</p>
+        <div className="who"><i>✉</i>SMS · CELERITY <span className="ex">EXAMPLE</span></div>
+        <p>May ₱3,250 para sa pamilya Delos Reyes mula sa Typhoon Dalisay relief. Tingnan dito: cel.ph/r/8Kq2…</p>
       </div>
       <div className="paper" role="group" aria-label="Example payouts">
         <PaperHead title="Dalisay payouts" />
@@ -284,9 +360,9 @@ function FunderStage() {
         <p className="foot"><Icon d={["M12 7v5l3 2"]} /><span>18 minutes from bulletin to the first payout</span></p>
       </div>
       <div className="float pool" aria-hidden="true">
-        <small>BICOL EMERGENCY POOL</small>
+        <small>BICOL EMERGENCY POOL <span className="ex">EXAMPLE</span></small>
         <b>₱4,280,000</b>
-        <span>Maharlika Foundation · ready to pay</span>
+        <span>Philippine Crop Insurance Corp. · ready to pay</span>
         <div className="bar"><i /></div>
       </div>
     </>
@@ -296,10 +372,10 @@ function FunderStage() {
 function CoordinatorStage() {
   const [approved, setApproved] = useState(false);
   const drafts = [
-    ["Delos Reyes · Naga", "₱10,000", "ok"],
-    ["Santos · Pili", "₱8,500", "ok"],
-    ["Villanueva · Legazpi", "₱10,000", "ok"],
-    ["Unregistered email", "₱25,000", "no"],
+    ["Delos Reyes · Naga", "₱3,250", "ok"],
+    ["Santos · Pili", "₱2,500", "ok"],
+    ["Villanueva · Legazpi", "₱3,500", "ok"],
+    ["Unregistered email", "₱8,000", "no"],
   ];
   return (
     <>
@@ -317,8 +393,15 @@ function CoordinatorStage() {
             </div>
           </div>
         ))}
+        <div className="row-card" style={{ cursor: "default" }}>
+          <div className="top">
+            <span className="name"><strong>21 more families</strong><small>Signal 2 to 4 · registered</small></span>
+            <span className="amt num" style={{ fontSize: 17 }}>₱53,150</span>
+            <span className={`verdict-pill ${approved ? "ok-pill" : "wait-pill"}`}>{approved ? "SENT" : "ALLOWED"}</span>
+          </div>
+        </div>
         <div className="approve">
-          <span>{approved ? "Batch sent to PayPal · ₱28,500" : "3 drafts · ₱28,500 within policy"}</span>
+          <span>{approved ? "Batch sent to PayPal · ₱62,400" : "24 drafts · ₱62,400 within policy"}</span>
           <button type="button" className="btn" onClick={() => setApproved((x) => !x)}>
             {approved ? "Undo demo" : "Approve run"}
           </button>
@@ -332,8 +415,8 @@ function FamilyStage() {
   return (
     <>
       <div className="float sms" aria-hidden="true" style={{ left: "-14%", top: "8%" }}>
-        <div className="who"><i>✉</i>SMS · NGAYON</div>
-        <p>Jun, may ₱10,000 para sa inyo mula sa Typhoon Dalisay relief. Tingnan: cel.ph/r/8Kq2…</p>
+        <div className="who"><i>✉</i>SMS · NGAYON <span className="ex">EXAMPLE</span></div>
+        <p>Jun, may ₱3,250 para sa inyo mula sa Typhoon Dalisay relief. Tingnan: cel.ph/r/8Kq2…</p>
       </div>
       <div style={{ width: 300 }}>
         <Phone stage={2} compact />
@@ -361,8 +444,8 @@ function Phone({ stage = 2, compact = false }) {
         <div className="pbody">
           <div className="greet">Magandang umaga, Jun.<small>Delos Reyes family · Naga City</small></div>
           <div className="amount">
-            <small>TYPHOON DALISAY RELIEF</small>
-            <b className="num">₱10,000</b>
+            <small>TYPHOON DALISAY RELIEF <span className="ex">EXAMPLE</span></small>
+            <b className="num">₱3,250</b>
             <span>{stage >= 2 ? "Natanggap na · nasa PayPal mo na" : stage >= 1 ? "Papunta na sa PayPal mo" : "Aprubado na ng coordinator"}</span>
           </div>
           <div className="steps-v">
@@ -374,7 +457,7 @@ function Phone({ stage = 2, compact = false }) {
               </div>
             ))}
           </div>
-          <div className="gcash"><Icon d={["M4 7h16v10H4z", "M4 11h16"]} /><span>Ilipat sa <b>GCash</b> o bangko anumang oras</span></div>
+          <div className="gcash"><Icon d={["M4 7h16v10H4z", "M4 11h16"]} /><span>Ilipat sa <b>bangko o e-wallet</b> mula sa PayPal</span></div>
         </div>
       </div>
     </div>
@@ -382,7 +465,7 @@ function Phone({ stage = 2, compact = false }) {
 }
 
 /* ── Marquee + live strip ─────────────────────────────────────────── */
-const PROMISES = ["Bulletin to money in 18 minutes", "Per-family cap enforced in code", "No double payments for one storm", "Verified PayPal webhooks", "Tagalog and English", "Hash-chained evidence log", "Funders see every peso"];
+const PROMISES = ["Bulletin to money in minutes", "Per-family cap enforced in code", "No double payments for one storm", "Verified PayPal webhooks", "Tagalog and English", "Hash-chained evidence log", "Funders see every peso"];
 
 function Marquee() {
   return (
@@ -403,8 +486,8 @@ function LiveStrip({ rec }) {
           <i />
           {rec.live ? `Live · PayPal ${rec.env || "sandbox"}` : <>Public record <span className="ex">EXAMPLE</span></>}
         </span>
-        <div className="stat"><b className="num"><Counter value={rec.pooled} format={peso} /></b><span>Pooled by funders</span></div>
-        <div className="stat"><b className="num"><Counter value={rec.delivered} format={peso} /></b><span>Delivered to families</span></div>
+        <div className="stat"><b className="num"><Counter value={rec.pooled} format={(n) => shortMoney(n, rec.currency)} /></b><span>{rec.demo ? "Pooled by funders, incl. demo pledges" : "Pooled by funders"}</span></div>
+        <div className="stat"><b className="num"><Counter value={rec.delivered} format={(n) => shortMoney(n, rec.currency)} /></b><span>Delivered to families</span></div>
         <div className="stat"><b className="num"><Counter value={rec.families} /></b><span>Families registered</span></div>
         <div className="stat"><b className="num"><Counter value={rec.events} /></b><span>{rec.live && rec.chainOk === false ? "Events · chain broken" : "Events on a verified chain"}</span></div>
       </div>
@@ -427,7 +510,7 @@ function StepCard({ kind, n, icon, title, body, bullets, delay, children }) {
       <h3>{title}</h3>
       <p>{body}</p>
       <ul>{bullets.map((b) => <li key={b}><i>✓</i>{b}</li>)}</ul>
-      <div className="scene"><div className="sc">{children}</div></div>
+      <div className="scene"><span className="ex">EXAMPLE</span><div className="sc">{children}</div></div>
     </article>
   );
 }
@@ -445,20 +528,20 @@ function HowItWorks() {
           <StepCard kind="pearl" n="01" delay={0} icon={["M3 10h18", "M5 10V8l7-4 7 4v2", "M6 10v7M10 10v7M14 10v7M18 10v7", "M4 20h16"]}
             title="Funders fill a pool for an area." body="An insurer or a foundation pays into a pool earmarked for, say, Bicol, through PayPal Checkout."
             bullets={["Each funder’s money stays traceable", "Many funders can cover one area"]}>
-            <div className="r"><span>Maharlika Foundation</span><b>₱4.28M</b></div><div className="bar"><i style={{ width: "82%" }} /></div>
-            <div className="r" style={{ marginTop: 8 }}><span>Pacific Shield</span><b>₱2.54M</b></div><div className="bar"><i style={{ width: "54%" }} /></div>
+            <div className="r"><span>Philippine Crop Insurance Corp.</span><b>₱4.28M</b></div><div className="bar"><i style={{ width: "82%" }} /></div>
+            <div className="r" style={{ marginTop: 8 }}><span>Global Rice Foundation</span><b>₱2.54M</b></div><div className="bar"><i style={{ width: "54%" }} /></div>
           </StepCard>
           <StepCard kind="emerald" n="02" delay={0.12} icon={["M12 3v3M12 18v3M3 12h3M18 12h3", "M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"]}
-            title="The agent drafts. Code decides." body="An AI agent reads the bulletin and drafts a payout for each eligible family. A policy engine checks every one."
+            title="The agent drafts. Code decides." body="When the rules can't place a bulletin, an AI agent drafts a payout for each eligible family. A policy engine checks every one."
             bullets={["Signal minimum and per-family cap", "Refused drafts must be fixed"]}>
             <div className="r"><span>Delos Reyes · Naga</span><span className="verdict-pill ok-pill">ALLOWED</span></div>
             <div className="r"><span>Santos · Pili</span><span className="verdict-pill ok-pill">ALLOWED</span></div>
-            <div className="r"><span>₱25,000 request</span><span className="verdict-pill no-pill">REFUSED · CAP</span></div>
+            <div className="r"><span>₱8,000 request</span><span className="verdict-pill no-pill">REFUSED · CAP</span></div>
           </StepCard>
           <StepCard kind="onyx" n="03" delay={0.24} icon={["M8 2h8a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3z", "M11 18h2"]}
-            title="A person approves. PayPal pays." body="Nothing moves until a coordinator approves. Then each family gets a private link showing their money arrive."
+            title="A person approves. PayPal pays." body="Rules alone pay a routine bulletin at once. Anything an AI had a hand in waits for a coordinator. Then each family gets a private link showing their money arrive."
             bullets={["One PayPal batch per run", "Live status, Tagalog or English"]}>
-            <div className="r" style={{ border: 0, padding: 0 }}><span>₱8,500 · Reyes family</span><b style={{ color: "#7fe0ae" }}>Received</b></div>
+            <div className="r" style={{ border: 0, padding: 0 }}><span>₱3,250 · Delos Reyes family</span><b style={{ color: "#7fe0ae" }}>Received</b></div>
             <div className="tl"><i className="on" /><i className="on" /><i className="on" /></div>
             <span style={{ color: "#9aa59e" }}>Approved 10:06 · Sent 10:11 · Received 10:19</span>
           </StepCard>
@@ -517,9 +600,9 @@ function Story() {
           <h2>{words.map((w, i) => <span key={w} data-lit={stage >= i || undefined}>{w}</span>)}</h2>
           <p>Every family gets a private link. They watch their money move, step by step, in the language they read best.</p>
         </div>
-        <div className="note n1" data-on={(rise && stage >= 0) || undefined}><small>10:06 · Approved</small><b>A coordinator signs off.</b><span>42 drafts, all within policy. One tap.</span></div>
-        <div className="note n2" data-on={stage >= 1 || undefined}><small>10:11 · Sent</small><b>PayPal Payouts takes it.</b><span>One batch for the run, its ID tied to the run so it can’t pay twice.</span></div>
-        <div className="note n3" data-on={stage >= 2 || undefined}><small>10:19 · Received</small><b>The money is theirs.</b><span>Confirmed by a verified PayPal webhook, then onto the public record.</span></div>
+        <div className="note n1" data-on={(rise && stage >= 0) || undefined}><small>10:06 · Approved <span className="ex">EXAMPLE</span></small><b>A coordinator signs off.</b><span>24 drafts, all within policy. One tap.</span></div>
+        <div className="note n2" data-on={stage >= 1 || undefined}><small>10:11 · Sent <span className="ex">EXAMPLE</span></small><b>PayPal Payouts takes it.</b><span>One batch for the run, its ID tied to the run so it can’t pay twice.</span></div>
+        <div className="note n3" data-on={stage >= 2 || undefined}><small>10:19 · Received <span className="ex">EXAMPLE</span></small><b>The money is theirs.</b><span>Confirmed by a verified PayPal webhook, then onto the public record.</span></div>
         <div className="device"><Phone stage={stage} /></div>
       </div>
     </section>
@@ -549,9 +632,9 @@ function OnPayPal() {
             <span className="ring" style={{ width: "112%", aspectRatio: 1, opacity: 0.35 }} />
             <div className="glass">
               <div className="orb"><Icon d={CHECK} /></div>
-              <b>Payout received</b>
+              <b>Payout received <span className="ex">EXAMPLE</span></b>
               <span>Delos Reyes family · Naga City</span>
-              <span className="chip"><span className="num">₱10,000</span> · 13 min after approval</span>
+              <span className="chip"><span className="num">₱3,250</span> · 13 min after approval</span>
             </div>
             <div className="ppline"><span>Fund the Bicol pool</span><a className="btn btn-paypal" href={FUND}>PayPal</a></div>
           </div>
@@ -571,9 +654,9 @@ function OnPayPal() {
 
 /* ── Guardrails: run the tampered bulletin ───────────────────────── */
 const VERDICTS = [
-  ["no", "₱25,000 to one family: refused", "Per-family cap is ₱10,000. The agent had to adjust."],
+  ["no", "₱8,000 to one family: refused", "Per-family cap is ₱6,000. The agent had to adjust."],
   ["no", "Outside email: refused", "Payouts go only to the email on file for a registered family."],
-  ["yes", "42 drafts within policy", "Waiting for a coordinator to approve. Nothing has moved."],
+  ["yes", "24 drafts within policy", "Waiting for a coordinator to approve. Nothing has moved."],
 ];
 
 function Guardrails() {
@@ -602,7 +685,7 @@ function Guardrails() {
         </div>
         <div className="tamper" data-reveal style={{ "--rd": ".1s" }}>
           <div className="thead">
-            <b>Tampered bulletin</b>
+            <b>Tampered bulletin <span className="ex">EXAMPLE</span></b>
             <span className={`verdict-pill ${step >= 2 ? "no-pill" : "wait-pill"}`}>{step >= 2 ? "INJECTION CAUGHT" : step ? "CHECKING…" : "UNCHECKED"}</span>
           </div>
           <div className="bul">
@@ -656,7 +739,7 @@ function Voices() {
   const v = [
     ["I read the drafts, saw why each family was on the list, and approved before the rain stopped.", "MA", "Mara Alonzo", "Relief coordinator, Bicol", ["#e2f5e9", "#0f7b3f"]],
     ["Dumating ang text, binuksan ko ang link, at nandoon na ang pera. Labing-tatlong minuto lang.", "JR", "Jun Reyes", "Rice farmer, Naga City", ["#fff1df", "#8a4b00"]],
-    ["Our board can see exactly which towns our money reached, and what’s still in the pool.", "PS", "Pacific Shield", "Funder, Bicol pool", ["#e8eefc", "#2c4f8f"]],
+    ["Our board can see exactly which towns our money reached, and what’s still in the pool.", "GR", "Global Rice Foundation", "Funder, Bicol pool", ["#e8eefc", "#2c4f8f"]],
   ];
   return (
     <section className="section tint">
@@ -681,8 +764,8 @@ function Voices() {
 
 function Faq() {
   const qs = [
-    ["Does the AI decide who gets paid?", "No. The agent drafts. A deterministic policy engine decides whether each draft is allowed, and a coordinator has to approve the run before PayPal sends anything."],
-    ["How does a family receive the money?", "PayPal Payouts sends it to the family’s PayPal email. They get a private link by SMS that shows the amount and status, and how to move it to GCash or a bank."],
+    ["Does the AI decide who gets paid?", "No. Rules read routine bulletins and pay them with no AI involved. When the rules can't place a bulletin, the agent drafts, a deterministic policy engine decides whether each draft is allowed, and a coordinator has to approve the run before PayPal sends anything."],
+    ["How does a family receive the money?", "PayPal Payouts sends it to the family’s PayPal email. They get a private link by SMS that shows the amount and status, and how to move it from PayPal to a bank or e-wallet."],
     ["Can I see where my contribution went?", "Yes. The public page shows your pool: what you put in, which storms and towns it paid for, and what’s left. Each payout is split pro-rata across the pools that cover the family."],
     ["What stops a family being paid twice?", "A family paid in the last 7 days can’t be drafted again under any storm name, and each PayPal batch ID comes from the run ID, so a retried approval can never pay twice."],
     ["Is this real money?", "Not in the demo. It runs on the PayPal sandbox with simulated bulletins for a fictional Typhoon Dalisay."],
@@ -731,7 +814,7 @@ function Footer() {
       <div className="wrap">
         <div>
           <a className="brand" href="#/" onClick={scrollTo("top")}><img src="/logo-dove.png" alt="" /><span>CELERITY<small>RELIEF NETWORK</small></span></a>
-          <p style={{ marginTop: 14, maxWidth: 320 }}>Typhoon cash aid, pooled through PayPal, drafted by an agent, approved by a person.</p>
+          <p style={{ marginTop: 14, maxWidth: 320 }}>Typhoon cash aid, pooled through PayPal. Rules pay the routine cases, and a person approves every AI draft.</p>
         </div>
         <div><h4>Product</h4><a href="#how" onClick={scrollTo("how")}>How it works</a><a href="#guardrails" onClick={scrollTo("guardrails")}>Guardrails</a><a href={PUBLIC}>Public record</a></div>
         <div><h4>For</h4><a href={FUND}>Funder app</a><a href={FARMER}>Farmer app</a><a href={SIGN_IN}>Coordinators</a></div>
@@ -748,6 +831,17 @@ export default function LandingPage() {
   useReveal(root);
   useEffect(() => {
     document.title = "Celerity Relief · Typhoon aid, in minutes";
+  }, []);
+  // A bare anchor opened directly (#how, #faq) lands on the page and scrolls
+  // to that section; the in-page links do this themselves.
+  useEffect(() => {
+    const target = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (/^[A-Za-z][\w-]*$/.test(id)) document.getElementById(id)?.scrollIntoView({ block: "start" });
+    };
+    target();
+    window.addEventListener("hashchange", target);
+    return () => window.removeEventListener("hashchange", target);
   }, []);
   return (
     <div className="lp" ref={root}>

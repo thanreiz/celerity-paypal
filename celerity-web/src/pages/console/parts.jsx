@@ -46,6 +46,7 @@ export function SystemStatus({ config }) {
     [config.paypalConfigured, `PayPal ${config.paypalEnv}`, "PayPal keys missing"],
     [config.aiConfigured, `${PROVIDER_NAMES[config.aiProvider] || "AI"} agent (${config.model})`, "AI key missing"],
     [config.webhooksVerified, "Webhooks verified", "Webhooks off: refresh each batch"],
+    [config.jevConfigured, "Jev (TypeSafe)", "Jev off: parser and agent only"],
   ];
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>

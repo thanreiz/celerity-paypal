@@ -36,7 +36,8 @@ export default function LoginScreen({ onSignIn, initialError = "" }) {
           setChecking(false);
           if (problem) {
             setError(problem);
-            setKey("");
+            // A rejected name is not a wrong key: keep the key so only the name changes.
+            if (!/reserved name/.test(problem)) setKey("");
           }
         }}
         style={{
@@ -55,7 +56,7 @@ export default function LoginScreen({ onSignIn, initialError = "" }) {
         <div>
           <h1 style={{ font: "var(--text-h1)", margin: 0 }}>Coordinator sign-in</h1>
           <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", margin: "6px 0 0" }}>
-            Coordinators review what the relief agent drafts and approve every payout before PayPal sends it.
+            Coordinators approve what the AI agent drafts before PayPal sends it, and keep watch over the routine runs the rules pay at once.
           </p>
         </div>
         <Input label="Your name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ana, MDRRMO Virac" autoComplete="name" />

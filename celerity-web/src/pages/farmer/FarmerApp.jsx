@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useDialog } from "../../lib/useDialog";
 import Card from "../../design/Card";
 import Button from "../../design/Button";
 import { api } from "../../lib/api";
@@ -26,21 +27,19 @@ const APP = {
     noStorm: "Walang wind signal sa lugar mo ngayon. Ligtas ka.",
     fundedBy: "Pondo mula sa",
     quick: ["Buksan ang PayPal", "Magtanong", "Aking lugar", "Saan napunta"],
-    recent: "Mga natanggap",
-    seeAll: "Lahat",
     tabs: ["Home", "Kasaysayan", "Tulong", "Ako"],
     helpTitle: "Magtanong kay Celerity",
     helpSub: "Sasagot ito tungkol sa sarili mong tulong lang. Hindi ito nakapagpapadala ng pera.",
-    helpHello: (n) => `Kumusta, ${n}! Ano ang maitutulong ko? Puwede kang magtanong kung nasaan ang pera mo, paano ito ilipat sa GCash, o mag-report ng sira sa bukid.`,
-    asks: ["Nasaan na ang pera ko?", "Paano ilipat sa GCash?", "Nalubog ang palay ko sa baha"],
+    helpHello: (n) => `Kumusta, ${n}! Ano ang maitutulong ko? Puwede kang magtanong kung nasaan ang pera mo, paano ito ilipat sa bangko o e-wallet mula sa PayPal, o mag-report ng sira sa bukid.`,
+    asks: ["Nasaan na ang pera ko?", "Paano ilipat sa bangko?", "Nalubog ang palay ko sa baha"],
     placeholder: "I-type ang tanong mo…",
     send: "Ipadala",
     thinking: "Sumasagot…",
     caseOpened: "May coordinator na titingin dito.",
-    cashTitle: "Ilipat ang pera sa GCash o bangko",
+    cashTitle: "Ilipat ang pera mula sa PayPal",
     cashSteps: [
       "Buksan ang PayPal app at mag-log in gamit ang email mo sa ibaba.",
-      "Sa Wallet, i-link ang GCash (o bangko mo).",
+      "Sa Wallet, i-link ang bangko o e-wallet na gusto mo.",
       "Pindutin ang Transfer money, ilagay ang halaga, at kumpirmahin.",
       "Wala ka pang PayPal? Mag-sign up gamit ang email na iyon. Hawak ng PayPal ang pera nang 30 araw.",
     ],
@@ -48,17 +47,32 @@ const APP = {
     openPaypal: "Buksan ang PayPal",
     profile: "Ang record mo",
     town: "Bayan",
-    status: "Status",
+    status: "Kalagayan",
     household: "Miyembro ng pamilya",
     since: "Rehistrado mula",
     active: "Aktibo",
-    language: "Wika",
     switch: "Hindi ikaw ito? Pumili ng iba",
     cases: "Mga report mo",
     connectTitle: "Ikaw ba ito?",
     connectSub: "Demo: pumili ng magsasaka. Sa totoo, binubuksan ito mula sa link sa text mo.",
     tagline: "Relief that moves.",
     none: "Wala pa",
+    offline: "Hindi makakonekta ngayon. Susubukan ulit namin; walang kailangang gawin.",
+    helpError: "Hindi naipadala ang tanong mo. Subukan ulit.",
+    close: "Isara",
+    reasons: {
+      status: (x) => `ang rehistro mo ay "${x}"`,
+      noEmail: "walang PayPal email sa record mo",
+      noSignal: (town) => `walang wind signal sa ${town} sa bulletin na ito`,
+      lowSignal: (n, min) => `Signal ${n} ang lugar mo; kailangan ay Signal ${min} pataas`,
+      noStorm: "wala pang pangalan ng bagyo ang bulletin",
+      paidStorm: (storm) => `naipadala na ang tulong para sa ${storm}`,
+      paidRecent: (n) => `nakatanggap ka na sa nakaraang ${n} araw`,
+      unknown: "hindi makita ang record mo",
+    },
+    topics: { not_received: "Hindi pa natatanggap", cash_out_help: "Tulong sa paglipat ng pera", damage_report: "Sira sa bukid", wrong_details: "Maling detalye", other: "Iba pa" },
+    caseStatus: { open: "Bukas pa", resolved: "Naresolba", closed: "Sarado" },
+    registrationStatus: { suspended: "Naka-hold", inactive: "Hindi aktibo" },
   },
   en: {
     hi: (n) => `Hello, ${n}`,
@@ -75,21 +89,19 @@ const APP = {
     noStorm: "No wind signal over your town right now. You're safe.",
     fundedBy: "Funded by",
     quick: ["Open PayPal", "Ask", "My area", "Where it went"],
-    recent: "Received",
-    seeAll: "All",
     tabs: ["Home", "History", "Help", "Me"],
     helpTitle: "Ask Celerity",
     helpSub: "It answers about your own aid only. It can't send money.",
-    helpHello: (n) => `Hi ${n}! How can I help? Ask where your money is, how to move it to GCash, or report damage to your farm.`,
-    asks: ["Where is my money?", "How do I move it to GCash?", "My rice field flooded"],
+    helpHello: (n) => `Hi ${n}! How can I help? Ask where your money is, how to move it from PayPal to a bank or e-wallet, or report damage to your farm.`,
+    asks: ["Where is my money?", "How do I move it to my bank?", "My rice field flooded"],
     placeholder: "Type your question…",
     send: "Send",
     thinking: "Answering…",
     caseOpened: "A coordinator will follow up on this.",
-    cashTitle: "Move the money to GCash or a bank",
+    cashTitle: "Move the money out of PayPal",
     cashSteps: [
       "Open the PayPal app and log in with the email below.",
-      "Under Wallet, link GCash (or your bank).",
+      "Under Wallet, link the bank or e-wallet you want to use.",
       "Tap Transfer money, enter the amount, and confirm.",
       "No PayPal yet? Sign up with that email. PayPal holds the money for 30 days.",
     ],
@@ -101,13 +113,19 @@ const APP = {
     household: "Household members",
     since: "Registered since",
     active: "Active",
-    language: "Language",
     switch: "Not you? Pick someone else",
     cases: "Your reports",
     connectTitle: "Is this you?",
     connectSub: "Demo: pick a farmer. For real, this opens from the link in your text message.",
     tagline: "Relief that moves.",
     none: "None yet",
+    offline: "Can't connect right now. We'll keep trying; there's nothing you need to do.",
+    helpError: "Your question didn't go through. Please try again.",
+    close: "Close",
+    reasons: null,
+    topics: { not_received: "Not received", cash_out_help: "Help moving money", damage_report: "Farm damage", wrong_details: "Wrong details", other: "Other" },
+    caseStatus: { open: "Open", resolved: "Resolved", closed: "Closed" },
+    registrationStatus: {},
   },
 };
 
@@ -127,6 +145,43 @@ const I = {
   down: "M12 5v14m0 0 6-6m-6 6-6-6",
   wind: "M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8",
 };
+
+/** Server reasons are English sentences from server/src/policy.js. In Tagalog
+ * the known ones are mapped; anything unrecognised is shown as sent. */
+function reasonText(r, a, t) {
+  const m = a.reasons;
+  if (!m) return r;
+  let x;
+  if ((x = r.match(/^registration status is (.+)$/))) return m.status(a.registrationStatus[x[1]] || x[1]);
+  if (r === "no PayPal email on file") return m.noEmail;
+  if ((x = r.match(/^(.+) is not under any wind signal in this bulletin$/))) return m.noSignal(x[1]);
+  if ((x = r.match(/^signal (\d+) is below the minimum of (\d+)$/))) return m.lowSignal(x[1], x[2]);
+  if (r === "the run has no storm name yet") return m.noStorm;
+  if ((x = r.match(/^already paid for (.+)$/))) return m.paidStorm(t.stormLabel(bareStorm(x[1])));
+  if ((x = r.match(/^already paid in the last (\d+) days$/))) return m.paidRecent(x[1]);
+  if (r === "unknown family_id") return m.unknown;
+  return r;
+}
+
+const Lock = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-2px", marginRight: 5 }}>
+    <path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z" />
+  </svg>
+);
+
+/** Masked emails wrap after the @ instead of mid-word. */
+function Email({ value }) {
+  if (!value) return null;
+  const [user, ...rest] = String(value).split("@");
+  return rest.length ? (
+    <span style={{ overflowWrap: "break-word" }}>
+      {user}@<wbr />
+      {rest.join("@")}
+    </span>
+  ) : (
+    <span style={{ overflowWrap: "break-word" }}>{value}</span>
+  );
+}
 
 function LangToggle({ lang, setLang }) {
   return (
@@ -233,7 +288,7 @@ export function FarmerConnect() {
   );
 }
 
-function StormCard({ status, a }) {
+function StormCard({ status, a, t }) {
   const s = status?.storms?.[0];
   if (!s) {
     return (
@@ -250,10 +305,10 @@ function StormCard({ status, a }) {
     <div className="app-card" style={{ borderColor: s.qualifies_now || paid ? "var(--ok-line)" : "var(--warn-line)" }}>
       <div style={{ font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)" }}>{a.stormTitle}</div>
       <div style={{ font: "var(--text-body-lg)", fontWeight: 700, marginTop: 4 }}>
-        {s.storm} · {a.signal(s.my_signal, status.town)}
+        {t.stormLabel(bareStorm(s.storm))} · {a.signal(s.my_signal, status.town)}
       </div>
       <p style={{ margin: "6px 0 0", font: "var(--text-meta)", color: paid || s.qualifies_now ? "var(--ok-text)" : "var(--warn-text)", fontWeight: 600 }}>
-        {paid ? a.paidAlready : s.qualifies_now ? a.qualifies : `${a.notQualified} ${s.reasons.join("; ")}`}
+        {paid ? a.paidAlready : s.qualifies_now ? a.qualifies : `${a.notQualified} ${s.reasons.map((r) => reasonText(r, a, t)).join("; ")}`}
       </p>
       {s.funded_by.length > 0 && (
         <p style={{ margin: "6px 0 0", font: "var(--text-fine)", color: "var(--text-faint)" }}>
@@ -294,12 +349,14 @@ function PayoutRows({ payouts, t, lang }) {
 }
 
 function CashOut({ data, a, onClose }) {
+  // Escape closes, focus moves in and stays in, and returns to the button that opened it.
+  const ref = useDialog(onClose);
   return (
-    <div className="app-modal-back" role="dialog" aria-modal="true" aria-label={a.cashTitle} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="app-modal cel-pop" style={{ maxWidth: 440 }}>
+    <div className="app-modal-back" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={a.cashTitle} className="app-modal cel-pop" style={{ maxWidth: 440, outline: "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
           <h2 style={{ margin: 0, font: "var(--text-h2)" }}>{a.cashTitle}</h2>
-          <button className="app-pill" onClick={onClose} aria-label="Close">✕</button>
+          <button className="app-pill" onClick={onClose} aria-label={a.close}>✕</button>
         </div>
         <ol style={{ margin: "14px 0 0", paddingLeft: 22, display: "flex", flexDirection: "column", gap: 10, font: "var(--text-body)" }}>
           {a.cashSteps.map((s) => (
@@ -308,7 +365,7 @@ function CashOut({ data, a, onClose }) {
         </ol>
         <div className="app-card" style={{ marginTop: 14, background: "var(--surface-low)", display: "flex", justifyContent: "space-between", gap: 10 }}>
           <span style={{ color: "var(--text-faint)", font: "var(--text-meta)" }}>{a.yourEmail}</span>
-          <strong>{data.registration?.paypal_email}</strong>
+          <strong style={{ minWidth: 0, textAlign: "right" }}><Email value={data.registration?.paypal_email} /></strong>
         </div>
         <Button variant="primary" style={{ marginTop: 16, width: "100%", background: "#003087" }} onClick={() => window.open("https://www.sandbox.paypal.com/myaccount/summary", "_blank", "noopener")}>
           {a.openPaypal}
@@ -342,7 +399,7 @@ function Help({ token, data, a, lang }) {
       const out = await api.help(token, next);
       setMessages((m) => [...m, { role: "helper", text: out.reply, case: out.case }]);
     } catch (e) {
-      setError(e.message);
+      setError(a.helpError);
     } finally {
       setBusy(false);
     }
@@ -411,17 +468,27 @@ export default function FarmerApp({ token }) {
   useEffect(() => {
     let cancelled = false;
     let timer;
+    let failures = 0;
     const tick = () =>
       api
         .farmer(token)
         .then((d) => {
           if (cancelled) return;
+          failures = 0;
           setData(d);
           setError(null);
           // Keep checking while money is on its way, slower otherwise.
           timer = setTimeout(tick, d.payouts.some((p) => !FINAL.has(p.status)) ? 8000 : 20000);
         })
-        .catch((e) => !cancelled && setError(e.status === 404 ? "notFound" : e.message));
+        .catch((e) => {
+          if (cancelled) return;
+          // A 404 is a bad link: nothing to retry. Anything else (a dropped
+          // connection, a server restart) is transient, so back off and go on.
+          if (e.status === 404) return setError("notFound");
+          failures += 1;
+          setError("offline");
+          timer = setTimeout(tick, Math.min(60000, 4000 * 2 ** (failures - 1)));
+        });
     tick();
     return () => {
       cancelled = true;
@@ -449,8 +516,8 @@ export default function FarmerApp({ token }) {
               <a href="#/farmer" style={{ color: "var(--primary)", fontWeight: 700 }}>{a.switch}</a>
             </Card>
           )}
-          {error && error !== "notFound" && <p style={{ color: "var(--bad-text)" }}>{error}</p>}
-          {!data && !error && (
+          {error === "offline" && <p role="status" style={{ color: "var(--bad-text)" }}>{a.offline}</p>}
+          {!data && error !== "notFound" && (
             <p style={{ color: "var(--text-faint)" }}>
               <span className="cel-spin" /> {t.loading}
             </p>
@@ -478,7 +545,7 @@ export default function FarmerApp({ token }) {
                 </div>
               </section>
 
-              <StormCard status={data.storm_status} a={a} />
+              <StormCard status={data.storm_status} a={a} t={t} />
 
               {payouts[0] && <Latest p={payouts[0]} t={t} lang={lang} />}
 
@@ -506,7 +573,7 @@ export default function FarmerApp({ token }) {
                   <p style={{ margin: 0 }}>{t.none}</p>
                 </Card>
               )}
-              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>🔒 {t.safe}</p>
+              <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}><Lock />{t.safe}</p>
             </div>
           )}
 
@@ -529,23 +596,23 @@ export default function FarmerApp({ token }) {
                     {data.municipality}, {data.province}
                   </dd>
                   <dt style={{ color: "var(--text-faint)" }}>{a.status}</dt>
-                  <dd style={{ margin: 0, fontWeight: 700 }}>{data.registration?.status === "active" ? a.active : data.registration?.status}</dd>
+                  <dd style={{ margin: 0, fontWeight: 700 }}>{data.registration?.status === "active" ? a.active : a.registrationStatus[data.registration?.status] || data.registration?.status}</dd>
                   <dt style={{ color: "var(--text-faint)" }}>{a.household}</dt>
                   <dd style={{ margin: 0, fontWeight: 700 }}>{data.registration?.household_size}</dd>
                   <dt style={{ color: "var(--text-faint)" }}>{a.yourEmail}</dt>
-                  <dd style={{ margin: 0, fontWeight: 700, overflowWrap: "anywhere" }}>{data.registration?.paypal_email}</dd>
+                  <dd style={{ margin: 0, fontWeight: 700, minWidth: 0 }}><Email value={data.registration?.paypal_email} /></dd>
                   <dt style={{ color: "var(--text-faint)" }}>{a.since}</dt>
                   <dd style={{ margin: 0, fontWeight: 700 }}>{day(data.registration?.registered_at, lang)}</dd>
                 </dl>
               </div>
-              <StormCard status={data.storm_status} a={a} />
+              <StormCard status={data.storm_status} a={a} t={t} />
               {data.cases?.length > 0 && (
                 <div className="app-card">
                   <strong>{a.cases}</strong>
                   <ul style={{ margin: "8px 0 0", paddingLeft: 18, font: "var(--text-meta)" }}>
                     {data.cases.map((c) => (
                       <li key={c.at}>
-                        {c.topic.replace(/_/g, " ")} · {day(c.at, lang)} · {c.status}
+                        {a.topics[c.topic] || c.topic.replace(/_/g, " ")} · {day(c.at, lang)} · {a.caseStatus[c.status] || c.status}
                       </li>
                     ))}
                   </ul>

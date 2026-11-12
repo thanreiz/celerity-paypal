@@ -6,6 +6,11 @@
 // Anything it can't place goes to `unparsed` and lowers `confidence`; that is
 // the hand-off to the AI agent. Text outside the signal blocks is never read
 // as data, so instructions smuggled into a bulletin have nothing to act on.
+//
+// The parser only calls a bulletin routine when it read every line of every
+// signal block. A part of a province with no towns named, a lifted or lowered
+// signal, and a line inside a block that isn't a region list all go to
+// `unparsed`, so the rules never pay on a guess.
 
 import { PROVINCES_TXT } from "./provinces.js";
 
@@ -34,6 +39,24 @@ export function lookupProvince(name) {
   return PROVINCES.get(key) ?? null;
 }
 
+/**
+ * The official names of the provinces a text mentions as whole names, longest
+ * first, so "Eastern Samar" doesn't also count as "Samar" and "Southern Leyte"
+ * doesn't count as "Leyte".
+ */
+export function provincesNamedIn(text) {
+  let hay = String(text ?? "").toLowerCase().replace(/\s+/g, " ");
+  const found = new Set();
+  const aliases = [...PROVINCES.keys()].sort((a, b) => b.length - a.length);
+  for (const alias of aliases) {
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`, "gu");
+    if (!re.test(hay)) continue;
+    found.add(PROVINCES.get(alias));
+    hay = hay.replace(re, "\u0000"); // a longer name can't lend its words to a shorter one
+  }
+  return [...found];
+}
+
 const STORM = /^\s*(Super Typhoon|Typhoon|Severe Tropical Storm|Tropical Storm|Tropical Depression)\s+["“]?([A-Za-z][A-Za-z-]+)["”]?/im;
 const NUMBER = /BULLETIN\s+(?:NR|NO)\.?\s*(\d+)/i;
 const SIGNAL = /^\s*TCWS\s+No\.?\s*(\d)\b(.*)$/i;
@@ -42,6 +65,9 @@ const REGION = /^\s*(Luzon|Visayas|Mindanao)\s*:\s*(.*)$/i;
 const PORTION = /^(?:the\s+)?(?:[a-z-]+(?:\s+and\s+[a-z-]+)?\s+)?portions?\s+of\s+(.+?)\s*(?:\((.+)\))?$/i;
 const PARENS = /^(.+?)\s*\((.+)\)$/;
 const INCLUDING = /^(.+?)\s+including\s+.+$/i;
+// A heading that takes a signal away rather than raising it.
+const LIFTED = /\b(?:lift|lower|cancel|remov|downgrad|terminat|no longer)/i;
+const BRACKET = /[()]/;
 const LINE_BREAK = /\r\n|[\n\r\v\f\x85\u2028\u2029]/;
 
 function titleCase(s) {
@@ -74,7 +100,10 @@ export function splitTopLevel(s) {
   const split = [];
   for (const part of out) {
     const p = part.trim().replace(/^and\s+/i, "");
-    if (p.toLowerCase().includes(" including ") || p.includes("(")) split.push(p);
+    // "Albay (Legazpi City) and Sorsogon (Bulan)" is two items; the "and" in
+    // "the northern and central portions of Cebu (Bogo City)" is not a break.
+    if (p.includes("(")) split.push(...p.split(/(?<=\))\s+and\s+/i));
+    else if (p.toLowerCase().includes(" including ")) split.push(p);
     else split.push(...p.split(/\s+and\s+/i));
   }
   return split;
@@ -90,17 +119,22 @@ function readList(list, signal, areas, unparsed) {
     const parens = item.match(PARENS);
     const including = item.match(INCLUDING);
     if (portion) {
-      province = lookupProvince(portion[1]);
-      if (portion[2] != null) municipalities = splitTopLevel(portion[2]);
+      // "the northern portion of Isabela" with no towns named is part of a
+      // province the rules can't draw: leave it for the agent and a person.
+      if (portion[2] != null) {
+        province = lookupProvince(portion[1]);
+        municipalities = splitTopLevel(portion[2]);
+      }
     } else if (parens) {
       province = lookupProvince(parens[1]);
-      municipalities = splitTopLevel(parens[2]);
+      // "Quezon (including Polillo Islands)" is the whole province.
+      if (!/^including\s/i.test(parens[2].trim())) municipalities = splitTopLevel(parens[2]);
     } else if (including) {
       province = lookupProvince(including[1]); // "Masbate including Ticao and Burias Islands"
     } else {
       province = lookupProvince(item);
     }
-    if (!province) {
+    if (!province || municipalities.some((m) => BRACKET.test(m))) {
       unparsed.push(item);
       continue;
     }
@@ -114,6 +148,9 @@ function readList(list, signal, areas, unparsed) {
     }
   }
 }
+
+/** A line the parser couldn't read, trimmed and capped for the hand-off. */
+const clip = (line) => line.trim().slice(0, 120);
 
 /** { storm, bulletin_number, areas[], unparsed[], confidence } */
 export function parseBulletin(text) {
@@ -131,6 +168,12 @@ export function parseBulletin(text) {
     const s = line.match(SIGNAL);
     if (s) {
       sawSignal = true;
+      if (LIFTED.test(s[2])) {
+        // "TCWS No. 3 (lifted)": not a signal in effect. A person reads it.
+        unparsed.push(clip(line));
+        signal = 0;
+        continue;
+      }
       signal = Number(s[1]);
       const inline = s[2].match(IN_EFFECT);
       if (inline) readList(inline[1], signal, areas, unparsed);
@@ -142,6 +185,7 @@ export function parseBulletin(text) {
       continue;
     }
     if (!line.trim()) signal = 0; // a blank line ends a signal block
+    else if (signal > 0) unparsed.push(clip(line)); // a wrapped list or a note inside the block
   }
   const places = new Set(areas.map((a) => a.province)).size;
   let confidence;

@@ -97,8 +97,11 @@ const capOf = (state, id, r = run()) => eligibility(state, state.families.find((
   draftCase("below the minimum signal", s, r, { family_id: "fam_015", amount: 10 });
   draftCase("run without a storm name", s, run({ storm: "  " }), { family_id: "fam_001", amount: 10 });
 
-  const alias = { ...baseState(), batches: [batch("Super Typhoon DALISAY (Haikui)", OLD, [paid("fam_001")])] };
+  const alias = { ...baseState(), batches: [batch("Super Typhoon DALISAY (Haikui)", RECENT, [paid("fam_001")])] };
   draftCase("already paid under another spelling of the storm", alias, r, { family_id: "fam_001", amount: 10 });
+  // PAGASA reuses storm names: a "Dalisay" from an earlier season is another storm.
+  const reused = { ...baseState(), batches: [batch("Typhoon Dalisay", OLD, [paid("fam_001")])] };
+  draftCase("a storm name reused in a later season pays again", reused, r, { family_id: "fam_001", amount: 10 });
   const cooldown = { ...baseState(), batches: [batch("Typhoon Other", RECENT, [paid("fam_001")])] };
   draftCase("paid for another storm within 7 days", cooldown, r, { family_id: "fam_001", amount: 10 });
   const old = { ...baseState(), batches: [batch("Typhoon Other", OLD, [paid("fam_001")])] };
@@ -194,6 +197,14 @@ add("totals add up in centavos", "policy/run-totals", { run: { drafts: [{ amount
     "unknown phrase lowers confidence": "Typhoon ESTER\nTCWS No. 2 (Gale-force winds)\nLuzon: Albay, the coastal towns near Mayon, Sorsogon and Masbate\nVisayas: Northern Samar",
     "no signal section": "Weather advisory: rains expected over Bicol tonight.",
     "portions and alternate spellings": "SEVERE TROPICAL STORM \"Ompong\"\nBULLETIN NO. 012\nTCWS No. 2 in effect: the northern and central portions of Cebu (Bogo City, Medellin and Daanbantayan), Western Samar, the Province of Leyte\n\nTCWS No. 1\nMindanao: Dinagat Islands; Surigao del Norte",
+    // Shapes the rules must not pay on by themselves: each leaves something unparsed.
+    "a portion with no towns is left for a person": "Typhoon DALISAY\nBULLETIN NR. 5\nTCWS No. 3\nLuzon: Albay, the northern portion of Isabela",
+    "two provinces each narrowed to towns": "Typhoon DALISAY\nTCWS No. 3\nLuzon: Albay (Legazpi City) and Sorsogon (Bulan, Irosin)",
+    "a list wrapped onto a second line": "Typhoon DALISAY\nTCWS No. 3\nLuzon: Albay, Sorsogon,\nMasbate, Catanduanes",
+    "a lifted signal is not in effect": "Typhoon DALISAY\nTCWS No. 3 (lifted)\nLuzon: Albay\n\nTCWS No. 1\nLuzon: Sorsogon",
+    "a signal lowered in the heading": "Typhoon DALISAY\nTCWS No. 3 has been lowered to TCWS No. 1\nLuzon: Albay",
+    "including in brackets is the whole province": "Typhoon DALISAY\nTCWS No. 2\nLuzon: Quezon (including Polillo Islands), Masbate including Ticao and Burias Islands",
+    "unbalanced brackets are not guessed at": "Typhoon DALISAY\nTCWS No. 2\nLuzon: Albay (Legazpi City (east), Daraga)",
   };
   for (const [name, text] of Object.entries(extra)) add(name, "bulletins/parse", { text }, parseBulletin(text));
 }

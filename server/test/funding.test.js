@@ -242,9 +242,8 @@ test("approval splits each payout across pools and is refused when a pool ran dr
 
   // Drain the Bicol pools, then try another Catanduanes run.
   await store.mutate((state) => {
-    for (const p of ["pool_pcic_bicol", "pool_rice_ph"]) {
-      state.contributions.push({ pool_id: p, amount: -1_000_000, status: "completed" });
-    }
+    // Every contribution to them refunded in full: nothing left to draw on.
+    for (const k of state.contributions) if (["pool_pcic_bicol", "pool_rice_ph"].includes(k.pool_id)) k.refunded = k.amount;
     state.runs.push({ ...state.runs.find((r) => r.id === runId), id: "run_dry", status: "awaiting_approval", storm: "Typhoon Dry", drafts: [{ family_id: "fam_003", amount: 10, currency: "USD" }] });
   });
   const posts = payoutPosts.length;

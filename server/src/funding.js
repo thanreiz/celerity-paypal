@@ -26,6 +26,15 @@ export function poolsFor(state, family, signal = null) {
  * else none (no pool rule filters on it). */
 const draftSignal = (family, run) => (family && Array.isArray(run.areas) ? signalFor(family, run.areas) : null);
 
+/**
+ * What a completed contribution puts in its pool, in centavos: what PayPal
+ * actually paid us (the capture's net amount, after PayPal's fee) less
+ * anything refunded since. A refund is counted at its full amount, which is
+ * never less than what it costs the balance, so the pool can't overstate.
+ * Seeded pledges and captures without a fee breakdown count at face value.
+ */
+export const creditedCents = (k) => Math.max(0, cents(k.net ?? k.amount) - cents(k.refunded || 0));
+
 /** { pool_id: { contributed, committed, available } } in pesos. Pending
  * checkouts don't count; payouts that never reached the family free their
  * money again. */
@@ -33,7 +42,8 @@ export function poolBalances(state) {
   const c = {};
   for (const p of state.pools || []) c[p.id] = { contributed: 0, committed: 0 };
   for (const k of state.contributions || []) {
-    if (k.status === "completed" && c[k.pool_id]) c[k.pool_id].contributed += cents(k.amount);
+    // A partial refund leaves the contribution completed for what remains.
+    if (k.status === "completed" && c[k.pool_id]) c[k.pool_id].contributed += creditedCents(k);
   }
   for (const b of state.batches || []) {
     for (const it of b.items || []) {
@@ -137,7 +147,7 @@ export function poolLedger(state) {
     }
     const contributions = (state.contributions || [])
       .filter((k) => k.pool_id === p.id && k.status === "completed")
-      .map((k) => ({ funder_name: k.funder_name, amount: k.amount, source: k.source, at: k.at }));
+      .map((k) => ({ funder_name: k.funder_name, amount: creditedCents(k) / 100, paid: k.amount, fee: k.fee ?? null, source: k.source, at: k.at }));
     return {
       id: p.id,
       name: p.name,
@@ -187,10 +197,13 @@ export function addPendingContribution(state, { pool, funderName, amount, orderI
  * pool only for a completed capture of exactly the amount the funder chose.
  * Idempotent: a second report of the same capture changes nothing.
  */
-export function completeContribution(state, log, { orderId, captureId, status, amount, currency, source }) {
+export function completeContribution(state, log, { orderId, captureId, status, amount, currency, net, fee, source }) {
   const k = state.contributions.find((x) => x.order_id === orderId);
   if (!k) return { ignored: "unknown order" };
   if (k.status === "completed") return { contribution: k.id, duplicate: true };
+  // Money that came back (or was refused) before this report arrived must
+  // not be credited by a late or replayed COMPLETED.
+  if (REVERSED_STATUS.has(k.status)) return { contribution: k.id, reversed: k.status };
   if (status !== "COMPLETED") return { contribution: k.id, pending: status };
   if (cents(amount) !== cents(k.amount) || currency !== k.currency) {
     k.status = "mismatch";
@@ -200,7 +213,76 @@ export function completeContribution(state, log, { orderId, captureId, status, a
   k.status = "completed";
   k.capture_id = captureId;
   k.at = new Date().toISOString();
+  // PayPal keeps a fee on every capture. The pool gets what PayPal paid out
+  // to us, so payouts are never planned against money the account never had.
+  const n = Number(net);
+  if (net != null && Number.isFinite(n) && n >= 0 && cents(n) <= cents(k.amount)) {
+    k.net = cents(n) / 100;
+    k.fee = (cents(k.amount) - cents(n)) / 100;
+  } else if (fee != null && Number.isFinite(Number(fee)) && cents(fee) >= 0 && cents(fee) <= cents(k.amount)) {
+    k.fee = cents(fee) / 100;
+    k.net = (cents(k.amount) - cents(fee)) / 100;
+  }
   const pool = state.pools.find((p) => p.id === k.pool_id);
-  log("pool.funded", source, { pool: pool?.name, funder_name: k.funder_name, amount: k.amount, currency: k.currency, capture_id: captureId }, k.pool_id);
+  log("pool.funded", source, { pool: pool?.name, funder_name: k.funder_name, amount: k.amount, fee: k.fee ?? null, net: k.net ?? k.amount, currency: k.currency, capture_id: captureId }, k.pool_id);
   return { contribution: k.id, funded: true };
+}
+
+// --- Funding that PayPal took back ---------------------------------------------
+
+// What a contribution is marked with once its money is gone. The balance code
+// counts only "completed", so any of these stops counting.
+const REVERSED_STATUS = new Set(["refunded", "reversed", "denied"]);
+const REVERSAL_EVENTS = {
+  "PAYMENT.CAPTURE.REFUNDED": "refunded",
+  "PAYMENT.CAPTURE.REVERSED": "reversed",
+  "PAYMENT.CAPTURE.DENIED": "denied",
+};
+export const isReversalEvent = (type) => type in REVERSAL_EVENTS;
+
+/**
+ * Apply PAYMENT.CAPTURE.REFUNDED / REVERSED / DENIED to the contribution it
+ * belongs to, found by capture id or by the order id PayPal puts in
+ * supplementary_data. A refund of part of the amount reduces the
+ * contribution by that amount; a reversal or denial, or a refund of all that
+ * is left, takes it out of the balance entirely. Idempotent per refund id.
+ * A pool may end up with a negative available balance: payouts already sent
+ * stay, and allocation draws only on pools with money left.
+ */
+export function reverseContribution(state, log, { type, orderId, captureIds, refundId, amount, currency, source }) {
+  const status = REVERSAL_EVENTS[type];
+  const ids = (captureIds || []).filter(Boolean);
+  const k = state.contributions.find((x) => (x.capture_id && ids.includes(x.capture_id)) || (orderId && x.order_id === orderId));
+  if (!k) return { ignored: "unknown order" };
+  if (REVERSED_STATUS.has(k.status)) return { contribution: k.id, duplicate: true };
+  if (refundId && (k.refund_ids || []).includes(refundId)) return { contribution: k.id, duplicate: true };
+
+  const pool = state.pools.find((p) => p.id === k.pool_id);
+  const credited = k.status === "completed";
+  const left = cents(k.amount) - cents(k.refunded || 0);
+  const detail = { pool: pool?.name, funder_name: k.funder_name, currency: k.currency, capture_id: k.capture_id || ids[0] || null, reason: type, credited };
+
+  let refund = left; // reversals and denials take back everything
+  if (status === "refunded") {
+    // The refund object carries its own amount. Without a matching amount in
+    // our currency there is no safe reduction, so record it and change nothing.
+    if (amount == null || !Number.isFinite(Number(amount)) || (currency && currency !== k.currency)) {
+      log("pool.funding_reversal_unapplied", source, { ...detail, amount: amount ?? null }, k.pool_id);
+      return { contribution: k.id, unapplied: true };
+    }
+    refund = Math.min(cents(amount), left);
+  }
+
+  if (refundId) k.refund_ids = [...(k.refund_ids || []), refundId];
+  if (refund >= left) {
+    // A contribution that was never credited has nothing to take back; it
+    // still gets the status so a late COMPLETED can't credit it.
+    k.status = status;
+    k.refunded = cents(k.amount) / 100;
+    log("pool.funding_reversed", source, { ...detail, amount: left / 100, partial: false }, k.pool_id);
+  } else {
+    k.refunded = (cents(k.refunded || 0) + refund) / 100;
+    log("pool.funding_reversed", source, { ...detail, amount: refund / 100, remaining: (left - refund) / 100, partial: true }, k.pool_id);
+  }
+  return { contribution: k.id, reversed: true };
 }

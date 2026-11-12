@@ -116,7 +116,10 @@ export default function Console({ route }) {
       try {
         const result = await fn();
         if (label) notify(label);
-        await refresh();
+        // The action went through. If only the follow-up refresh fails, say
+        // nothing: polling picks the data up again, and the caller's success
+        // path (navigation, clearing a form) still runs.
+        await refresh().catch(() => {});
         return result;
       } catch (e) {
         const extra = e.body?.violations?.length

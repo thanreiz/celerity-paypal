@@ -79,6 +79,17 @@ beforeEach(() => {
   requests = [];
 });
 
+// Funder sign-in (demo mode: no code), then calls carrying the session token.
+const funderToken = async (id) => (await (await api(`/api/funders/${id}/session`, { method: "POST", key: null, body: {} })).json()).token;
+const asFunder = async (id, path, opts = {}) => {
+  const res = await fetch(`${base}${path}`, {
+    method: opts.method || "GET",
+    headers: { "Content-Type": "application/json", "x-funder-token": await funderToken(id) },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  return res;
+};
+
 const until = async (fn, ms = 3000) => {
   const end = Date.now() + ms;
   for (;;) {
@@ -156,7 +167,7 @@ test("the funder app sees only its own pools, and a pool rule is checked before 
   const list = await (await api("/api/funders", { key: null })).json();
   assert.deepEqual(list.funders.map((f) => f.id), ["fnd_pcic", "fnd_grf"]);
 
-  const pcic = await (await api("/api/funders/fnd_pcic", { key: null })).json();
+  const pcic = await (await asFunder("fnd_pcic", "/api/funders/fnd_pcic")).json();
   assert.deepEqual(pcic.pools.map((p) => p.id), ["pool_pcic_bicol"]);
   assert.ok(pcic.releases.length >= 1, "the rules release above was paid partly from PCIC's pool");
   assert.ok(pcic.releases.every((r) => r.pool_id === "pool_pcic_bicol" && r.decided_by === "rules"));
@@ -176,7 +187,7 @@ test("the funder app sees only its own pools, and a pool rule is checked before 
     turn([{ type: "text", text: "This pool pays registered families in Leyte, Samar and Eastern Samar at Signal 3 or higher." }], "end_turn"),
   ];
   const draft = await (
-    await api("/api/funders/fnd_pcic/pool-drafts", { method: "POST", key: null, body: { text: "Rice farmers in Eastern Visayas, signal 3 up, 3 monthly installments" } })
+    await asFunder("fnd_pcic", "/api/funders/fnd_pcic/pool-drafts", { method: "POST", body: { text: "Rice farmers in Eastern Visayas, signal 3 up, 3 monthly installments" } })
   ).json();
   assert.deepEqual(draft.proposal.provinces, ["Leyte", "Samar", "Eastern Samar"]);
   assert.equal(draft.proposal.min_signal, 3);
@@ -186,16 +197,16 @@ test("the funder app sees only its own pools, and a pool rule is checked before 
 
   // Creating checks the rule again; a made-up province or a signal below
   // policy is refused whatever the client sends.
-  const bad = await api("/api/funders/fnd_pcic/pools", { method: "POST", key: null, body: { name: "x", provinces: ["Atlantis"], min_signal: 1 } });
+  const bad = await asFunder("fnd_pcic", "/api/funders/fnd_pcic/pools", { method: "POST", body: { name: "x", provinces: ["Atlantis"], min_signal: 1 } });
   assert.equal(bad.status, 400);
   assert.match((await bad.json()).error, /Atlantis.*min_signal/s);
 
-  const ok = await api("/api/funders/fnd_pcic/pools", { method: "POST", key: null, body: { ...draft.proposal, rule_text: "Rice farmers in Eastern Visayas" } });
+  const ok = await asFunder("fnd_pcic", "/api/funders/fnd_pcic/pools", { method: "POST", body: { ...draft.proposal, rule_text: "Rice farmers in Eastern Visayas" } });
   assert.equal(ok.status, 201);
   const pool = await ok.json();
   assert.equal(pool.funder_id, "fnd_pcic");
   assert.equal(pool.min_signal, 3);
-  const grf = await (await api("/api/funders/fnd_grf", { key: null })).json();
+  const grf = await (await asFunder("fnd_grf", "/api/funders/fnd_grf")).json();
   assert.equal(grf.pools.some((p) => p.id === pool.id), false, "another funder never sees it");
 });
 

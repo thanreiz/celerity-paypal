@@ -1,0 +1,18 @@
+{
+  "name": "unbalanced brackets are not guessed at",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon DALISAY\nTCWS No. 2\nLuzon: Albay (Legazpi City (east), Daraga)"
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": null,
+    "areas": [],
+    "unparsed": [
+      "Albay (Legazpi City (east), Daraga)"
+    ],
+    "confidence": 0
+  }
+}

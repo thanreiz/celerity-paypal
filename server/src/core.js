@@ -9,7 +9,7 @@
 
 import { createHash } from "node:crypto";
 import { POLICY, cents, checkDraft as localCheckDraft } from "./policy.js";
-import { allocateRun as localAllocateRun } from "./funding.js";
+import { allocateRun as localAllocateRun, creditedCents } from "./funding.js";
 
 const TIMEOUT_MS = 3000;
 
@@ -38,7 +38,9 @@ export function coreState(state) {
       items: b.items.map((i) => ({ family_id: i.family_id, status: i.status, funding: i.funding })),
     })),
     pools: (state.pools || []).map((p) => ({ id: p.id, provinces: p.provinces, ...(p.min_signal ? { min_signal: p.min_signal } : {}) })),
-    contributions: (state.contributions || []).map((c) => ({ pool_id: c.pool_id, amount: c.amount, status: c.status })),
+    // The core knows only amount and status, so a contribution is sent as
+    // what it actually puts in the pool: net of PayPal's fee and refunds.
+    contributions: (state.contributions || []).map((c) => ({ pool_id: c.pool_id, amount: creditedCents(c) / 100, status: c.status })),
   };
 }
 

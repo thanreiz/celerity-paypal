@@ -65,6 +65,8 @@ const EVENT_LABELS = {
   "farmer.notified": "Farmers notified",
   "pool.funded": "Pool funded",
   "pool.funding_mismatch": "Funding amount mismatch",
+  "pool.funding_reversed": "Funding taken back by PayPal",
+  "pool.funding_reversal_unapplied": "Funding reversal needs a look",
   "payout.resumed": "PayPal submission resumed",
   "payout.unconfirmed": "PayPal unconfirmed",
   "webhook.received": "PayPal webhook",
@@ -113,6 +115,8 @@ export function eventDetail(e, names = {}) {
       return `${d.name} (${d.funder})${d.provinces?.length ? `: ${d.provinces.join(", ")}` : ": nationwide"}${d.min_signal ? `, signal ${d.min_signal}+` : ""}`;
     case "pool.funded":
       return `${d.funder_name} → ${d.pool}, ${money(d.amount, d.currency)}`;
+    case "pool.funding_reversed":
+      return `${d.pool || "A pool"}: ${money(d.amount, d.currency)} ${d.partial ? "refunded in part" : "refunded or reversed"}`;
     case "payout.unconfirmed":
       return d.message || "PayPal did not confirm yet; approve again to resume";
     case "run.draft_removed":

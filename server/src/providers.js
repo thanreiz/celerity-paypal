@@ -89,6 +89,9 @@ function openaiSession({ client, system, tools, userText }) {
       });
       previousId = res.id;
       input = [];
+      // A failed response has no output; without this it would read as the
+      // agent finishing cleanly with nothing to say.
+      if (res.status === "failed" || res.error) throw new Error(`OpenAI could not complete this request${res.error?.message ? `: ${res.error.message}` : ""}`);
 
       const output = res.output || [];
       const parts = output.filter((o) => o.type === "message").flatMap((o) => o.content || []);

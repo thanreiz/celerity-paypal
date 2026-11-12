@@ -5,6 +5,7 @@
 // decides whether that rule can be enforced. Money only moves under rules
 // this file accepted.
 
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { POLICY, NOT_PAID, cents, norm } from "./policy.js";
 import { PROVINCE_NAMES, lookupProvince } from "./parser.js";
 import { poolLedger } from "./funding.js";
@@ -27,7 +28,44 @@ export const FUNDERS = [
   },
 ];
 
+/** What the public sign-in picker may show: display fields only. */
+export const publicFunder = ({ id, name, short, desc, initials }) => ({ id, name, short, desc, initials });
+
 export const funderById = (id) => FUNDERS.find((f) => f.id === id) || null;
+
+// --- Funder sessions ----------------------------------------------------------
+// A stateless token: base64url("<funderId>.<expiryMs>") "." base64url(HMAC).
+// Nothing is stored, so it works across serverless instances as long as they
+// share COORDINATOR_KEY (the signing secret is derived from it). With no key
+// (local dev) each process uses a random secret and tokens die on restart.
+
+export const FUNDER_SESSION_MS = 12 * 3600_000;
+const b64u = (buf) => Buffer.from(buf).toString("base64url");
+const randomSecret = randomBytes(32);
+
+export function funderSessionSecret(coordinatorKey) {
+  if (!coordinatorKey) return randomSecret;
+  return createHmac("sha256", String(coordinatorKey)).update("celerity funder session v1").digest();
+}
+
+export function signFunderToken(secret, funderId, expiresAtMs) {
+  const body = b64u(`${funderId}.${expiresAtMs}`);
+  return `${body}.${b64u(createHmac("sha256", secret).update(body).digest())}`;
+}
+
+/** True only for an unexpired token that this server signed for `funderId`. */
+export function verifyFunderToken(secret, funderId, token, now = Date.now()) {
+  const parts = typeof token === "string" ? token.split(".") : [];
+  if (parts.length !== 2) return false;
+  const [body, sig] = parts;
+  const want = createHmac("sha256", secret).update(body).digest();
+  const got = Buffer.from(sig, "base64url");
+  if (got.length !== want.length || !timingSafeEqual(got, want)) return false;
+  const payload = Buffer.from(body, "base64url").toString("utf8");
+  const dot = payload.lastIndexOf(".");
+  const expiry = Number(payload.slice(dot + 1));
+  return dot > 0 && payload.slice(0, dot) === funderId && Number.isFinite(expiry) && expiry > now;
+}
 
 /** The funder a pool belongs to: by id, or by name for pools made before ids. */
 export function poolFunderId(pool) {

@@ -1,0 +1,24 @@
+{
+  "name": "a portion with no towns is left for a person",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon DALISAY\nBULLETIN NR. 5\nTCWS No. 3\nLuzon: Albay, the northern portion of Isabela"
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": "5",
+    "areas": [
+      {
+        "province": "Albay",
+        "municipality": null,
+        "signal_level": 3
+      }
+    ],
+    "unparsed": [
+      "the northern portion of Isabela"
+    ],
+    "confidence": 0.5
+  }
+}
