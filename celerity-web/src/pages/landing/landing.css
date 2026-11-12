@@ -95,8 +95,8 @@
     & img { width: 30px; height: 30px; object-fit: contain; filter: brightness(0) invert(1); transition: filter .3s; }
     & small { display: block; font: 700 9px var(--sans); letter-spacing: .16em; color: rgb(255 255 255 / .75); margin-top: 2px; }
   }
-  & .nav .links { display: flex; gap: 26px; margin-left: auto; font: 600 14.5px var(--sans); color: rgb(255 255 255 / .9); & a:hover { color: #fff; } }
-  & .nav .signin { font: 600 14.5px var(--sans); color: #fff; }
+  & .nav .links { display: flex; gap: 22px; margin-left: auto; white-space: nowrap; font: 600 14.5px var(--sans); color: rgb(255 255 255 / .9); & a:hover { color: #fff; } }
+  & .nav .signin { font: 600 14.5px var(--sans); color: #fff; white-space: nowrap; }
   & .nav .btn { height: 44px; padding: 0 20px; font-size: 14.5px; }
   /* Menu for the links the bar hides on tablet and phone widths. */
   & .nav .menu-btn { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: #fff; cursor: pointer;
@@ -109,7 +109,7 @@
     & hr { width: calc(100% - 24px); border: 0; border-top: 1px solid var(--line); margin: 6px 12px; }
   }
   & .nav[data-lifted] { padding-top: 12px;
-    & .bar { max-width: 1100px; height: 58px; background: rgb(255 255 255 / .86); backdrop-filter: saturate(1.6) blur(16px); -webkit-backdrop-filter: saturate(1.6) blur(16px); box-shadow: 0 1px 0 rgb(16 19 17 / .04), 0 18px 40px -22px rgb(6 73 47 / .45); }
+    & .bar { max-width: 1200px; height: 58px; background: rgb(255 255 255 / .95); backdrop-filter: saturate(1.6) blur(16px); -webkit-backdrop-filter: saturate(1.6) blur(16px); box-shadow: 0 1px 0 rgb(16 19 17 / .04), 0 18px 40px -22px rgb(6 73 47 / .45); }
     & .brand { color: var(--ink); & small { color: var(--muted); } & img { filter: none; } }
     & .links, & .signin { color: #3d4540; }
     & .links a:hover { color: var(--ink); }
@@ -158,12 +158,12 @@
   & .scene > .ex { display: inline-flex; margin: 0 0 8px; }
   & .float.pool small .ex { color: #8a4b00; font-size: 9.5px; letter-spacing: .08em; }
   & .glass b .ex { margin-left: 6px; }
-  & .float.sms { left: -20%; top: -3%; width: 240px; padding: 16px; background: rgb(255 255 255 / .96); color: var(--ink); transform: rotate(-5deg); box-shadow: 0 30px 60px -30px rgb(0 0 0 / .55);
+  & .float.sms { left: -30%; top: -21%; width: 240px; padding: 16px; background: rgb(255 255 255 / .96); color: var(--ink); transform: rotate(-5deg); box-shadow: 0 30px 60px -30px rgb(0 0 0 / .55);
     & .who { display: flex; align-items: center; gap: 8px; font: 700 11px var(--sans); color: var(--muted); letter-spacing: .05em; }
     & .who i { width: 22px; height: 22px; border-radius: 50%; background: var(--mint); display: grid; place-items: center; font-style: normal; color: var(--green); }
     & p { margin-top: 9px; font-size: 13px; line-height: 1.45; color: #2b312d; background: #f1f4f2; border-radius: 14px 14px 14px 4px; padding: 10px 12px; }
   }
-  & .float.pool { right: -12%; bottom: 3%; width: 246px; padding: 18px; color: #fff; overflow: hidden; text-align: right; transform: rotate(5deg);
+  & .float.pool { right: -16%; bottom: -19%; width: 246px; padding: 18px; color: #fff; overflow: hidden; text-align: right; transform: rotate(5deg);
     background: radial-gradient(80% 65% at 92% 0%, rgb(62 212 140 / .4) 0%, rgb(62 212 140 / 0) 62%), linear-gradient(160deg, #1b211e 0%, #0a0d0b 62%);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1), inset 0 1px 0 rgb(255 255 255 / .18), 0 30px 60px -28px rgb(0 0 0 / .7);
     &::before { content: ""; position: absolute; inset: 0; background: url(/brand/contours-white.svg) center/100% 100%; opacity: .16; }
@@ -268,7 +268,7 @@
 
   /* ── Story: a full-bleed block where the phone rises (PayPal's "Pay, send, and save" move) ── */
   & .story { position: relative; height: 320vh; background: linear-gradient(180deg, #c9f5dc 0%, #a9edc9 100%); }
-  & .story .pin { position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; place-items: center; isolation: isolate; }
+  & .story .pin { position: sticky; top: 0; height: 100vh; box-sizing: border-box; padding-top: 84px; overflow: hidden; display: grid; place-items: center; isolation: isolate; }
   & .story .pin::before { content: ""; position: absolute; inset: 0; z-index: -1; background: url(/brand/contours-green.svg) center/100% 100% no-repeat; opacity: .3; }
   & .story .pin::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(50% 50% at 50% 60%, rgb(255 255 255 / .7), transparent 70%); }
   & .story .words { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; transform: translateY(calc(var(--p, 0) * -32vh)); }
@@ -280,15 +280,17 @@
     &:not([data-on]) { opacity: 0; transform: translateY(20px); }
     & small { font: 800 10.5px var(--sans); letter-spacing: .12em; color: var(--green); text-transform: uppercase; }
     & b { display: block; font: 800 18px/1.2 var(--display); color: var(--ink); letter-spacing: -.02em; margin-top: 6px; }
-    & span { display: block; font-size: 13px; color: var(--body); margin-top: 4px; }
+    & > span { display: block; font-size: 13px; color: var(--body); margin-top: 4px; }
+    & small .ex { margin-left: 6px; }
   }
   & .story .note.n1 { left: max(4vw, calc(50% - 560px)); top: 26%; }
   & .story .note.n2 { right: max(4vw, calc(50% - 560px)); top: 40%; }
   & .story .note.n3 { left: max(4vw, calc(50% - 520px)); top: 62%; }
 
   /* The phone itself */
-  & .phone { border-radius: 52px; padding: 12px; background: linear-gradient(160deg, #2a302c, #0b0d0c); box-shadow: inset 0 0 0 1.5px #3a423d, inset 0 1px 0 rgb(255 255 255 / .2), 0 50px 100px -40px rgb(4 50 30 / .65), 0 20px 40px -20px rgb(0 0 0 / .4); }
-  & .phone .scr { position: relative; border-radius: 41px; overflow: hidden; background: var(--paper); height: 640px; display: flex; flex-direction: column; }
+  /* The Farmer app's .phone shell (apps.css) is global: undo its full-screen sizing here. */
+  & .phone { min-height: 0; max-width: none; margin: 0; display: block; border-radius: 52px; padding: 12px; background: linear-gradient(160deg, #2a302c, #0b0d0c); box-shadow: inset 0 0 0 1.5px #3a423d, inset 0 1px 0 rgb(255 255 255 / .2), 0 50px 100px -40px rgb(4 50 30 / .65), 0 20px 40px -20px rgb(0 0 0 / .4); }
+  & .phone .scr { position: relative; border-radius: 41px; overflow: hidden; background: var(--paper); height: min(640px, calc(100vh - 128px)); display: flex; flex-direction: column; }
   & .phone .island { position: absolute; top: 10px; left: 50%; translate: -50% 0; width: 96px; height: 28px; border-radius: 20px; background: #0b0d0c; z-index: 4; }
   & .phone .status { display: flex; justify-content: space-between; padding: 14px 26px 6px; font: 700 13px var(--sans); color: var(--ink); }
   & .phone .ptop { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; & .brand { color: var(--ink); font-size: 13px; & img { width: 24px; height: 24px; filter: none; } & small { color: var(--muted); font-size: 8px; } } }
@@ -316,7 +318,7 @@
   & .onpp .lead { color: #b9c4bd; }
   & .onpp .grid { display: grid; grid-template-columns: .95fr 1.05fr; gap: clamp(40px, 6vw, 90px); align-items: center; margin-top: 56px; }
   & .onpp .feats { display: grid; grid-template-columns: 1fr 1fr; gap: 40px 36px;
-    & h3 { color: #fff; font-size: 21px; letter-spacing: -.025em; display: flex; align-items: center; gap: 10px; }
+    & h3 { color: #fff; font-size: clamp(17px, 1.5vw, 21px); white-space: nowrap; letter-spacing: -.025em; display: flex; align-items: center; gap: 10px; }
     & h3 .ico { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgb(255 255 255 / .06); color: #7fe0ae; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); & .i { width: 18px; height: 18px; } }
     & p { margin: 12px 0 0; font-size: 15px; color: #aab5ae; line-height: 1.55; }
   }
@@ -339,7 +341,7 @@
   }
 
   /* ── Guardrails, playable ────────────────────────────────────── */
-  & .guard { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(36px, 6vw, 80px); align-items: center; }
+  & .guard { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(36px, 6vw, 80px); align-items: start; }
   & .guard ol { list-style: none; padding: 0; margin: 30px 0 0; display: grid; }
   & .guard ol li { display: grid; grid-template-columns: 36px 1fr; gap: 14px; padding: 16px 0; border-top: 1px solid var(--line);
     & b { display: block; color: var(--ink); font-size: 16px; } & span { font-size: 14px; color: var(--muted); }
@@ -440,17 +442,20 @@
   @media (max-width: 1080px) {
     & .story .note { display: none; }
   }
-  @media (max-width: 960px) {
+  @media (max-width: 1300px) {
     & .nav .links, & .nav .signin { display: none; }
-    & .nav .menu-btn { display: inline-flex; margin-left: auto; }
+    & .nav .menu-btn { display: inline-flex; }
+    & .nav .btn-white { margin-left: auto; }
     & .nav[data-lifted] .menu-btn { color: #3d4540; }
     & .nav .bar { gap: 12px; justify-content: space-between; }
+  }
+  @media (max-width: 960px) {
     & .hero .grid, & .guard, & .faq, & .onpp .grid { grid-template-columns: 1fr; }
     & .steps, & .voices { grid-template-columns: 1fr; }
     & .stepcard { min-height: 0; }
     & .numbers { grid-template-columns: 1fr 1fr; & > div:nth-child(3) { border-left: 0; } & > div:nth-child(n+3) { border-top: 1px solid var(--line); } }
     & .live .wrap { grid-template-columns: 1fr 1fr; & .tag { grid-column: 1 / -1; } & .stat:nth-of-type(odd) { border-left: 0; padding-left: 0; } }
-    & .foot .wrap { grid-template-columns: 1fr 1fr; }
+    & .lp-footer .wrap { grid-template-columns: 1fr 1fr; & > div:first-child { grid-column: 1 / -1; } }
   }
   @media (max-width: 640px) {
     & .float { display: none; }
@@ -458,8 +463,9 @@
     & .hero .ctas .btn { width: 100%; }
     & .switch button { padding: 8px 12px; font-size: 12.5px; }
     & .onpp .feats { grid-template-columns: 1fr; gap: 28px; }
+    & .lp-footer .fine { flex-direction: column; gap: 6px; }
     & .story .device { width: 300px; }
-    & .phone .scr { height: 580px; }
+    & .phone .scr { height: min(580px, calc(100vh - 128px)); }
   }
 }
 

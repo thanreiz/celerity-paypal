@@ -59,6 +59,9 @@ export default function LoginScreen({ onSignIn, initialError = "" }) {
             Coordinators approve what the AI agent drafts before PayPal sends it, and keep watch over the routine runs the rules pay at once.
           </p>
         </div>
+        <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", margin: 0 }}>
+          Judging? The key is in the submission notes, and <a href="#/demo">the demo guide</a> walks through what to try.
+        </p>
         <Input label="Your name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ana, MDRRMO Virac" autoComplete="name" />
         <Input
           label="Coordinator key"

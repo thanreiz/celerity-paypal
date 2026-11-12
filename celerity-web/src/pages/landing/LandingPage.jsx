@@ -10,6 +10,7 @@ const FUND = "#/funder";
 const PUBLIC = "#/public";
 const FARMER = "#/farmer";
 const SIGN_IN = "#/console";
+const DEMO = "#/demo";
 
 const Icon = ({ d, className = "i", ...rest }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true" {...rest}>
@@ -102,6 +103,7 @@ const MENU = [
   ["Guardrails", "#guardrails"],
   ["FAQ", "#faq"],
   null,
+  ["Try the demo", DEMO],
   ["Farmer app", FARMER],
   ["Coordinator sign in", SIGN_IN],
   ["Funder app", FUND],
@@ -149,11 +151,11 @@ function Nav() {
         </a>
         <nav className="links" aria-label="Sections">
           <a href="#how" onClick={scrollTo("how")}>How it works</a>
-          <a href="#story" onClick={scrollTo("story")}>For families</a>
           <a href="#paypal" onClick={scrollTo("paypal")}>PayPal</a>
           <a href="#guardrails" onClick={scrollTo("guardrails")}>Guardrails</a>
           <a href="#faq" onClick={scrollTo("faq")}>FAQ</a>
         </nav>
+        <a className="signin" href={DEMO}>Try the demo</a>
         <a className="signin" href={FARMER}>Farmer app</a>
         <a className="signin" href={SIGN_IN}>Coordinator sign in</a>
         <a className="btn btn-white" href={FUND}>Funder app</a>
@@ -799,7 +801,7 @@ function Final() {
             <p>Fill a pool today. When the bulletin comes, families get help in minutes, not weeks.</p>
             <div className="ctas">
               <a className="btn btn-lg btn-white" href={FUND}>Fund a pool <Icon d={ARROW} /></a>
-              <a className="btn btn-lg btn-glass" href={FARMER}>Farmer app</a>
+              <a className="btn btn-lg btn-glass" href={DEMO}>Try the demo</a>
             </div>
           </div>
         </div>
@@ -816,7 +818,7 @@ function Footer() {
           <a className="brand" href="#/" onClick={scrollTo("top")}><img src="/logo-dove.png" alt="" /><span>CELERITY<small>RELIEF NETWORK</small></span></a>
           <p style={{ marginTop: 14, maxWidth: 320 }}>Typhoon cash aid, pooled through PayPal. Rules pay the routine cases, and a person approves every AI draft.</p>
         </div>
-        <div><h4>Product</h4><a href="#how" onClick={scrollTo("how")}>How it works</a><a href="#guardrails" onClick={scrollTo("guardrails")}>Guardrails</a><a href={PUBLIC}>Public record</a></div>
+        <div><h4>Product</h4><a href={DEMO}>Try the demo</a><a href="#how" onClick={scrollTo("how")}>How it works</a><a href="#guardrails" onClick={scrollTo("guardrails")}>Guardrails</a><a href={PUBLIC}>Public record</a></div>
         <div><h4>For</h4><a href={FUND}>Funder app</a><a href={FARMER}>Farmer app</a><a href={SIGN_IN}>Coordinators</a></div>
         <div><h4>Built on</h4><a href="#paypal" onClick={scrollTo("paypal")}>PayPal Checkout</a><a href="#paypal" onClick={scrollTo("paypal")}>PayPal Payouts</a><a href="#faq" onClick={scrollTo("faq")}>FAQ</a></div>
         <div className="fine"><span>PayPal sandbox demo · Simulated bulletins · No real money moves.</span><span>© 2026 Celerity Relief</span></div>

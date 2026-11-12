@@ -4,6 +4,7 @@ import TransparencyPage from "./pages/public/TransparencyPage";
 import FarmerApp, { FarmerConnect } from "./pages/farmer/FarmerApp";
 import FunderApp from "./pages/funder/FunderApp";
 import LandingPage from "./pages/landing/LandingPage";
+import DemoGuide from "./pages/DemoGuide";
 
 function useHash() {
   const [hash, setHash] = useState(() => window.location.hash);
@@ -19,7 +20,8 @@ function useHash() {
 //   #/funder      the Funder app (cash in through PayPal, follow the money)
 //   #/farmer      the Farmer app ("Is this you?"), #/r/<token> one farmer's app
 //   #/console/... Celerity operations: coordinators approve what AI drafted
-// plus the public record at #/public and the landing page.
+// plus the public record at #/public, the demo walk-through at #/demo and
+// the landing page.
 // Console pages, by first path segment. Anything else unknown is the landing page.
 const CONSOLE = new Set(["console", "overview", "funds", "respond", "payouts", "families", "evidence"]);
 
@@ -32,6 +34,7 @@ export default function App() {
   if (seg === "farmer") return <FarmerConnect />;
   if (seg === "funder") return <FunderApp query={hash.split("?")[1] || ""} />;
   if (seg === "public") return <TransparencyPage />;
+  if (seg === "demo") return <DemoGuide />;
   if (CONSOLE.has(seg)) return <Console route={hash.replace(/^#\/?/, "").replace(/^console\/?/, "")} />;
 
   // Everything else is the landing page, signed in or not: "#/", "#/home",
