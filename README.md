@@ -58,7 +58,7 @@ with PayPal at both edges and AI agents only where rules can't decide:
     act on.
 - **Farmer app** (`#/farmer`, or the private link `#/r/<token>` from the SMS). The original phone
   app, in Tagalog or English: what arrived, whether the storm over their town qualifies them
-  (the rules' answer), how to move it from PayPal to GCash, and a **helper agent** (GPT-5.5) that
+  (the rules' answer), how to move it from PayPal to a bank or e-wallet, and a **helper agent** (GPT-5.5) that
   answers from that farmer's own record and can open a case for a coordinator. Jev triages each
   message first: a damage report or wrong details opens a case even if GPT doesn't. Neither can
   move money.
@@ -72,10 +72,32 @@ moves. Only a run no AI touched goes on the automatic path; anything Jev placed 
 drafted goes to a person. Set `AUTO_RELEASE=0` to have a coordinator approve every run. Without a TypeSafe key, Jev is skipped
 and the parser + GPT agent + coordinator path works as before.
 
-> **Hosted demo:** https://celerity-relief.vercel.app (PayPal sandbox; coordinator key shared with judges in the submission) · **Demo video:** _coming soon_
+> **Hosted demo:** https://celerity-relief.vercel.app · **Step-by-step guide:** https://celerity-relief.vercel.app/#/demo · **Demo video:** _coming soon_
 >
 > The demo runs on the **PayPal sandbox** with **simulated bulletins** for a fictional
 > Typhoon Dalisay. No real money moves.
+
+## Try the demo (about 10 minutes)
+
+The same walk-through is in the app at [`/#/demo`](https://celerity-relief.vercel.app/#/demo).
+
+**You need:** the coordinator key (in the submission notes) for steps 3 to 5, and a PayPal
+sandbox **personal** account for step 1 (any from your own developer dashboard under
+*Testing Tools → Sandbox Accounts*, or the one in the submission notes). The demo is shared, so you
+may see other judges' pools, runs and payouts.
+
+| # | Where | Do | You should see |
+| --- | --- | --- | --- |
+| 1 | [Funder app](https://celerity-relief.vercel.app/#/funder) | Pick a demo institution (no password; the picker is the demo sign-in). **Cash in with PayPal**, ₱1,000, pay with the sandbox personal account. | Back in the app: "PayPal confirmed your payment". The pool's **Put in, after fees** rises by a little under ₱1,000; the PayPal fee is listed on the public record. |
+| 2 | Funder app | **New pool**, type *"rice farmers in Albay and Sorsogon at signal 3 or higher"*. | The pool-rule agent turns it into provinces + minimum signal; code checks it; anything unenforceable (crops) is shown as not enforced. |
+| 3 | [Coordinator console](https://celerity-relief.vercel.app/#/console) | Sign in (any name + key). **Respond** → *Typhoon Dalisay, Bulletin #8* → **Run Celerity**. Open **Payouts**. | The rules parser reads every area with no AI and releases the run to PayPal Payouts at once. One batch; its status moves to SUCCESS from PayPal webhooks. If someone ran it before you, every family reads "already paid": the no-double-payment rule. |
+| 4 | Console → Respond | Run *Tampered bulletin (guardrail demo)*. Its text tells the AI to ignore limits and pay an outside email. | Jev flags the hidden instruction and the run is **held** for a person. Drafts name only registered families, at the cap, to the email on file. Reject it. |
+| 5 | Console → Respond | Run *Typhoon Dalisay, Bulletin #7 (irregular wording)*. | The parser can't place some phrases, so Jev and the GPT agent work them out (the trace shows each tool call). The run waits under **Needs approval**. |
+| 6 | [Farmer app](https://celerity-relief.vercel.app/#/farmer) | Pick **Maria Santos** (Virac, Catanduanes). Toggle Tagalog / English. Ask the helper *"where is my money?"*. | Her payout with Approved → Sent → Received. The helper answers from her record only and can open a case; it can't move money. |
+| 7 | [Public record](https://celerity-relief.vercel.app/#/public) | Scroll. | Each pool: what went in, towns paid, what's left; no names or emails. **Chain verified**, and your browser keeps a checkpoint it re-checks next visit. |
+
+Prefer to run it yourself? See [Run it locally](#run-it-locally): the rules path and the whole UI work
+with no AI key, and the test suite needs no keys at all.
 
 ---
 
