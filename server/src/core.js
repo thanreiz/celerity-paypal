@@ -38,7 +38,9 @@ export function coreState(state) {
       items: b.items.map((i) => ({ family_id: i.family_id, status: i.status, funding: i.funding })),
     })),
     pools: (state.pools || []).map((p) => ({ id: p.id, provinces: p.provinces, ...(p.min_signal ? { min_signal: p.min_signal } : {}) })),
-    contributions: (state.contributions || []).map((c) => ({ pool_id: c.pool_id, amount: c.amount, status: c.status })),
+    // The core knows only amount and status, so a partly refunded contribution
+    // is sent as what is left of it.
+    contributions: (state.contributions || []).map((c) => ({ pool_id: c.pool_id, amount: Math.round((Number(c.amount) - (Number(c.refunded) || 0)) * 100) / 100, status: c.status })),
   };
 }
 

@@ -39,18 +39,32 @@ export async function getAccessToken() {
     body: "grant_type=client_credentials",
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  const body = await res.json().catch(() => ({}));
+  const body = parseBody(await res.text().catch(() => "")) || {};
   if (!res.ok) {
     throw new PayPalError(`PayPal OAuth failed: ${body.error_description || res.statusText}`, {
       status: res.status,
       name: body.error,
     });
   }
+  if (!body.access_token) throw new PayPalError("PayPal OAuth answered without an access token", { status: res.status });
   cachedToken = { value: body.access_token, expiresAt: Date.now() + body.expires_in * 1000 };
   return cachedToken.value;
 }
 
-async function call(method, path, { body, requestId } = {}) {
+// PayPal's answers are JSON, but a gateway in front of it can answer with an
+// HTML 502 page. Parse defensively so the caller always gets a PayPalError
+// with the HTTP status instead of a SyntaxError.
+function parseBody(text) {
+  if (!text) return {};
+  try {
+    const json = JSON.parse(text);
+    return json && typeof json === "object" ? json : null;
+  } catch {
+    return null;
+  }
+}
+
+async function call(method, path, { body, requestId } = {}, retried = false) {
   const token = await getAccessToken();
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -65,14 +79,26 @@ async function call(method, path, { body, requestId } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
+  // The cached token can be revoked or expire early. A 401 means PayPal did
+  // nothing with the call, so fetch a fresh token and send it once more.
+  if (res.status === 401 && !retried) {
+    cachedToken = null;
+    return call(method, path, { body, requestId }, true);
+  }
   const text = await res.text();
-  const json = text ? JSON.parse(text) : {};
+  const json = parseBody(text);
   if (!res.ok) {
-    throw new PayPalError(json.message || `PayPal ${method} ${path} failed (${res.status})`, {
+    throw new PayPalError(json?.message || `PayPal ${method} ${path} failed (${res.status})`, {
       status: res.status,
-      name: json.name,
-      details: json.details,
-      debugId: json.debug_id || res.headers.get("paypal-debug-id"),
+      name: json?.name,
+      details: json?.details,
+      debugId: json?.debug_id || res.headers.get("paypal-debug-id"),
+    });
+  }
+  if (json === null) {
+    throw new PayPalError(`PayPal ${method} ${path} answered with something that is not JSON (${res.status})`, {
+      status: res.status,
+      debugId: res.headers.get("paypal-debug-id"),
     });
   }
   return json;
