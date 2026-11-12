@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../../design/Button";
 import Toast from "../../design/Toast";
 import { api } from "../../lib/api";
@@ -57,9 +57,42 @@ function payoutState(r) {
 
 function Login({ onPick }) {
   const [funders, setFunders] = useState(null);
-  useEffect(() => {
-    api.funders().then((d) => setFunders(d.funders)).catch(() => setFunders([]));
+  const [loadError, setLoadError] = useState(null);
+  const [needsCode, setNeedsCode] = useState(null); // funder id waiting for an access code
+  const [code, setCode] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
+  const [pickError, setPickError] = useState(null);
+  const load = useCallback(() => {
+    setFunders(null);
+    setLoadError(null);
+    api
+      .funders()
+      .then((d) => setFunders(d.funders))
+      .catch((e) => setLoadError(e.message || "Couldn't load the funders."));
   }, []);
+  useEffect(load, [load]);
+
+  // Opening a session happens here so a deployment that wants an access code
+  // can ask for it; in the demo it needs none.
+  const pick = async (id, withCode) => {
+    if (signingIn) return;
+    setSigningIn(true);
+    setPickError(null);
+    try {
+      await api.funderSession(id, withCode);
+      onPick(id);
+    } catch (e) {
+      if (e.status === 401) {
+        setNeedsCode(id);
+        setPickError(withCode ? e.message || "That code wasn't accepted." : null);
+      } else {
+        setPickError(e.message);
+      }
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
   return (
     <div className="app-shell">
       <main className="app-wrap" style={{ maxWidth: 520, paddingTop: 48 }}>
@@ -69,11 +102,20 @@ function Login({ onPick }) {
           <p style={{ margin: 0, color: "var(--text-dim)" }}>Put money where the next storm will hit. Celerity decides who gets it; PayPal pays them.</p>
         </div>
         <div className="app-card" style={{ padding: 8 }}>
-          {!funders && <p style={{ padding: 14 }}><span className="cel-spin" /> Loading…</p>}
+          {!funders && !loadError && <p style={{ padding: 14 }}><span className="cel-spin" /> Loading…</p>}
+          {loadError && (
+            <div role="alert" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ color: "var(--bad-text)", fontWeight: 600 }}>Couldn't load the funders. {loadError}</span>
+              <Button size="sm" variant="outline" onClick={load}>
+                Try again
+              </Button>
+            </div>
+          )}
           {funders?.map((f) => (
             <button
               key={f.id}
-              onClick={() => onPick(f.id)}
+              onClick={() => pick(f.id)}
+              disabled={signingIn}
               className="cel-press"
               style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", border: "none", background: "none", padding: 14, textAlign: "left", cursor: "pointer", borderRadius: 12, fontFamily: "var(--font-sans)" }}
             >
@@ -86,6 +128,25 @@ function Login({ onPick }) {
             </button>
           ))}
         </div>
+        {needsCode && (
+          <form
+            className="app-card cel-pop"
+            style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (code.trim()) pick(needsCode, code.trim());
+            }}
+          >
+            <label htmlFor="funder-code" style={{ font: "var(--text-fine)", color: "var(--text-dim)" }}>
+              Access code for {funders?.find((x) => x.id === needsCode)?.name || "this institution"}
+            </label>
+            <input id="funder-code" className="app-input" type="password" autoComplete="off" autoFocus value={code} onChange={(e) => setCode(e.target.value)} />
+            <Button type="submit" variant="outline" disabled={signingIn || !code.trim()}>
+              {signingIn ? "Checking…" : "Continue"}
+            </Button>
+          </form>
+        )}
+        {pickError && <p role="alert" style={{ margin: 0, color: "var(--bad-text)", fontWeight: 600 }}>{pickError}</p>}
         <p style={{ margin: 0, font: "var(--text-fine)", color: "var(--text-faint)" }}>
           Demo institutions · PayPal sandbox · no real money. <a href="#/" style={{ color: "var(--primary)" }}>Back to Celerity</a>
         </p>
@@ -172,11 +233,26 @@ export default function FunderApp({ query }) {
   const [error, setError] = useState(null);
   const [modal, setModal] = useState(null); // "new" | { topUp: pool }
   const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
 
-  const notify = useCallback((msg, isError = false) => {
-    setToast({ msg, isError });
-    setTimeout(() => setToast(null), isError ? 12000 : 6000);
+  // Clearing the previous timer keeps an older toast from dismissing a newer one.
+  const notify = useCallback((msg, isError = false, extra = {}) => {
+    clearTimeout(toastTimer.current);
+    setToast({ msg, isError, ...extra });
+    toastTimer.current = setTimeout(() => setToast(null), isError ? 12000 : 6000);
   }, []);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  // A lost funder session sends the funder back to the picker with a reason.
+  const signOut = useCallback(
+    (id, message) => {
+      api.forgetFunder(id);
+      saveWho("");
+      setWho("");
+      if (message) notify(message, true);
+    },
+    [notify]
+  );
 
   const load = useCallback(() => {
     if (!who) return Promise.resolve();
@@ -186,8 +262,12 @@ export default function FunderApp({ query }) {
         setData(d);
         setError(null);
       })
-      .catch((e) => (e.status === 404 ? (saveWho(""), setWho("")) : setError(e.message)));
-  }, [who]);
+      .catch((e) => {
+        if (e.status === 404) signOut(who);
+        else if (e.status === 401) signOut(who, "Your funder session ended. Pick your institution to sign in again.");
+        else setError(e.message);
+      });
+  }, [who, signOut]);
 
   useEffect(() => {
     document.title = "Funder app · Celerity";
@@ -204,24 +284,37 @@ export default function FunderApp({ query }) {
     if (!funded) return;
     if (funded === "cancelled") notify("Checkout cancelled. Nothing was charged.");
     else if (funded === "failed" || funded === "unknown") notify("PayPal didn't confirm that payment, so nothing was credited.", true);
-    else notify(`PayPal confirmed your payment of ${q.get("amount")}. The pool is credited.`);
+    else if (funded === "pending") notify("PayPal is still processing your payment. It will be credited to the pool as soon as PayPal confirms it.", false, { neutral: true });
+    else notify("", false, { amount: Number(q.get("amount")) || 0 });
     window.history.replaceState(null, "", "#/funder");
   }, [query, notify]);
 
+  const f = data?.funder;
+  const cur = data?.currency || "PHP";
+  // The amount is formatted here, with the pool currency, not printed raw from the URL.
+  const toastNode = toast && (
+    <Toast
+      error={toast.isError}
+      neutral={toast.neutral}
+      message={toast.amount != null ? `PayPal confirmed your payment of ${money(toast.amount, cur)}. The pool is credited.` : toast.msg}
+    />
+  );
+
   if (!who) {
     return (
-      <Login
-        onPick={(id) => {
-          saveWho(id);
-          setWho(id);
-          setPage("home");
-        }}
-      />
+      <>
+        <Login
+          onPick={(id) => {
+            saveWho(id);
+            setWho(id);
+            setPage("home");
+          }}
+        />
+        {toastNode}
+      </>
     );
   }
 
-  const f = data?.funder;
-  const cur = data?.currency || "PHP";
   const titles = { pools: "My pools", ledger: "Ledger" };
 
   return (
@@ -255,10 +348,7 @@ export default function FunderApp({ query }) {
               className="app-avatar cel-press"
               title="Switch institution"
               style={{ width: 40, height: 40, cursor: "pointer" }}
-              onClick={() => {
-                saveWho("");
-                setWho("");
-              }}
+              onClick={() => signOut(who)}
             >
               {f?.initials || "··"}
             </button>
@@ -310,7 +400,7 @@ export default function FunderApp({ query }) {
               <div className="app-flow">
                 <div><b>1 · You</b>Pick where and at what wind signal. PayPal Checkout cashes you in.</div>
                 <div><b>2 · Rules</b>Java-checked rules read routine PAGASA bulletins and decide who qualifies and how much.</div>
-                <div><b>3 · AI</b>Agents read only what rules can't: odd bulletins, your words, farmers' questions. A person approves.</div>
+                <div><b>3 · AI</b>Agents read only what rules can't: odd bulletins, your words, farmers' questions. A person approves every AI draft.</div>
                 <div><b>4 · PayPal</b>Payouts to each family, tracked here to the town.</div>
               </div>
             </section>
@@ -352,6 +442,7 @@ export default function FunderApp({ query }) {
         <NewPoolModal
           funder={f}
           notify={notify}
+          onAuthLost={() => signOut(who, "Your funder session ended. Pick your institution to sign in again.")}
           onClose={() => setModal(null)}
           onCreated={(pool) => {
             load();
@@ -361,7 +452,7 @@ export default function FunderApp({ query }) {
         />
       )}
       {modal?.topUp && data && <TopUpModal funder={f} pool={modal.topUp} limits={data.limits} currency={cur} onClose={() => setModal(null)} />}
-      {toast && <Toast message={toast.msg} error={toast.isError} />}
+      {toastNode}
     </div>
   );
 }

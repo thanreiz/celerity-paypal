@@ -5,6 +5,28 @@ Newest first. History before the PayPal rebuild lives in the original repo,
 
 ---
 
+## 2026-11-13 — v0.4.0 QA pass: parser, guardrails, money state, access
+
+- **Parser (Node and Java):** a bulletin is routine only when every line of
+  every signal block was read. Part of a province with no towns, a lifted or
+  lowered signal, a wrapped list and unbalanced brackets now go to AI and a
+  person. Seven new contract fixtures.
+- **Guardrails:** a run Jev placed waits for a coordinator. Jev's answers are
+  range-checked, and a run is held when Jev is on but gives no answer.
+  Provinces are matched by whole name; the agent can't raise a signal.
+- **Money:** refunded and reversed contributions leave their pool, early
+  payout webhooks are retried, a failed batch frees its items, and approving
+  without PayPal credentials no longer strands a run.
+- **Access:** funder sessions, a limiter that can't be dodged with a header or
+  used to lock out a coordinator or farmer, official province names in the
+  registry, and a PayPal return address that never follows the Host header.
+- **Apps:** landing examples obey the live caps and are labelled, a phone
+  menu, unknown links open the landing page, modals close on Escape and trap
+  focus, the Farmer app keeps polling after a failed request, and coordinator
+  names in any script work.
+
+---
+
 ## 2026-10-30 — v0.3.0 Fund step, farmer phone page, QA fixes
 
 - **Fund:**

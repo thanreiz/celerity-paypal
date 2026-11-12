@@ -115,6 +115,15 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
   const [open, setOpen] = useState(latest);
   const currency = config.policy.currency;
   const familiesById = useMemo(() => Object.fromEntries(data.families.map((f) => [f.id, f])), [data.families]);
+  const waiting = run.status === "awaiting_approval";
+  // "needs approval" only while a person still has to decide; once approved,
+  // rejected or failed the run is just labelled by who read it.
+  const modeLabel =
+    run.mode === "rules"
+      ? "Rules · no AI"
+      : run.mode === "jev"
+        ? `Rules + Jev${waiting ? " · needs approval" : ""}`
+        : `AI agent${waiting ? " · needs approval" : ""}`;
   const refused = run.steps.filter((s) => s.kind === "tool" && !s.ok).length;
 
   // In-page confirmation instead of window.confirm/prompt: embedded browsers
@@ -156,11 +165,11 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
             className="cel-chip"
             style={{
               marginLeft: 6,
-              background: run.mode === "agent" ? "var(--accent-soft)" : "var(--ok-bg)",
-              color: run.mode === "agent" ? "#8a5a06" : "var(--ok-text)",
+              background: run.mode === "agent" || waiting ? "var(--accent-soft)" : "var(--ok-bg)",
+              color: run.mode === "agent" || waiting ? "#8a5a06" : "var(--ok-text)",
             }}
           >
-            {run.mode === "rules" ? "Rules · no AI" : run.mode === "jev" ? "Rules + Jev" : "AI agent · needs approval"}
+            {modeLabel}
           </span>
           <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
             Started {when(run.started_at)} by {run.started_by} · {run.mode !== "agent" ? `read by the ${run.parse?.parsed_by === "java-core" ? "Java core" : "rules"} parser` : run.model}
@@ -401,13 +410,24 @@ function RunCard({ run, data, config, act, busy, go, latest }) {
 function PasteBulletin({ act, onAdded, onCancel }) {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
+  // The ref blocks a second submit before React re-renders (double click, Enter held).
+  const inFlight = useRef(false);
+  const [sending, setSending] = useState(false);
   return (
     <Card title="Paste a bulletin">
       <form
         className="cel-stack"
         onSubmit={(e) => {
           e.preventDefault();
-          act("Bulletin added.", () => api.addBulletin(title, text)).then(onAdded, () => {});
+          if (inFlight.current) return;
+          inFlight.current = true;
+          setSending(true);
+          act("Bulletin added.", () => api.addBulletin(title, text))
+            .then(onAdded, () => {})
+            .finally(() => {
+              inFlight.current = false;
+              setSending(false);
+            });
         }}
       >
         <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Typhoon Dalisay, Bulletin #9" />
@@ -427,8 +447,8 @@ function PasteBulletin({ act, onAdded, onCancel }) {
           </span>
         </label>
         <div className="cel-row-actions">
-          <Button type="submit" variant="outline" disabled={text.trim().length < 40}>
-            Add bulletin
+          <Button type="submit" variant="outline" disabled={sending || text.trim().length < 40}>
+            {sending ? "Adding…" : "Add bulletin"}
           </Button>
           <Button variant="ghost" onClick={onCancel}>
             Cancel
@@ -456,7 +476,7 @@ export default function RespondPage({ data, config, act, busy, go }) {
     <main className="cel-page cel-page--wide">
       <PageHeader
         title="Respond to a bulletin"
-        lede="Pick a bulletin and run the AI agent. It drafts payouts for families in signal areas; you approve before anything is sent."
+        lede="Pick a bulletin and run Celerity. A routine bulletin the rules read completely is paid at once. Anything an AI had a hand in waits here for your approval before money moves."
       />
       <div className="cel-split">
         <div className="cel-stack" style={{ gap: 10 }}>
@@ -507,7 +527,7 @@ export default function RespondPage({ data, config, act, busy, go }) {
                   </div>
                   <Button
                     variant="outline"
-                    disabled={busy || anyRunning || !config.aiConfigured}
+                    disabled={busy || anyRunning}
                     onClick={() => act("Celerity is on it.", () => api.startRun(bulletin.id)).catch(() => {})}
                     title="Routine bulletins are decided by the rules and released at once; anything else goes to the AI agent and waits for your approval."
                   >
@@ -525,7 +545,7 @@ export default function RespondPage({ data, config, act, busy, go }) {
                 )}
                 {!config.aiConfigured && (
                   <p style={{ font: "var(--text-meta)", color: "var(--warn-text)", margin: "12px 0 0" }}>
-                    Set {config.aiProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"} on the server to run the agent.
+                    Set {config.aiProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"} on the server to use the AI agent. Routine bulletins still run without it; if one needs the agent, the server will say so.
                   </p>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setShowText((s) => !s)} style={{ marginTop: 10, paddingLeft: 0 }}>

@@ -1,7 +1,7 @@
 {
   "name": "celerity-relief-server",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "Celerity Relief API: rules and AI agents decide typhoon relief payouts, PayPal Checkout funds them, PayPal Payouts sends them.",
   "type": "module",
   "main": "src/index.js",

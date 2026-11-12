@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Card from "../../design/Card";
 import Button from "../../design/Button";
 import Input from "../../design/Input";
@@ -10,6 +10,9 @@ function NewPool({ act, onDone }) {
   const [name, setName] = useState("");
   const [funder, setFunder] = useState("");
   const [provinces, setProvinces] = useState("");
+  // The ref blocks a second submit before React re-renders (double click, Enter held).
+  const inFlight = useRef(false);
+  const [sending, setSending] = useState(false);
   const list = provinces
     .split(",")
     .map((p) => p.trim())
@@ -21,7 +24,15 @@ function NewPool({ act, onDone }) {
         style={{ gap: 14 }}
         onSubmit={(e) => {
           e.preventDefault();
-          act("Pool opened.", () => api.createPool({ name, funder, provinces: list })).then(onDone, () => {});
+          if (inFlight.current) return;
+          inFlight.current = true;
+          setSending(true);
+          act("Pool opened.", () => api.createPool({ name, funder, provinces: list, ...(list.length ? {} : { nationwide: true }) }))
+            .then(onDone, () => {})
+            .finally(() => {
+              inFlight.current = false;
+              setSending(false);
+            });
         }}
       >
         <Input label="Pool name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} placeholder="e.g. Sorsogon rice farmers typhoon fund" />
@@ -34,8 +45,8 @@ function NewPool({ act, onDone }) {
           hint={list.length ? `Earmarked for ${list.join(", ")}` : "Separate with commas. Leave empty for a nationwide pool."}
         />
         <div className="cel-row-actions">
-          <Button type="submit" variant="outline" disabled={!name.trim() || !funder.trim()}>
-            Open pool
+          <Button type="submit" variant="outline" disabled={sending || !name.trim() || !funder.trim()}>
+            {sending ? "Opening…" : "Open pool"}
           </Button>
           <Button variant="ghost" onClick={onDone}>
             Cancel

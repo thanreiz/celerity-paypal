@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import Card from "../../design/Card";
 import Button from "../../design/Button";
 import Input from "../../design/Input";
@@ -13,17 +13,28 @@ const EMPTY = { name: "", municipality: "", province: "", household_size: "4", p
 
 function AddFamily({ act, notify, onDone }) {
   const [f, setF] = useState(EMPTY);
+  // The ref blocks a second submit before React re-renders (double click, Enter held).
+  const inFlight = useRef(false);
+  const [sending, setSending] = useState(false);
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
   return (
     <Card title="Register a family">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          act("Family registered.", () => api.addFamily({ ...f, household_size: Number(f.household_size) })).then((family) => {
-            if (family?.warning) notify(`Registered, but ${family.warning}.`, true);
-            setF(EMPTY);
-            onDone();
-          }, () => {});
+          if (inFlight.current) return;
+          inFlight.current = true;
+          setSending(true);
+          act("Family registered.", () => api.addFamily({ ...f, household_size: Number(f.household_size) }))
+            .then((family) => {
+              if (family?.warning) notify(`Registered, but ${family.warning}.`, true);
+              setF(EMPTY);
+              onDone();
+            }, () => {})
+            .finally(() => {
+              inFlight.current = false;
+              setSending(false);
+            });
         }}
         style={{ display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}
       >
@@ -48,8 +59,8 @@ function AddFamily({ act, notify, onDone }) {
           ))}
         </fieldset>
         <div className="cel-row-actions" style={{ gridColumn: "1 / -1" }}>
-          <Button type="submit" variant="outline">
-            Register family
+          <Button type="submit" variant="outline" disabled={sending}>
+            {sending ? "Registering…" : "Register family"}
           </Button>
           <Button variant="ghost" onClick={onDone}>
             Cancel

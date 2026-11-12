@@ -74,8 +74,8 @@ export default function PayoutsPage({ data, config, act, busy, go, notify }) {
         title="Payouts"
         lede={
           config.webhooksVerified
-            ? "Each approved run is one PayPal Payouts batch. Verified webhooks update status as PayPal reports it."
-            : "Each approved run is one PayPal Payouts batch. Webhooks are not configured, so use “Refresh from PayPal” on a batch to get its latest status."
+            ? "Each released run is one PayPal Payouts batch. Verified webhooks update status as PayPal reports it."
+            : "Each released run is one PayPal Payouts batch. Webhooks are not configured, so use “Refresh from PayPal” on a batch to get its latest status."
         }
       />
       {data.batches.length === 0 && (
@@ -95,7 +95,7 @@ export default function PayoutsPage({ data, config, act, busy, go, notify }) {
               <div style={{ minWidth: 0 }}>
                 <strong style={{ font: "var(--text-h2)" }}>{stormName(b.storm)}</strong>
                 <span style={{ display: "block", font: "var(--text-fine)", color: "var(--text-faint)" }}>
-                  Approved by {b.approved_by} {when(b.created_at)} · {delivered.length}/{b.items.length} delivered ·{" "}
+                  {b.approved_by === "rules" ? "Released by the rules" : `Approved by ${b.approved_by}`} {when(b.created_at)} · {delivered.length}/{b.items.length} delivered ·{" "}
                   {money(delivered.reduce((s, i) => s + i.amount, 0), b.items[0]?.currency)} of {money(total, b.items[0]?.currency)}
                 </span>
                 <span className="cel-mono" style={{ color: "var(--text-faint)" }}>
