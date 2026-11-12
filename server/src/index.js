@@ -10,7 +10,7 @@ const store = storeFromEnv();
 const staticDir = fileURLToPath(new URL("../../celerity-web/dist", import.meta.url));
 const app = createApp({ store, staticDir });
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`Celerity Relief API on http://localhost:${config.port} (PayPal ${config.paypal.env}, ${store.kind} store)`);
   if (!config.paypal.clientId) console.warn("  ! PAYPAL_CLIENT_ID not set: approvals will fail");
   console.log(`  AI agent: ${config.ai.provider} / ${config.ai.model}`);
@@ -20,3 +20,8 @@ app.listen(config.port, () => {
   if (!config.paypal.webhookId) console.warn("  ! PAYPAL_WEBHOOK_ID not set: webhooks rejected, use Refresh to poll PayPal");
   if (!config.coordinatorKey) console.warn("  ! COORDINATOR_KEY not set: the console is open to anyone (dev only)");
 });
+
+// A request whose body never arrives is dropped after 30 seconds instead of
+// holding a connection for Node's default five minutes.
+server.requestTimeout = 30_000;
+server.headersTimeout = 15_000;
