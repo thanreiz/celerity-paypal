@@ -208,7 +208,7 @@ function PoolCard({ pool, currency, onTopUp }) {
         {[
           ["Available", pool.available],
           ["Paid out", pool.committed],
-          ["Put in", pool.contributed],
+          ["Put in, after fees", pool.contributed],
         ].map(([k, v]) => (
           <div key={k}>
             <div style={{ font: "var(--text-label)", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-label)" }}>{k}</div>

@@ -37,7 +37,7 @@
   --accent: #d99a2b;
   --accent-soft: rgba(217, 154, 43, 0.14);
 
-  --font-sans: "Quicksand", system-ui, sans-serif;
+  --font-sans: "Quicksand", "Noto Sans", system-ui, sans-serif;
   --tracking-tight: -0.01em;
   --tracking-label: 0.04em;
 

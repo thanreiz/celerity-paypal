@@ -15,6 +15,7 @@ const { createApp } = await import("../src/app.js");
 
 let verdict = "SUCCESS";
 const verifyCalls = [];
+const rawVerifyBodies = [];
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
   const u = String(url);
@@ -23,6 +24,7 @@ globalThis.fetch = async (url, init = {}) => {
   if (u.endsWith("/v1/oauth2/token")) return json(200, { access_token: "tok", expires_in: 3600 });
   if (u.endsWith("/v1/notifications/verify-webhook-signature")) {
     verifyCalls.push(JSON.parse(init.body));
+    rawVerifyBodies.push(init.body);
     if (verdict === "MALFORMED") return json(400, { name: "VALIDATION_ERROR", message: "Invalid data provided" });
     return json(200, { verification_status: verdict });
   }
@@ -72,4 +74,17 @@ test("verified events for batches this app didn't send are acknowledged but not 
   const state = await store.read();
   assert.equal(state.events.length, 0);
   assert.ok(state.webhookIds.includes("WH-D"));
+});
+
+test("PayPal is sent the webhook exactly as it was delivered, not a re-serialised copy", async () => {
+  verdict = "SUCCESS";
+  // Keys in an unusual order, spacing and a number written as 1.50: what a
+  // parse and JSON.stringify would change.
+  const delivered = '{"resource": {"batch_header": {"payout_batch_id": "OTHER"}, "amount": 1.50}, "event_type": "PAYMENT.PAYOUTSBATCH.SUCCESS", "id": "WH-RAW"}';
+  const before = rawVerifyBodies.length;
+  const res = await fetch(`${base}/api/webhooks/paypal`, { method: "POST", headers: { "Content-Type": "application/json", ...signedHeaders }, body: delivered });
+  assert.equal(res.status, 200);
+  const sent = rawVerifyBodies[before];
+  assert.ok(sent.endsWith(`"webhook_event":${delivered}}`), "the delivered bytes are spliced in unchanged");
+  assert.equal(JSON.parse(sent).webhook_id, "WH-TEST");
 });

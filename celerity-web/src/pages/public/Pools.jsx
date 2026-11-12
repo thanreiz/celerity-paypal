@@ -98,7 +98,7 @@ export function PoolList({ pools, currency, canFund = true }) {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, marginTop: 16 }}>
-              <Stat label="Put in" value={money(p.contributed, currency)} />
+              <Stat label="Put in, after fees" value={money(p.contributed, currency)} />
               <Stat label="Paid out" value={money(p.committed, currency)} />
               <Stat label="Left" value={money(p.available, currency)} tone={
                   // Nothing was ever put in: neutral, not an error. A pool that
@@ -150,7 +150,8 @@ export function PoolList({ pools, currency, canFund = true }) {
                   <ul style={{ margin: "6px 0 0", paddingLeft: 18, font: "var(--text-meta)" }}>
                     {p.contributions.map((c, i) => (
                       <li key={i}>
-                        {c.funder_name} · {money(c.amount, currency)} · {when(c.at)}{" "}
+                        {c.funder_name} · {money(c.amount, currency)}
+                        {c.fee ? ` (paid ${money(c.paid, currency)}, PayPal fee ${money(c.fee, currency)})` : ""} · {when(c.at)}{" "}
                         {c.source === "seed" ? (
                           <Badge style={{ padding: "1px 8px" }}>demo pledge</Badge>
                         ) : (

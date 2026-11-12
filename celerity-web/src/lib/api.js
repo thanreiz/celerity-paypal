@@ -135,6 +135,7 @@ export const api = {
   config: () => request("/api/config"),
   state: () => request("/api/state", { coordinator: true }),
   publicView: () => request("/api/public"),
+  chainEntry: (seq) => request(`/api/chain/${seq}`),
   addFamily: (family) => request("/api/families", { method: "POST", body: family, coordinator: true }),
   setFamilyStatus: (id, status) => request(`/api/families/${id}`, { method: "PATCH", body: { status }, coordinator: true }),
   addBulletin: (title, text) => request("/api/bulletins", { method: "POST", body: { title, text }, coordinator: true }),

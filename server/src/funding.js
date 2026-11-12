@@ -26,6 +26,15 @@ export function poolsFor(state, family, signal = null) {
  * else none (no pool rule filters on it). */
 const draftSignal = (family, run) => (family && Array.isArray(run.areas) ? signalFor(family, run.areas) : null);
 
+/**
+ * What a completed contribution puts in its pool, in centavos: what PayPal
+ * actually paid us (the capture's net amount, after PayPal's fee) less
+ * anything refunded since. A refund is counted at its full amount, which is
+ * never less than what it costs the balance, so the pool can't overstate.
+ * Seeded pledges and captures without a fee breakdown count at face value.
+ */
+export const creditedCents = (k) => Math.max(0, cents(k.net ?? k.amount) - cents(k.refunded || 0));
+
 /** { pool_id: { contributed, committed, available } } in pesos. Pending
  * checkouts don't count; payouts that never reached the family free their
  * money again. */
@@ -34,7 +43,7 @@ export function poolBalances(state) {
   for (const p of state.pools || []) c[p.id] = { contributed: 0, committed: 0 };
   for (const k of state.contributions || []) {
     // A partial refund leaves the contribution completed for what remains.
-    if (k.status === "completed" && c[k.pool_id]) c[k.pool_id].contributed += cents(k.amount) - cents(k.refunded || 0);
+    if (k.status === "completed" && c[k.pool_id]) c[k.pool_id].contributed += creditedCents(k);
   }
   for (const b of state.batches || []) {
     for (const it of b.items || []) {
@@ -138,7 +147,7 @@ export function poolLedger(state) {
     }
     const contributions = (state.contributions || [])
       .filter((k) => k.pool_id === p.id && k.status === "completed")
-      .map((k) => ({ funder_name: k.funder_name, amount: (cents(k.amount) - cents(k.refunded || 0)) / 100, source: k.source, at: k.at }));
+      .map((k) => ({ funder_name: k.funder_name, amount: creditedCents(k) / 100, paid: k.amount, fee: k.fee ?? null, source: k.source, at: k.at }));
     return {
       id: p.id,
       name: p.name,
@@ -188,7 +197,7 @@ export function addPendingContribution(state, { pool, funderName, amount, orderI
  * pool only for a completed capture of exactly the amount the funder chose.
  * Idempotent: a second report of the same capture changes nothing.
  */
-export function completeContribution(state, log, { orderId, captureId, status, amount, currency, source }) {
+export function completeContribution(state, log, { orderId, captureId, status, amount, currency, net, fee, source }) {
   const k = state.contributions.find((x) => x.order_id === orderId);
   if (!k) return { ignored: "unknown order" };
   if (k.status === "completed") return { contribution: k.id, duplicate: true };
@@ -204,8 +213,18 @@ export function completeContribution(state, log, { orderId, captureId, status, a
   k.status = "completed";
   k.capture_id = captureId;
   k.at = new Date().toISOString();
+  // PayPal keeps a fee on every capture. The pool gets what PayPal paid out
+  // to us, so payouts are never planned against money the account never had.
+  const n = Number(net);
+  if (net != null && Number.isFinite(n) && n >= 0 && cents(n) <= cents(k.amount)) {
+    k.net = cents(n) / 100;
+    k.fee = (cents(k.amount) - cents(n)) / 100;
+  } else if (fee != null && Number.isFinite(Number(fee)) && cents(fee) >= 0 && cents(fee) <= cents(k.amount)) {
+    k.fee = cents(fee) / 100;
+    k.net = (cents(k.amount) - cents(fee)) / 100;
+  }
   const pool = state.pools.find((p) => p.id === k.pool_id);
-  log("pool.funded", source, { pool: pool?.name, funder_name: k.funder_name, amount: k.amount, currency: k.currency, capture_id: captureId }, k.pool_id);
+  log("pool.funded", source, { pool: pool?.name, funder_name: k.funder_name, amount: k.amount, fee: k.fee ?? null, net: k.net ?? k.amount, currency: k.currency, capture_id: captureId }, k.pool_id);
   return { contribution: k.id, funded: true };
 }
 

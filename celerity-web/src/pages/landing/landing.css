@@ -32,8 +32,8 @@
   --mint: #e8f5ed;
   --pp-yellow: #ffc439;
   --pp-navy: #003087;
-  --display: "Manrope", "DM Sans", system-ui, sans-serif;
-  --sans: "DM Sans", system-ui, sans-serif;
+  --display: "Manrope", "Noto Sans", "DM Sans", system-ui, sans-serif;
+  --sans: "DM Sans", "Noto Sans", system-ui, sans-serif;
   --ease: cubic-bezier(.22, 1, .36, 1);
   --satin: linear-gradient(150deg, #3ed48c 0%, #12925a 44%, #06492f 100%);
   --mesh:

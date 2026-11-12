@@ -4,7 +4,7 @@
 // called outside it.
 
 import { POLICY } from "./policy.js";
-import { PayPalError, createPayoutBatch, getPayoutBatch, paypalConfigured } from "./paypal.js";
+import { feeOf, PayPalError, createPayoutBatch, getPayoutBatch, paypalConfigured } from "./paypal.js";
 import { newId } from "./store.js";
 import { completeContribution, isReversalEvent, poolTotals, reverseContribution } from "./funding.js";
 // The money rules at approval go through the core client, which can hand
@@ -383,6 +383,7 @@ function applyEvent(state, log, event) {
       status: r.status,
       amount: r.amount?.value,
       currency: r.amount?.currency_code,
+      ...feeOf(r),
       source: "paypal-webhook",
     });
   }

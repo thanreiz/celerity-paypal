@@ -34,6 +34,8 @@ public final class PolicyEngine {
             Set.of("FAILED", "RETURNED", "BLOCKED", "REFUNDED", "REVERSED", "DENIED", "CANCELED");
 
     public static final int COOLDOWN_DAYS = 7;
+    /** How long a storm name means the same storm: PAGASA reuses its names. */
+    public static final int STORM_WINDOW_DAYS = 60;
 
     private static final Pattern BRACKETS = Pattern.compile("[(\\[{].*?[)\\]}]");
     private static final Pattern CATEGORY =
@@ -72,13 +74,15 @@ public final class PolicyEngine {
         return Math.min(policy.maxPerFamily(), base + topUp + flags * policy.vulnerabilityTopUp());
     }
 
-    /** Families already paid (or in flight) for this storm. */
-    public static Set<String> paidFamilyIds(Object state, Object storm) {
+    /** Families already paid (or in flight) for this storm, within STORM_WINDOW_DAYS. */
+    public static Set<String> paidFamilyIds(Object state, Object storm, long nowMillis) {
         String key = stormKey(storm);
         Set<String> ids = new LinkedHashSet<>();
         if (key.isEmpty()) return ids;
         for (Object b : list(get(state, "batches"))) {
             if (!stormKey(get(b, "storm")).equals(key)) continue;
+            // A batch with no readable date counts, as in Node (NaN > x is false).
+            if (nowMillis - parseDate(get(b, "created_at")) > STORM_WINDOW_DAYS * 86_400_000L) continue;
             for (Object it : list(get(b, "items"))) {
                 if (!NOT_PAID.contains(str(get(it, "status")))) ids.add(str(get(it, "family_id")));
             }
@@ -129,7 +133,7 @@ public final class PolicyEngine {
         }
         String familyId = str(get(family, "id"));
         if (stormKey(get(run, "storm")).isEmpty()) reasons.add("the run has no storm name yet");
-        else if (paidFamilyIds(state, get(run, "storm")).contains(familyId)) reasons.add("already paid for " + str(get(run, "storm")));
+        else if (paidFamilyIds(state, get(run, "storm"), nowMillis).contains(familyId)) reasons.add("already paid for " + str(get(run, "storm")));
         else if (recentlyPaidIds(state, nowMillis).contains(familyId)) reasons.add("already paid in the last " + COOLDOWN_DAYS + " days");
         long max = reasons.isEmpty() ? maxAmountFor(family, signal, policy) : 0;
         out.put("eligible", reasons.isEmpty());

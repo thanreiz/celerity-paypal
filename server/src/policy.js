@@ -80,15 +80,21 @@ export function maxAmountFor(family, signal, policy = POLICY) {
 // Item states where no money reached the family, so a retry is allowed.
 export const NOT_PAID = new Set(["FAILED", "RETURNED", "BLOCKED", "REFUNDED", "REVERSED", "DENIED", "CANCELED"]);
 const COOLDOWN_DAYS = 7;
+/** How long a storm name means the same storm. PAGASA reuses its names (the
+ * list comes round every four years), so a family paid for one "Dalisay" can
+ * be paid for the next. No storm keeps a signal up for anything near this. */
+export const STORM_WINDOW_DAYS = 60;
 
 /** Families already paid (or in flight) for this storm. Failed or returned
  * items don't count, so a coordinator can retry them. */
-export function paidFamilyIds(state, storm) {
+export function paidFamilyIds(state, storm, now = Date.now()) {
   const key = stormKey(storm);
   const ids = new Set();
   if (!key) return ids;
   for (const b of state.batches) {
     if (stormKey(b.storm) !== key) continue;
+    // A batch with no readable date counts (NaN > x is false): fail closed.
+    if (now - Date.parse(b.created_at) > STORM_WINDOW_DAYS * 86_400_000) continue;
     for (const it of b.items) if (!NOT_PAID.has(it.status)) ids.add(it.family_id);
   }
   return ids;

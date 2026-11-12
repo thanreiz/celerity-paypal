@@ -92,7 +92,7 @@ and the parser + GPT agent + coordinator path works as before.
 | **Rules path** ([`parser.js`](server/src/parser.js), [`rules.js`](server/src/rules.js)) | Reads routine bulletins without AI and drafts by policy alone; Node port of the Java parser, both held to `contracts/fixtures`. |
 | **LLM agent**: OpenAI (Responses API, function calling) or Anthropic Claude (Messages API, tool use) | The agent loop ([`agent.js`](server/src/agent.js), [`providers.js`](server/src/providers.js)). Five strict-schema tools: `record_bulletin_facts`, `search_families`, `check_eligibility`, `draft_payout`, `remove_draft`. One env var (`AI_PROVIDER`) switches vendors. |
 | **Policy engine** ([`server/src/policy.js`](server/src/policy.js)) | Deterministic eligibility and caps. The only thing that decides whether a draft is allowed. |
-| **Funding pools** ([`server/src/funding.js`](server/src/funding.js)) | Earmarked pools over the one PayPal balance. Splits every payout pro-rata across the pools that cover the family; refuses drafts the pools can't cover. Balances are computed from the record, never stored. |
+| **Funding pools** ([`server/src/funding.js`](server/src/funding.js)) | Earmarked pools over the one PayPal balance. A pool is credited what PayPal actually paid in, net of its fee, so payouts are never planned against money the account doesn't have. Splits every payout pro-rata across the pools that cover the family; refuses drafts the pools can't cover. Balances are computed from the record, never stored. |
 | **Evidence log** ([`server/src/store.js`](server/src/store.js)) | Append-only, hash-chained. Editing or deleting any past entry breaks verification. |
 
 ### Guardrails, not vibes
@@ -109,14 +109,18 @@ More of what the code enforces, whatever the model says:
   name ("Eastern Samar" doesn't name Samar), and never at a higher signal than the parser read for it.
 - Jev's answers are checked before use: a probability outside 0 to 1, or a province that wasn't
   offered, counts as no answer.
-- A family paid in the last 7 days can't be drafted again under any storm name.
+- A family paid in the last 7 days can't be drafted again under any storm name, and a family paid
+  for a storm can't be paid for it again. PAGASA reuses storm names, so a name counts as the same
+  storm for 60 days.
 - Approval never holds a database lock while PayPal is called. If PayPal's answer is lost, the batch
   stays "sending" and Approve resumes it with the same PayPal-Request-Id, so nothing is paid twice.
 - The public page shows an allow-list of fields per event: no emails, names, family IDs or error payloads.
 
-**Limits.** The evidence chain proves the log wasn't edited after the fact by anyone who doesn't
-also control the database; anchoring its head hash outside the app is future work. Wrong-key
-throttling is per serverless instance. `/api/config` is public on purpose, so anyone can read the
+**Limits.** The hash chain proves the log agrees with itself. On its own it can't show that the
+newest entries were cut off, or the whole log rewritten by someone who controls the database. For
+that, checkpoints live outside the app: every visitor's browser notes the newest entry on the public
+page and, on the next visit, checks it is still there and unchanged (`GET /api/chain/:seq`), and
+anyone can note one by hand. Wrong-key throttling is per serverless instance. `/api/config` is public on purpose, so anyone can read the
 payout policy.
 
 ---

@@ -44,7 +44,7 @@ const PUBLIC_DETAIL = {
   "payout.submitting": ["recipients", "amount", "currency", "pools"],
   "pool.created": ["name", "funder", "provinces", "min_signal"],
   "farmer.notified": ["count", "channel"],
-  "pool.funded": ["pool", "funder_name", "amount", "currency"],
+  "pool.funded": ["pool", "funder_name", "amount", "fee", "net", "currency"],
   "pool.funding_reversed": ["pool", "amount", "currency", "partial"],
   "pool.funding_reversal_unapplied": ["pool"],
   "payout.resumed": [],
@@ -205,7 +205,16 @@ function verifiedChain(events) {
 export function createApp({ store, aiClient, staticDir, coordinatorKey = config.coordinatorKey } = {}) {
   const app = express();
   app.disable("x-powered-by");
-  app.use(express.json({ limit: "200kb" }));
+  app.use(
+    express.json({
+      limit: "200kb",
+      // PayPal signs the exact bytes it sent. Keep them for the webhook check,
+      // since parsing and re-serialising can change key order or number format.
+      verify: (req, _res, buf) => {
+        if (req.originalUrl?.startsWith("/api/webhooks/")) req.rawBody = buf.toString("utf8");
+      },
+    })
+  );
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "no-referrer");
@@ -294,6 +303,22 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
   }
 
   // Public transparency view: aggregates and the evidence chain, no PII.
+  // One entry's hash, so anyone who noted a checkpoint (seq + hash) earlier
+  // can check the log still holds it. verifyChain proves the log is
+  // consistent with itself; it can't tell if the newest entries were cut off
+  // or the whole log rewritten. A checkpoint kept outside the app can: every
+  // visitor's browser keeps one (see the public page), and anyone can note
+  // one by hand. A missing or different entry means the log was changed.
+  app.get("/api/chain/:seq", wrap(async (req, res) => {
+    const seq = Number(req.params.seq);
+    if (!Number.isInteger(seq) || seq < 0) throw new HttpError(400, "seq must be a whole number");
+    const { events } = await store.read();
+    const head = events.length ? { seq: events.length - 1, hash: events.at(-1).hash } : null;
+    const entry = events[seq];
+    if (!entry) return res.status(404).json({ error: "the log has no entry with that number", length: events.length, head });
+    res.json({ seq, hash: entry.hash, at: entry.at, length: events.length, head });
+  }));
+
   app.get("/api/public", wrap(async (req, res) => {
     const state = await store.read();
     res.setHeader("Cache-Control", "public, max-age=0, s-maxage=10, stale-while-revalidate=30");
@@ -927,7 +952,7 @@ export function createApp({ store, aiClient, staticDir, coordinatorKey = config.
       if (config.paypal.webhookId) {
         const sent = Date.parse(req.get("paypal-transmission-time") || "");
         if (Number.isFinite(sent) && Date.now() - sent > WEBHOOK_MAX_AGE_MS) throw new HttpError(400, "webhook delivery is too old");
-        const ok = await verifyWebhookSignature(req.headers, event);
+        const ok = await verifyWebhookSignature(req.headers, event, req.rawBody);
         if (!ok) {
           // Not written to the evidence log: anyone can post here, and the
           // public log should only hold events PayPal actually sent.

@@ -9,6 +9,7 @@ import { PoolList, hasDemoPledge } from "./Pools";
 import { api } from "../../lib/api";
 import { money, when, eventLabel, eventDetail, short, stormName } from "../../lib/format";
 import { ChainStatus } from "../console/EvidencePage";
+import Checkpoint from "./Checkpoint";
 
 /** Public, no-login page: how much relief went out, for which storm, and
  * the hash-chained record behind it. No names or emails. */
@@ -141,6 +142,7 @@ export default function TransparencyPage() {
             </Card>
 
             <ChainStatus chain={data.chain} />
+            <Checkpoint chain={data.chain} />
 
             <Card title="Latest record entries">
               <Table

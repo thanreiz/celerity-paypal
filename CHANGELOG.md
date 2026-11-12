@@ -20,6 +20,11 @@ Newest first. History before the PayPal rebuild lives in the original repo,
 - **Access:** funder sessions, a limiter that can't be dodged with a header or
   used to lock out a coordinator or farmer, official province names in the
   registry, and a PayPal return address that never follows the Host header.
+- **Ledger:** pools are credited PayPal's net amount, with the fee shown;
+  webhooks are verified with the exact bytes PayPal sent; a storm name blocks
+  a second payment for 60 days, not forever (PAGASA reuses names); every
+  public-page visitor's browser keeps a checkpoint of the chain and flags a
+  log that was cut short or rewritten.
 - **Apps:** landing examples obey the live caps and are labelled, a phone
   menu, unknown links open the landing page, modals close on Escape and trap
   focus, the Farmer app keeps polling after a failed request, and coordinator

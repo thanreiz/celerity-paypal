@@ -64,26 +64,26 @@ function parseBody(text) {
   }
 }
 
-async function call(method, path, { body, requestId } = {}, retried = false) {
+async function call(method, path, { body, rawBody, requestId } = {}, retried = false) {
   const token = await getAccessToken();
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: "application/json",
   };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined || rawBody !== undefined) headers["Content-Type"] = "application/json";
   if (requestId) headers["PayPal-Request-Id"] = requestId;
 
   const res = await fetch(`${paypalBaseUrl()}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: rawBody !== undefined ? rawBody : body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   // The cached token can be revoked or expire early. A 401 means PayPal did
   // nothing with the call, so fetch a fresh token and send it once more.
   if (res.status === 401 && !retried) {
     cachedToken = null;
-    return call(method, path, { body, requestId }, true);
+    return call(method, path, { body, rawBody, requestId }, true);
   }
   const text = await res.text();
   const json = parseBody(text);
@@ -169,10 +169,17 @@ export async function createOrder({ amount, currency, poolId, poolName, returnUr
 }
 
 /** The first capture of an order, in a flat shape. */
+/** PayPal's fee and what reaches our balance, from a capture's
+ * seller_receivable_breakdown (absent while a capture is pending). */
+export function feeOf(capture) {
+  const b = capture?.seller_receivable_breakdown;
+  return { net: b?.net_amount?.value ?? null, fee: b?.paypal_fee?.value ?? null };
+}
+
 function captureOf(order) {
   const c = order.purchase_units?.[0]?.payments?.captures?.[0];
   return c
-    ? { orderId: order.id, captureId: c.id, status: c.status, amount: c.amount?.value, currency: c.amount?.currency_code }
+    ? { orderId: order.id, captureId: c.id, status: c.status, amount: c.amount?.value, currency: c.amount?.currency_code, ...feeOf(c) }
     : { orderId: order.id, captureId: null, status: order.status, amount: null, currency: null };
 }
 
@@ -197,7 +204,24 @@ export async function getPayoutBatch(payoutBatchId) {
  * Ask PayPal whether a webhook delivery is genuine. Returns true only on
  * verification_status === "SUCCESS".
  */
-export async function verifyWebhookSignature(headers, event) {
+/** The JSON for verify-webhook-signature, with webhook_event spliced in as
+ * the exact text PayPal delivered when we have it (and it parses), so the
+ * signed bytes reach PayPal unchanged. */
+export function verificationBody(signed, event, rawEvent) {
+  const head = JSON.stringify({ ...signed, webhook_id: config.paypal.webhookId });
+  let raw = null;
+  if (typeof rawEvent === "string") {
+    try {
+      JSON.parse(rawEvent);
+      raw = rawEvent.trim();
+    } catch {
+      raw = null;
+    }
+  }
+  return `${head.slice(0, -1)},"webhook_event":${raw ?? JSON.stringify(event)}}`;
+}
+
+export async function verifyWebhookSignature(headers, event, rawEvent = null) {
   const h = (k) => headers[k] || headers[k.toLowerCase()];
   const signed = {
     auth_algo: h("paypal-auth-algo"),
@@ -210,7 +234,7 @@ export async function verifyWebhookSignature(headers, event) {
   if (Object.values(signed).some((v) => !v)) return false;
   try {
     const result = await call("POST", "/v1/notifications/verify-webhook-signature", {
-      body: { ...signed, webhook_id: config.paypal.webhookId, webhook_event: event },
+      rawBody: verificationBody(signed, event, rawEvent),
     });
     return result.verification_status === "SUCCESS";
   } catch (e) {

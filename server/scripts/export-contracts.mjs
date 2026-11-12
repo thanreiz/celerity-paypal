@@ -97,8 +97,11 @@ const capOf = (state, id, r = run()) => eligibility(state, state.families.find((
   draftCase("below the minimum signal", s, r, { family_id: "fam_015", amount: 10 });
   draftCase("run without a storm name", s, run({ storm: "  " }), { family_id: "fam_001", amount: 10 });
 
-  const alias = { ...baseState(), batches: [batch("Super Typhoon DALISAY (Haikui)", OLD, [paid("fam_001")])] };
+  const alias = { ...baseState(), batches: [batch("Super Typhoon DALISAY (Haikui)", RECENT, [paid("fam_001")])] };
   draftCase("already paid under another spelling of the storm", alias, r, { family_id: "fam_001", amount: 10 });
+  // PAGASA reuses storm names: a "Dalisay" from an earlier season is another storm.
+  const reused = { ...baseState(), batches: [batch("Typhoon Dalisay", OLD, [paid("fam_001")])] };
+  draftCase("a storm name reused in a later season pays again", reused, r, { family_id: "fam_001", amount: 10 });
   const cooldown = { ...baseState(), batches: [batch("Typhoon Other", RECENT, [paid("fam_001")])] };
   draftCase("paid for another storm within 7 days", cooldown, r, { family_id: "fam_001", amount: 10 });
   const old = { ...baseState(), batches: [batch("Typhoon Other", OLD, [paid("fam_001")])] };
