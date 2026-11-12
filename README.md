@@ -134,7 +134,7 @@ payout policy.
   Families, Evidence log), a public transparency page at `/#/public`, and each farmer's private
   phone page at `/#/r/<link>`.
 - **`core/`**: Java 21 + Spring Boot. The deterministic money rules as a stateless service on
-  Google Cloud Run:
+  Render or Google Cloud Run:
   - eligibility, caps and draft checks;
   - the pro-rata split across funders' pools;
   - hash-chain verification;
@@ -281,10 +281,12 @@ function limit (a typical run takes about 30 seconds).
 
 ## Tools used
 
-- **PayPal**: Payouts API, Webhooks + webhook signature verification, OAuth 2.0 client credentials (sandbox)
+- **PayPal**: Checkout (Orders v2), Payouts API, Webhooks + webhook signature verification, OAuth 2.0 client credentials (sandbox)
+- **TypeSafe AI**: Jev, the System One model, for fast typed decisions with a confidence (optional)
 - **OpenAI API**: Responses API with strict function calling and reasoning (`openai`)
 - **Anthropic Claude API**: Messages API with strict tool use, adaptive thinking, server-side refusal fallback (`@anthropic-ai/sdk`)
 - **Node.js 24** and **Express 5** for the API server
+- **Java 21** and **Spring Boot** for the deterministic rules core, deployable to **Render** (`render.yaml`) or Cloud Run
 - **React 18** and **Vite 6** for the frontend
 - **Vercel** for hosting (static frontend + one serverless function)
 - **Neon** serverless Postgres for state (`pg`), tested locally with **PGlite**
@@ -300,8 +302,8 @@ after Oct 1, 2026, with a new backend, a new payment rail, and a new console:
 - **New:** an Express backend; an LLM tool-use agent (OpenAI or Claude) that reads free-text bulletins and drafts
   payouts; a deterministic policy engine; human approval; PayPal Payouts with verified webhooks
   and a live status timeline; a hash-chained evidence log; and a public transparency page.
-- **Replaced:** the old payment and trigger layer and the recipient wallet app, which PayPal
-  Payouts and the agent now cover.
+- **Replaced:** the old payment and trigger layer. PayPal Checkout and Payouts now move the money,
+  and the Funder and Farmer apps were rebuilt around them.
 - **Kept:** the design system and the core rules from the original: objective triggers, no
   double payment for the same event, and the registry stays in human hands.
 

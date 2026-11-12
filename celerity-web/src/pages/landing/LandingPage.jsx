@@ -121,10 +121,10 @@ const AUDIENCES = [
     key: "funders",
     label: "Funders",
     title: ["Typhoon aid,", "in minutes."],
-    sub: "Pool money through PayPal before the storm. When the bulletin comes, an AI agent drafts who gets help, code enforces the limits, a person approves, and PayPal pays families directly.",
+    sub: "Pool money through PayPal before the storm. When the bulletin comes, rules pay the routine cases at once, an AI agent drafts the rest for a person to approve, and PayPal pays families directly.",
     cta: ["Fund a pool", FUND],
-    alt: ["See the public record", FUND],
-    chips: ["Paid by PayPal", "A person approves every run", "Every peso on the record"],
+    alt: ["See the public record", "#/public"],
+    chips: ["Paid by PayPal", "A person approves every AI draft", "Every peso on the record"],
   },
   {
     key: "coordinators",
@@ -456,7 +456,7 @@ function HowItWorks() {
             <div className="r"><span>₱25,000 request</span><span className="verdict-pill no-pill">REFUSED · CAP</span></div>
           </StepCard>
           <StepCard kind="onyx" n="03" delay={0.24} icon={["M8 2h8a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3z", "M11 18h2"]}
-            title="A person approves. PayPal pays." body="Nothing moves until a coordinator approves. Then each family gets a private link showing their money arrive."
+            title="A person approves. PayPal pays." body="Rules alone pay a routine bulletin. Anything the agent drafts waits for a coordinator. Then each family gets a private link showing their money arrive."
             bullets={["One PayPal batch per run", "Live status, Tagalog or English"]}>
             <div className="r" style={{ border: 0, padding: 0 }}><span>₱8,500 · Reyes family</span><b style={{ color: "#7fe0ae" }}>Received</b></div>
             <div className="tl"><i className="on" /><i className="on" /><i className="on" /></div>
@@ -681,7 +681,7 @@ function Voices() {
 
 function Faq() {
   const qs = [
-    ["Does the AI decide who gets paid?", "No. The agent drafts. A deterministic policy engine decides whether each draft is allowed, and a coordinator has to approve the run before PayPal sends anything."],
+    ["Does the AI decide who gets paid?", "No. Rules read routine bulletins and pay them with no AI involved. When a bulletin is unclear, the agent drafts, a deterministic policy engine decides whether each draft is allowed, and a coordinator has to approve the run before PayPal sends anything."],
     ["How does a family receive the money?", "PayPal Payouts sends it to the family’s PayPal email. They get a private link by SMS that shows the amount and status, and how to move it to GCash or a bank."],
     ["Can I see where my contribution went?", "Yes. The public page shows your pool: what you put in, which storms and towns it paid for, and what’s left. Each payout is split pro-rata across the pools that cover the family."],
     ["What stops a family being paid twice?", "A family paid in the last 7 days can’t be drafted again under any storm name, and each PayPal batch ID comes from the run ID, so a retried approval can never pay twice."],

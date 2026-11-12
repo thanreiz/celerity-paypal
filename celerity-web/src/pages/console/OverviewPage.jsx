@@ -33,7 +33,7 @@ export default function OverviewPage({ data, config, go }) {
 
   return (
     <main className="cel-page cel-page--wide">
-      <PageHeader title="Overview" lede="An AI agent drafts typhoon cash aid within hard limits. A person approves it. PayPal delivers it.">
+      <PageHeader title="Overview" lede="Rules pay routine bulletins. An AI agent drafts the rest within hard limits and a person approves it. PayPal delivers it.">
         <SystemStatus config={config} />
       </PageHeader>
 

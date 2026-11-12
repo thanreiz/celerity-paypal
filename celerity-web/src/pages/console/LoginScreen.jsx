@@ -55,7 +55,7 @@ export default function LoginScreen({ onSignIn, initialError = "" }) {
         <div>
           <h1 style={{ font: "var(--text-h1)", margin: 0 }}>Coordinator sign-in</h1>
           <p style={{ font: "var(--text-meta)", color: "var(--text-dim)", margin: "6px 0 0" }}>
-            Coordinators review what the relief agent drafts and approve every payout before PayPal sends it.
+            Coordinators review what the relief agent drafts and approve those payouts before PayPal sends them.
           </p>
         </div>
         <Input label="Your name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ana, MDRRMO Virac" autoComplete="name" />

@@ -73,8 +73,8 @@ export default function TransparencyPage() {
         <div>
           <h1 style={{ font: "var(--text-display)", margin: 0, letterSpacing: "var(--tracking-tight)" }}>Where the relief went</h1>
           <p style={{ font: "var(--text-body)", color: "var(--text-dim)", margin: "6px 0 0", maxWidth: 680 }}>
-            Celerity Relief sends typhoon cash aid through PayPal. An AI agent drafts each payout within fixed limits, a coordinator
-            approves it, and every step is written to a tamper-evident log you can check here.
+            Celerity Relief sends typhoon cash aid through PayPal. Rules pay routine bulletins within fixed limits. When a bulletin is
+            unclear, an AI agent drafts and a coordinator approves. Every step is written to a tamper-evident log you can check here.
           </p>
           {data?.paypalEnv === "sandbox" && (
             <div style={{ marginTop: 10 }}>
