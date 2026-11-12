@@ -72,7 +72,12 @@ moves. Only a run no AI touched goes on the automatic path; anything Jev placed 
 drafted goes to a person. Set `AUTO_RELEASE=0` to have a coordinator approve every run. Without a TypeSafe key, Jev is skipped
 and the parser + GPT agent + coordinator path works as before.
 
-> **Hosted demo:** https://celerity-relief.vercel.app · **Step-by-step guide:** https://celerity-relief.vercel.app/#/demo · **Demo video:** _coming soon_
+> - **Hosted demo:** https://celerity-relief.vercel.app
+> - **Step-by-step guide:** https://celerity-relief.vercel.app/#/demo
+> - **Public record:** https://celerity-relief.vercel.app/#/public
+> - **Demo video:** _coming soon_
+>
+> **Coordinator sign-in (for judges):** Name `Ethan` · Code `celerity123`
 >
 > The demo runs on the **PayPal sandbox** with **simulated bulletins** for a fictional
 > Typhoon Dalisay. No real money moves.
@@ -81,7 +86,7 @@ and the parser + GPT agent + coordinator path works as before.
 
 The same walk-through is in the app at [`/#/demo`](https://celerity-relief.vercel.app/#/demo).
 
-**You need:** the coordinator key (in the submission notes) for steps 3 to 5, and a PayPal
+**You need:** the coordinator sign-in above (Name `Ethan`, Code `celerity123`) for steps 3 to 5, and a PayPal
 sandbox **personal** account for step 1 (any from your own developer dashboard under
 *Testing Tools → Sandbox Accounts*, or the one in the submission notes). The demo is shared, so you
 may see other judges' pools, runs and payouts.
