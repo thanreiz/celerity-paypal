@@ -13,6 +13,8 @@
 // returns null and the caller falls back to what it did before Jev (the
 // parser alone, the GPT agent, a coordinator).
 
+import { provincesNamedIn } from "./parser.js";
+
 const ENDPOINT = "https://api.typesafe.ai/v1/systemone";
 const TIMEOUT_MS = Number(process.env.TYPESAFE_TIMEOUT_MS) || 4000;
 
@@ -48,7 +50,7 @@ export async function systemOne(state, questions, { fetchImpl = fetch } = {}) {
     }
     const body = await res.json();
     const answers = body?.answers;
-    if (!answers || Object.keys(questions).some((k) => !answers[k] || answers[k].type !== questions[k].type)) {
+    if (!answers || Object.keys(questions).some((k) => !wellFormed(answers[k], questions[k]))) {
       console.warn("jev answer did not match the questions; falling back");
       return null;
     }
@@ -59,7 +61,19 @@ export async function systemOne(state, questions, { fetchImpl = fetch } = {}) {
   }
 }
 
-const norm = (s) => String(s || "").trim().toLowerCase();
+/** A probability is a finite number from 0 to 1; "96" or a missing value is
+ * not an answer, and the caller falls back rather than guess what was meant. */
+const isProbability = (v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1;
+
+function wellFormed(answer, question) {
+  if (!answer || answer.type !== question.type) return false;
+  if (question.type === "noul") return isProbability(answer.noul);
+  if (question.type === "choice") {
+    return typeof answer.choice === "string" && Object.hasOwn(question.criteria, answer.choice) && isProbability(answer.probabilities?.[answer.choice]);
+  }
+  return true;
+}
+
 const NONE = "none of these";
 
 /**
@@ -80,10 +94,10 @@ const NONE = "none of these";
  */
 export async function assessBulletin({ text, parsed, provinceNames, fetchImpl }) {
   const unparsed = parsed.unparsed.slice(0, 20);
-  const haystack = norm(text);
-  // Options: every province the bulletin names (Jev can only pick among
-  // them), plus a way out.
-  const named = provinceNames.filter((p) => haystack.includes(norm(p))).slice(0, 250);
+  // Options: every province the bulletin names as a whole name (Jev can only
+  // pick among them), plus a way out.
+  const mentioned = new Set(provincesNamedIn(text));
+  const named = provinceNames.filter((p) => mentioned.has(p)).slice(0, 250);
   const criteria = Object.fromEntries(named.map((p) => [p, `The Philippine province of ${p}`]));
   criteria[NONE] = "None of the listed provinces, or the phrase is not a place";
 
@@ -120,7 +134,7 @@ export async function assessBulletin({ text, parsed, provinceNames, fetchImpl })
     else if (whole < JEV_THRESHOLDS.wholeProvince) why = `it covers only part of ${province}; towns need the agent`;
     return { phrase, province: province === NONE ? null : province, p, whole, accepted: !why, why };
   });
-  return { model: r.model, ms: r.ms, injection: Number(r.answers.injection.noul) || 0, placements };
+  return { model: r.model, ms: r.ms, injection: r.answers.injection.noul, placements };
 }
 
 export const MESSAGE_TOPICS = {

@@ -118,6 +118,7 @@ Luzon: Catanduanes, the Province of Albay
 
 TCWS No. 2 (Gale-force winds)
 Luzon: Sorsogon, the Caramoan Peninsula
+
 Note: the Caramoan Peninsula is in Camarines Sur.`;
 
 test("the request follows the TypeSafe API: bearer key, jev-latest, typed questions", async () => {
@@ -193,6 +194,52 @@ test("an answer that doesn't match the questions, or a timeout, falls back witho
   assert.ok(warnings.every((w) => !w.includes(KEY_VALUE)), "the key never reaches the logs");
 });
 
+test("a probability outside 0 to 1, or a missing one, is not an answer", async () => {
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    const noul = { injection: { type: "noul", instructions: "x" } };
+    for (const bad of [91, -0.2, "0.9", null, undefined, Number.NaN]) {
+      jevAnswer = () => ({ injection: { type: "noul", noul: bad } });
+      assert.equal(await systemOne("s", noul), null, `noul ${bad}`);
+    }
+    const choice = { place: { type: "choice", instructions: "x", criteria: { Albay: "a", Sorsogon: "b" } } };
+    jevAnswer = () => ({ place: { type: "choice", choice: "Albay", probabilities: { Albay: 96 } } });
+    assert.equal(await systemOne("s", choice), null, "a percentage is not a probability");
+    jevAnswer = () => ({ place: { type: "choice", choice: "Cebu", probabilities: { Cebu: 0.99 } } });
+    assert.equal(await systemOne("s", choice), null, "a choice that was never offered");
+    jevAnswer = () => ({ place: { type: "choice", choice: "Albay", probabilities: { Albay: 0.99 } } });
+    assert.notEqual(await systemOne("s", choice), null);
+  } finally {
+    console.warn = warn;
+  }
+});
+
+test("when Jev is on but gives no answer, even a routine bulletin waits for a coordinator", async () => {
+  const dalisay = (await store.read()).bulletins.find((b) => b.id === "blt_dalisay_08").text;
+  jevAnswer = null; // TypeSafe answers 500
+  const down = await routeBulletin(dalisay);
+  assert.equal(down.route, "rules");
+  assert.match(down.hold, /could not check/);
+  jevAnswer = answersFor();
+  assert.equal((await routeBulletin(dalisay)).hold, null);
+});
+
+test("only province names written out in full count as named, and a 21st leftover phrase is never skipped", async () => {
+  // "Eastern Samar" must not make "Samar" an option Jev can pick.
+  jevAnswer = answersFor();
+  jevCalls.length = 0;
+  await routeBulletin("Typhoon ANA\nTCWS No. 3\nVisayas: Eastern Samar, Southern Leyte, the far coast");
+  const offered = Object.keys(jevCalls[0].body.questions.province_0.criteria);
+  assert.ok(offered.includes("Eastern Samar") && offered.includes("Southern Leyte"));
+  assert.ok(!offered.includes("Samar") && !offered.includes("Leyte"));
+
+  // Jev is asked about 20 phrases at most; with 21 the bulletin goes to the agent.
+  const phrases = Array.from({ length: 21 }, (_, i) => `the Province of Albay ${i}`).join(", ");
+  jevAnswer = answersFor({ place: () => ({ province: "Albay", p: 0.99, whole: 0.99 }) });
+  assert.equal((await routeBulletin(`Typhoon ANA\nTCWS No. 3\nLuzon: Albay, ${phrases}`)).route, "agent");
+});
+
 test("a bulletin Jev flags as carrying instructions is drafted by the rules but held for a coordinator", async () => {
   payoutPosts = [];
   jevAnswer = answersFor({ injection: 0.96 });
@@ -209,7 +256,7 @@ test("a bulletin Jev flags as carrying instructions is drafted by the rules but 
   await api(`/api/runs/${run.id}/reject`, { method: "POST", body: { reason: "test" } });
 });
 
-test("a Jev-routed bulletin is released, marked as Jev's, and pays only at each area's signal", async () => {
+test("a Jev-routed bulletin is drafted by the rules, marked as Jev's, and waits for a coordinator", async () => {
   payoutPosts = [];
   const added = await (await api("/api/bulletins", { method: "POST", body: { title: "Ompong #5", text: OMPONG } })).json();
   jevAnswer = answersFor({
@@ -217,14 +264,18 @@ test("a Jev-routed bulletin is released, marked as Jev's, and pays only at each 
   });
   const run = await (await api(`/api/bulletins/${added.id}/runs`, { method: "POST" })).json();
   assert.equal(run.mode, "jev");
-  assert.equal(run.auto_release, true);
+  assert.equal(run.auto_release, false, "an AI placed part of it, so a person approves");
+  assert.equal(run.status, "awaiting_approval");
   assert.ok(run.steps.some((s) => /Jev placed "the Province of Albay" as all of Albay/.test(s.text || "")));
   const albay = run.drafts.filter((d) => d.family_id >= "fam_005" && d.family_id <= "fam_008");
   assert.ok(albay.length > 0 && albay.every((d) => d.signal === 3));
   await new Promise((r) => setTimeout(r, 100));
+  assert.equal(payoutPosts.length, 0, "nothing sent on Jev's judgment alone");
+  assert.equal((await store.read()).runs.find((r) => r.id === run.id).status, "awaiting_approval");
+  assert.equal((await api(`/api/runs/${run.id}/approve`, { method: "POST" })).status, 200);
   const saved = (await store.read()).runs.find((r) => r.id === run.id);
   assert.equal(saved.status, "approved");
-  assert.equal(saved.approved_by, "jev");
+  assert.notEqual(saved.approved_by, "jev");
   assert.equal(payoutPosts.length, 1);
   const pub = await (await api("/api/public", { key: null })).json();
   assert.equal(pub.events.find((e) => e.type === "run.drafted").actor, "jev");

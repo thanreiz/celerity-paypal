@@ -37,7 +37,17 @@ test("bulletin facts are validated and areas must appear in the bulletin text", 
 
   const ok = facts([{ province: " albay ", municipality: "", signal_level: 3 }]);
   assert.equal(ok.isError, undefined);
-  assert.deepEqual(run.areas, [{ province: "albay", municipality: null, signal_level: 3 }]);
+  assert.deepEqual(run.areas, [{ province: "Albay", municipality: null, signal_level: 3 }], "stored under the official name");
+
+  // A province is named by its whole name: "Eastern Samar" doesn't name Samar,
+  // and "Southern Leyte" doesn't name Leyte.
+  const samar = (areas) => executeTool(state, { drafts: [] }, "record_bulletin_facts", { storm_name: "Typhoon Ana", bulletin_number: "3", areas }, "Typhoon ANA\nTCWS No. 3\nVisayas: Eastern Samar, Southern Leyte\n\nTCWS No. 1\nVisayas: Biliran");
+  assert.match(samar([{ province: "Samar", municipality: null, signal_level: 3 }]).content.error, /does not appear/);
+  assert.match(samar([{ province: "Leyte", municipality: null, signal_level: 3 }]).content.error, /does not appear/);
+  assert.equal(samar([{ province: "Eastern Samar", municipality: null, signal_level: 3 }]).isError, undefined);
+  // The agent can't raise a signal above the one the parser read for a province.
+  assert.match(samar([{ province: "Biliran", municipality: null, signal_level: 5 }]).content.error, /under signal 1, not 5/);
+  assert.equal(samar([{ province: "Biliran", municipality: null, signal_level: 1 }]).isError, undefined);
 
   const long = executeTool(state, run, "draft_payout", { family_id: "fam_005", amount: 1, rationale: "r".repeat(1000) });
   assert.equal(long.content.rationale.length, 300);

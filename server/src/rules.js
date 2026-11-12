@@ -2,8 +2,8 @@
 // reads the wind signals, policy picks every eligible family and its cap,
 // the pools must cover it. Because nothing here is a judgment call, the run
 // is released without waiting for a person (AUTO_RELEASE, on by default).
-// Anything the parser can't place goes to the agent instead, and a person
-// approves what the agent drafts.
+// Anything the parser can't place goes to Jev or the agent instead, and a
+// person approves any run an AI had a hand in.
 //
 // Same input, same drafts, every time.
 
@@ -72,7 +72,9 @@ export function draftByRules(state, run, parsed) {
  * Jev. Returns { route, parsed, jev, hold }:
  *   route "rules"  the parser read everything
  *   route "jev"    the parser + Jev's confident whole-province placements
- *                  cover everything; parsed.areas includes them
+ *                  cover everything; parsed.areas includes them. The rules
+ *                  draft it, and a coordinator approves, because an AI
+ *                  judgment decided where the money goes
  *   route "agent"  something needs judgment: the GPT agent drafts and a
  *                  coordinator approves
  * hold is a reason a rules/jev run must still wait for a coordinator (Jev
@@ -81,11 +83,17 @@ export function draftByRules(state, run, parsed) {
 export async function routeBulletin(text, { forceAgent = false, fetchImpl } = {}) {
   const parsed = await readBulletin(text);
   const jev = jevConfigured() && !forceAgent ? await assessBulletin({ text, parsed, provinceNames: PROVINCE_NAMES, fetchImpl }) : null;
-  const hold = jev && jev.injection >= JEV_THRESHOLDS.injection ? `Jev puts the chance of instructions hidden in this bulletin at ${Math.round(jev.injection * 100)}%` : null;
+  let hold = null;
+  if (jev && jev.injection >= JEV_THRESHOLDS.injection) hold = `Jev puts the chance of instructions hidden in this bulletin at ${Math.round(jev.injection * 100)}%`;
+  // Jev is switched on but gave no usable answer: nobody checked this
+  // bulletin for hidden instructions, so a person looks before money moves.
+  else if (!jev && jevConfigured() && !forceAgent) hold = "Jev could not check this bulletin for hidden instructions";
   if (forceAgent) return { route: "agent", parsed, jev, hold };
   if (routine(parsed)) return { route: "rules", parsed, jev, hold };
 
-  const placeable = parsed.storm && jev?.placements?.length && jev.placements.every((p) => p.accepted);
+  // Every leftover phrase must have been asked about and accepted; Jev is
+  // only asked about the first 20.
+  const placeable = parsed.storm && jev?.placements?.length === parsed.unparsed.length && jev.placements.every((p) => p.accepted);
   if (placeable) {
     const extra = [];
     for (const pl of jev.placements) {

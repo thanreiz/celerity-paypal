@@ -10,6 +10,7 @@
 import { config } from "./config.js";
 import { createSession } from "./providers.js";
 import { POLICY, VULNERABILITY_FLAGS, eligibility, checkDraft, runTotals } from "./policy.js";
+import { lookupProvince, parseBulletin, provincesNamedIn } from "./parser.js";
 
 const MAX_TURNS = 30;
 
@@ -138,14 +139,28 @@ const escapeTags = (s) => String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const isText = (v, max) => typeof v === "string" && v.trim().length > 0 && v.length <= max;
 
+/** Does the text mention this name as whole words (not inside a longer word)? */
+function mentions(haystack, name) {
+  const escaped = norm(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "u").test(haystack);
+}
+
 /** Why these bulletin facts can't be recorded, or null. Areas must name a
  * province the bulletin text actually mentions, so text smuggled into the
- * bulletin can't add a province by asking. */
+ * bulletin can't add a province by asking. A known province is matched by
+ * its whole name ("Samar" is not named by "Eastern Samar"), and can't be
+ * recorded at a higher signal than the one the parser read for it. */
 function factsProblem(input, bulletinText) {
   if (!isText(input?.storm_name, 60)) return "storm_name must be a non-empty string of at most 60 characters";
   if (input.bulletin_number != null && !isText(String(input.bulletin_number), 20)) return "bulletin_number is too long";
   if (!Array.isArray(input.areas) || input.areas.length > 100) return "areas must be a list of at most 100 entries";
-  const haystack = norm(bulletinText);
+  const haystack = norm(bulletinText).replace(/\s+/g, " ");
+  const named = bulletinText == null ? null : new Set(provincesNamedIn(bulletinText));
+  // The highest signal the parser read for each province, where it read one.
+  const parserSignal = new Map();
+  if (bulletinText != null) {
+    for (const p of parseBulletin(bulletinText).areas) parserSignal.set(p.province, Math.max(parserSignal.get(p.province) || 0, p.signal_level));
+  }
   for (const a of input.areas) {
     if (!a || !isText(a.province, 60)) return "every area needs a province name";
     if (a.municipality != null && a.municipality.trim?.() !== "" && !isText(a.municipality, 60)) {
@@ -154,8 +169,15 @@ function factsProblem(input, bulletinText) {
     if (!Number.isInteger(a.signal_level) || a.signal_level < 1 || a.signal_level > 5) {
       return `signal_level for ${a.province} must be a whole number from 1 to 5`;
     }
-    if (bulletinText != null && !haystack.includes(norm(a.province))) {
-      return `${a.province} does not appear in the bulletin text; record only areas the bulletin names`;
+    if (bulletinText != null) {
+      const official = lookupProvince(a.province);
+      if (official ? !named.has(official) : !mentions(haystack, a.province)) {
+        return `${a.province} does not appear in the bulletin text; record only areas the bulletin names`;
+      }
+      const read = official ? parserSignal.get(official) : undefined;
+      if (read && a.signal_level > read) {
+        return `the bulletin puts ${official} under signal ${read}, not ${a.signal_level}; record the signal the bulletin gives`;
+      }
     }
   }
   return null;
@@ -170,7 +192,8 @@ export function executeTool(state, run, name, input, bulletinText = null) {
       run.storm = input.storm_name.trim();
       run.bulletin_number = input.bulletin_number == null ? null : String(input.bulletin_number);
       run.areas = input.areas.map((a) => ({
-        province: a.province.trim(),
+        // The official name, so "Western Samar" covers families registered in Samar.
+        province: lookupProvince(a.province) || a.province.trim(),
         municipality: a.municipality?.trim() || null,
         signal_level: a.signal_level,
       }));
@@ -247,7 +270,7 @@ function summarize(name, input, result) {
  * is called after every step so the caller can persist and the UI can poll.
  * `client` overrides the SDK client (tests pass a scripted fake).
  */
-export async function runAgent({ state, run, bulletin, parsed = null, jev = null, client, provider = config.ai.provider, onProgress = () => {} }) {
+export async function runAgent({ state, run, bulletin, parsed = null, jev = null, client, provider = config.ai.provider, onProgress = () => {}, signal = null }) {
   // What the rules parser could and couldn't read, so the agent works on the
   // part that needs judgment. A hint only: record_bulletin_facts still checks
   // every area against the bulletin text.
@@ -270,7 +293,10 @@ export async function runAgent({ state, run, bulletin, parsed = null, jev = null
   });
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
+    // The caller gave up on this run (its deadline passed): stop paying for turns.
+    if (signal?.aborted) return run;
     const step = await session.next();
+    if (signal?.aborted) return run;
     run.usage.input_tokens += step.usage.input;
     run.usage.output_tokens += step.usage.output;
 
