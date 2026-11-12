@@ -134,7 +134,7 @@ payout policy.
   Families, Evidence log), a public transparency page at `/#/public`, and each farmer's private
   phone page at `/#/r/<link>`.
 - **`core/`**: Java 21 + Spring Boot. The deterministic money rules as a stateless service on
-  Render or Google Cloud Run:
+  **Render** (Docker, from [`render.yaml`](render.yaml)):
   - eligibility, caps and draft checks;
   - the pro-rata split across funders' pools;
   - hash-chain verification;
@@ -286,9 +286,10 @@ function limit (a typical run takes about 30 seconds).
 - **OpenAI API**: Responses API with strict function calling and reasoning (`openai`)
 - **Anthropic Claude API**: Messages API with strict tool use, adaptive thinking, server-side refusal fallback (`@anthropic-ai/sdk`)
 - **Node.js 24** and **Express 5** for the API server
-- **Java 21** and **Spring Boot** for the deterministic rules core, deployable to **Render** (`render.yaml`) or Cloud Run
+- **Java 21** and **Spring Boot** for the deterministic rules core
 - **React 18** and **Vite 6** for the frontend
-- **Vercel** for hosting (static frontend + one serverless function)
+- **Vercel** hosts the website: the static frontend and the API as one serverless function
+- **Render** hosts the Java core as a Docker web service, described by the [`render.yaml`](render.yaml) Blueprint
 - **Neon** serverless Postgres for state (`pg`), tested locally with **PGlite**
 - **GitHub Actions** for CI (server tests + frontend build)
 - **Claude Code** was used as a coding assistant during development
