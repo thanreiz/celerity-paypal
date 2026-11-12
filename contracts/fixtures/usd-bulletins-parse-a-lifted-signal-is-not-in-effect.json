@@ -1,0 +1,24 @@
+{
+  "name": "a lifted signal is not in effect",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon DALISAY\nTCWS No. 3 (lifted)\nLuzon: Albay\n\nTCWS No. 1\nLuzon: Sorsogon"
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": null,
+    "areas": [
+      {
+        "province": "Sorsogon",
+        "municipality": null,
+        "signal_level": 1
+      }
+    ],
+    "unparsed": [
+      "TCWS No. 3 (lifted)"
+    ],
+    "confidence": 0.5
+  }
+}

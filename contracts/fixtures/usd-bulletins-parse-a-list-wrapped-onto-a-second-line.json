@@ -1,0 +1,29 @@
+{
+  "name": "a list wrapped onto a second line",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon DALISAY\nTCWS No. 3\nLuzon: Albay, Sorsogon,\nMasbate, Catanduanes"
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": null,
+    "areas": [
+      {
+        "province": "Albay",
+        "municipality": null,
+        "signal_level": 3
+      },
+      {
+        "province": "Sorsogon",
+        "municipality": null,
+        "signal_level": 3
+      }
+    ],
+    "unparsed": [
+      "Masbate, Catanduanes"
+    ],
+    "confidence": 0.67
+  }
+}

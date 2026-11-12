@@ -36,7 +36,7 @@ Notes:
 
 The rules were written in Node first (`server/src/policy.js`, `funding.js`, `store.js`). Every rule here is a direct port, and the two are held together by **contract fixtures**:
 
-- `node server/scripts/export-contracts.mjs` runs the Node rules over 38 cases per currency and writes the inputs and answers to `contracts/fixtures/`.
+- `node server/scripts/export-contracts.mjs` runs the Node rules over 56 cases per currency and writes the inputs and answers to `contracts/fixtures/`.
 - `ParityTest` replays every fixture in Java and fails on any difference, down to the message text and the centavo.
 - `server/test/contracts.test.js` fails if a Node rule changes without regenerating the fixtures.
 

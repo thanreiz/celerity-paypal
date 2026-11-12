@@ -20,6 +20,11 @@ import java.util.regex.Pattern;
  * {@code unparsed} and lowers {@code confidence}; that is the hand-off to an
  * AI agent. Text outside the signal blocks is never read as data, so
  * instructions smuggled into a bulletin have nothing to act on.
+ *
+ * <p>A bulletin is only routine when every line of every signal block was
+ * read. A part of a province with no towns named, a lifted or lowered signal,
+ * and a line inside a block that isn't a region list all go to
+ * {@code unparsed}, so the rules never pay on a guess.
  */
 public final class BulletinParser {
     private final Map<String, String> provinces; // lower-case alias -> official name
@@ -43,6 +48,10 @@ public final class BulletinParser {
             "^(?:the\\s+)?(?:[a-z-]+(?:\\s+and\\s+[a-z-]+)?\\s+)?portions?\\s+of\\s+(.+?)\\s*(?:\\((.+)\\))?$", Pattern.CASE_INSENSITIVE);
     private static final Pattern PARENS = Pattern.compile("^(.+?)\\s*\\((.+)\\)$");
     private static final Pattern INCLUDING = Pattern.compile("^(.+?)\\s+including\\s+.+$", Pattern.CASE_INSENSITIVE);
+    /** A heading that takes a signal away rather than raising it. */
+    private static final Pattern LIFTED = Pattern.compile("\\b(?:lift|lower|cancel|remov|downgrad|terminat|no longer)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern INCLUDING_ONLY = Pattern.compile("^including\\s", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BRACKET = Pattern.compile("[()]");
 
     public Result parse(String text) {
         String body = text == null ? "" : text;
@@ -60,6 +69,12 @@ public final class BulletinParser {
             Matcher s = SIGNAL.matcher(line);
             if (s.find()) {
                 sawSignal = true;
+                if (LIFTED.matcher(s.group(2)).find()) {
+                    // "TCWS No. 3 (lifted)": not a signal in effect. A person reads it.
+                    unparsed.add(clip(line));
+                    signal = 0;
+                    continue;
+                }
                 signal = Integer.parseInt(s.group(1));
                 Matcher inline = IN_EFFECT.matcher(s.group(2));
                 if (inline.find()) readList(inline.group(1), signal, areas, unparsed);
@@ -71,12 +86,19 @@ public final class BulletinParser {
                 continue;
             }
             if (line.isBlank()) signal = 0; // a blank line ends a signal block
+            else if (signal > 0) unparsed.add(clip(line)); // a wrapped list or a note inside the block
         }
         double confidence;
         if (!sawSignal) confidence = 0.0;
         else if (areas.isEmpty() && unparsed.isEmpty()) confidence = 1.0;
         else confidence = (double) countPlaces(areas) / (countPlaces(areas) + unparsed.size());
         return new Result(storm, number, areas, unparsed, Math.round(confidence * 100) / 100.0);
+    }
+
+    /** A line the parser couldn't read, trimmed and capped for the hand-off. */
+    private static String clip(String line) {
+        String t = line.strip();
+        return t.length() > 120 ? t.substring(0, 120) : t;
     }
 
     private static long countPlaces(List<Area> areas) {
@@ -94,18 +116,23 @@ public final class BulletinParser {
             Matcher parens = PARENS.matcher(item);
             Matcher including = INCLUDING.matcher(item);
             if (portion.matches()) {
-                province = lookup(portion.group(1));
-                if (portion.group(2) != null) municipalities = splitTopLevel(portion.group(2));
+                // "the northern portion of Isabela" with no towns named is part of a
+                // province the rules can't draw: leave it for the agent and a person.
+                if (portion.group(2) != null) {
+                    province = lookup(portion.group(1));
+                    municipalities = splitTopLevel(portion.group(2));
+                }
             } else if (parens.matches()) {
                 province = lookup(parens.group(1));
-                municipalities = splitTopLevel(parens.group(2));
+                // "Quezon (including Polillo Islands)" is the whole province.
+                if (!INCLUDING_ONLY.matcher(parens.group(2).strip()).find()) municipalities = splitTopLevel(parens.group(2));
             } else if (including.matches()) {
                 province = lookup(including.group(1)); // "Masbate including Ticao and Burias Islands"
             } else {
                 province = lookup(item);
             }
 
-            if (province == null) {
+            if (province == null || municipalities.stream().anyMatch(m -> BRACKET.matcher(m).find())) {
                 unparsed.add(item);
                 continue;
             }
@@ -141,7 +168,11 @@ public final class BulletinParser {
         List<String> split = new ArrayList<>();
         for (String part : out) {
             String p = part.strip().replaceFirst("(?i)^and\\s+", "");
-            if (p.toLowerCase(Locale.ROOT).contains(" including ") || p.contains("(")) {
+            // "Albay (Legazpi City) and Sorsogon (Bulan)" is two items; the "and" in
+            // "the northern and central portions of Cebu (Bogo City)" is not a break.
+            if (p.contains("(")) {
+                for (String x : p.split("(?i)(?<=\\))\\s+and\\s+")) split.add(x);
+            } else if (p.toLowerCase(Locale.ROOT).contains(" including ")) {
                 split.add(p);
             } else {
                 for (String x : p.split("(?i)\\s+and\\s+")) split.add(x);

@@ -1,0 +1,27 @@
+{
+  "name": "including in brackets is the whole province",
+  "op": "bulletins/parse",
+  "input": {
+    "currency": "USD",
+    "now": "2026-11-15T00:00:00.000Z",
+    "text": "Typhoon DALISAY\nTCWS No. 2\nLuzon: Quezon (including Polillo Islands), Masbate including Ticao and Burias Islands"
+  },
+  "expected": {
+    "storm": "Typhoon Dalisay",
+    "bulletin_number": null,
+    "areas": [
+      {
+        "province": "Quezon",
+        "municipality": null,
+        "signal_level": 2
+      },
+      {
+        "province": "Masbate",
+        "municipality": null,
+        "signal_level": 2
+      }
+    ],
+    "unparsed": [],
+    "confidence": 1
+  }
+}
