@@ -65,6 +65,7 @@ export function publicConfig(policy) {
     paypalEnv: config.paypal.env,
     paypalConfigured: Boolean(config.paypal.clientId && config.paypal.clientSecret),
     webhooksVerified: Boolean(config.paypal.webhookId),
+    jevConfigured: Boolean(process.env.TYPESAFE_API_KEY),
     aiConfigured: config.ai.configured,
     aiProvider: config.ai.provider,
     model: config.ai.model,
