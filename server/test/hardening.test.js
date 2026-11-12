@@ -79,7 +79,8 @@ test("old webhook deliveries are refused before PayPal is asked", async () => {
     method: "POST",
     key: null,
     body: { id: "WH-old", event_type: "PAYMENT.PAYOUTSBATCH.SUCCESS" },
-    headers: { "paypal-transmission-time": new Date(Date.now() - 2 * 3600_000).toISOString() },
+    // PayPal retries a delivery for up to 3 days, so that is the window.
+    headers: { "paypal-transmission-time": new Date(Date.now() - 4 * 24 * 3600_000).toISOString() },
   });
   assert.equal(res.status, 400);
   assert.match((await res.json()).error, /too old/);
@@ -105,11 +106,14 @@ test("Postgres store saves text with NUL characters and lone surrogates, chain i
 
 // Last: it leaves this client's address locked out for the rest of the file.
 test("wrong keys are throttled after 10 tries", async () => {
-  // One wrong key was already sent by the cache-header test above.
+  // The right key clears the count, so start from a clean slate and send only wrong ones.
   const statuses = [];
-  for (let i = 0; i < 10; i++) statuses.push((await call("/api/state", { key: `guess-${i}` })).status);
-  assert.deepEqual(statuses.slice(0, 9), Array(9).fill(401));
-  assert.equal(statuses[9], 429);
+  for (let i = 0; i < 11; i++) statuses.push((await call("/api/state", { key: `guess-${i}` })).status);
+  assert.deepEqual(statuses.slice(0, 10), Array(10).fill(401));
+  assert.equal(statuses[10], 429);
   const wrong = await (await call("/api/state", { key: "x" })).json();
   assert.match(wrong.error, /too many/);
+  // ...but the right key is never locked out, and a missing one is just 401.
+  assert.equal((await call("/api/state")).status, 200);
+  assert.equal((await call("/api/state", { key: null })).status, 401);
 });
